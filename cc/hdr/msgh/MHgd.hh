@@ -7,7 +7,7 @@
 #include <string.h>
 #include <pthread.h>
 #include "cc/hdr/msgh/MHmsgBase.hh"
-#include "cc/hdr/msgh/MHnames.hh"
+#include "cc/hdr/msgh/MHname.hh"
 #include "cc/hdr/msgh/MHmtypes.hh"
 #include "cc/hdr/init/INsharedMem.hh"
 #include "cc/hdr/msgh/MHdefs.hh"
@@ -96,7 +96,7 @@ struct MHgdHost {
 };
 
 struct MHgdMsg {
-  Long m_size,
+  Long m_size;
   int m_opNum;
   MHqid m_qid;
   Long m_msgp;
@@ -108,7 +108,7 @@ struct MHgdShm {
   LongLong m_LastSync;  // Sync address as checked last time
   LongLong m_SyncAddress; // Address object synched up to
   LongLong m_size;  // Size of the data space
-  pthread_mutex m_lock; // mutex for this GDO
+  pthread_mutex_t m_lock; // mutex for this GDO
   int m_lockcnt;
   int m_lastlockcnt;
   char m_Name[MHmaxNameLen+1]; // name of the GDO
@@ -144,7 +144,7 @@ struct MHgdShm {
   U_long m_nWaitMsgBuf; // Number of times waiting for buffers
   U_long m_nMsgWaitOp; // Number of times waiting for msg send
   U_long m_SendFailed; // Number of failed sends
-  MhgdMsg m_delSend[MHgdMaxSend]; // Delayed send messages
+  MHgdMsg m_delSend[MHgdMaxSend]; // Delayed send messages
   MHgdOp m_Ops[MHgdMaxOps]; // Table of pending operations should be
                             // next to last
   Char m_Data[1]; // Start of the real shared memory data area
@@ -157,7 +157,7 @@ enum MHgdAudAction {
 };
 
 struct MHregGd;
-struct MHgdSyncReg;
+struct MHgdSyncReq;
 struct MHgdSyncData;
 struct MHgdUpd;
 struct MHaudGd;
@@ -170,7 +170,7 @@ public:
   MHgd();
   GLretVal attach(const char* name, Bool bCreate, Bool& isNew,
                   int permissions,
-                  Longlong size,
+                  LongLong size,
                   char *& pAttached,
                   Long bufferSz = 3 * MHdefUpdSz,
                   void* AtAddress = (void*)NULL,
@@ -180,7 +180,7 @@ public:
                   Bool delaySend = TRUE);
   void invalidateCmp(const void* pStartAddress, Long length);
   inline void invalidateCmp(const void *pStartAddress, Long length, int cmpOffset, MHqid notifyQid) {
-    invalidateCmpInt(pStartAddress, length, comOffset, notifyQid);
+    invalidateCmpInt(pStartAddress, length, cmpOffset, notifyQid);
   }
   inline void invalidateSeq(const void *pStartAddress, Long length) {
     invalidateSeqInt(pStartAddress, length, FALSE);
@@ -197,7 +197,7 @@ public:
   static GLretVal remove(const char *name);
   GLretVal audit(MHgdAudAction action = MHgdBoot,
                  const void* pStartAddress = NULL, Long length=0);
-  thread_t m_audthread; // Audit thread
+  pthread_t m_audthread; // Audit thread
 
 private:
   void invalidateCmpInt(const void * pStartAddress, Long length , int cmoOffset, MHqid notifyQid);
@@ -215,7 +215,7 @@ public: // The following mehtods are implemented in MSGH and MHRPROC
   GLretVal create(MHregGd* msg, MHrt* rt, IN_SHM_KEY shmkey, Bool bDoSynch=FALSE);
   GLretVal attach(int shmid, MHrt* rt, int lock=-1);
   Char* getName() {
-    if (m_p != NUMM) {
+    if (m_p != NULL) {
       return (m_p->m_Name);
     } else {
       return (NULL);
@@ -237,9 +237,9 @@ class MHraceNotifyMsg: public MHmsgBase {
 public:
   MHraceNotifyMsg() {
     priType = MHoamPtyp;
-    msgType = MHraceNofityTyp;
+    msgType = MHraceNotifyTyp;
     srcQue = MHnullQ;
-    reclength = 0;
+    recLength = 0;
     foreignCounter = 0;
     localCounter = 0;
     buffer[0] = '\0';
@@ -255,13 +255,13 @@ public:
   void * getKeptRecord() { return buffer; }
   void * getDiscardedRecord() {return (buffer + recLength);}
   short getSendSize() {
-    return (sizeof(MHraceNotifyMsg) - (MAXRDBTUPLESIZE * 2) + (reclength * 2));
+    return (sizeof(MHraceNotifyMsg) - (MAXRDBTUPLESIZE * 2) + (recLength * 2));
   }
 
 public:
   short recLength;
   unsigned short foreignCounter;
-  unsigend short localCounter;
+  unsigned short localCounter;
   char buffer[MAXRDBTUPLESIZE * 2];
 };
 

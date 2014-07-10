@@ -7,15 +7,15 @@
 
 #undef  _REENTRANT
 #define _REENTRANT
-#include <thread.h>
-#include <synch.h>
+#include <pthread.h>
+//#include <synch.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/utsname.h>
-#include "hdr/GLtypes.hh"
-#include "hdr/GLreturns.hh"
-#include "hdr/GLmsgs.hh"
-#include "hdr/GLportid.hh"
+#include "hdr/GLtypes.h"
+#include "hdr/GLreturns.h"
+#include "hdr/GLmsgs.h"
+#include "hdr/GLportid.h"
 #include "cc/hdr/msgh/MHname.hh"
 #include "cc/hdr/msgh/MHinfoExt.hh"
 #include "cc/hdr/msgh/MHmsg.hh"
@@ -27,13 +27,13 @@
 
 #define MHR26 0xc001
 
-#define MHmaxMsgs -x20000 // Total number of message headers in the system
+#define MHmaxMsgs 0x20000 // Total number of message headers in the system
 
 const key_t MHkey = MHMSGBASE; // key used to get a shmid
 
 // Constants & masks for decoding the mhqid
 const Short MHhostShift = 11;
-const Short MHhostmask = 0x3ff;
+const Short MHhostMask = 0x3ff;
 const Short MHqidMask = 0x3ff;
 // Timer tag used to encode the timer for the host in reject state
 #define MHrejTag 0x1000
@@ -61,6 +61,9 @@ const int MHtotNameSlotsSz = 32000;
 // time to go around, preserving some information for shared
 // memory update race conditions
 const Short MHmaxNamesReg = MHtotNameSlotsSz - 500;
+
+// Number of buffers for sending
+const Short MHmaxSQueue = 1024;
 
 // Number of buffers for sending
 const Short MHdefwindowSz = 1024;
@@ -92,12 +95,15 @@ const Short MHmaxSeq = 1023;
 // Hash table size for the list all processes in all hosts
 const Short MHtotHashTblSz = 32497; // Prime number about 2.14*MHmaxAllHosts
 
+// Hash table size for the table of host names.
+const Short MHhostHashTblSz = 2477; // Prime number about 2.14 * MHmaxAllHosts
+
 // Hash table size for the table of names per host
 const Short MHnameHashTblSz = 1193; // prime number about 1.14*MHmaxQid
 
 // Constants used in 'msqid' field of routing table
 const Short MHempty = -1;
-const Short MHnone -2;
+const Short MHnone = -2;
 
 // Unbuffered send flag
 #define MHunBufferedFlg 0x80
@@ -124,8 +130,8 @@ struct MHhostdata {
   Short SelectedNet; // Active network for communication to this host
   Short Preferrednet; // Preferred network for communication to this host
   Bool netup[MHmaxNets]; // True if that network is upShort
-  sockaddr_in6 sadd[MHmaxNets]; // Socket addresses for the host
-  sockaddr_in6 alias[MHmaxnets][MHmaxAlias]; // Alias socket address for host
+  sockaddr_in6 saddr[MHmaxNets]; // Socket addresses for the host
+  sockaddr_in6 alias[MHmaxNets][MHmaxAlias]; // Alias socket address for host
   Short next; // Pointer for next element in host hash
   Short delay; // Delay in trying to connect hosts
   Short windowSz; // Protocol window size for this host
@@ -168,8 +174,8 @@ struct MHhostdata {
 };
 
 struct MHqData {
-  mutext_t m_qLock; // mutex variable associated with cv
-  cond_t m_cv;
+  pthread_mutex_t m_qLock; // mutex variable associated with cv
+  pthread_cond_t m_cv;
   pid_t pid; // local process ids
   Long nBytes; // Number of  bytes in queue
   Long nBytesHigh; // high water mark for number of bytes
@@ -283,7 +289,7 @@ public:
   Void ClearSndQueue(Short hostid, Bool setNutex=TRUE);
   Void ClearRcvQueue(Short hostid, Bool setMutex=TRUE);
   Void SetSockId(int sock_id);
-  GLretVal ValidateMsg(MHmasgbase *msgp);
+  GLretVal ValidateMsg(MHmsgBase *msgp);
   Void AuditBuffers();
   Bool AuditMutex();
   Bool isCC(const char *name);
@@ -341,16 +347,16 @@ private:
   Short RCStoHostId[MHmaxRack][MHmaxChassis][MHmaxSlot];
   MHname oam_lead[MHmaxPilotNodes];
 
-  mutex_t m_lock; // mutex variable for ciritcal region processing
+  pthread_mutex_t m_lock; // mutex variable for ciritcal region processing
 
   U_long m_lockcnt; // this variable is incremented every time lock is set
-  mutex_t m_msglock;
-  U_long m_msglockCnt;
+  pthread_mutex_t m_msgLock;
+  U_long m_msgLockCnt;
   int m_lastActive;
   int m_bufferFreedCnt; // Number of mesasge buffers freed by audit
   int m_headerFreedCnt; // Number of message headers freed by audit
   int m_freeMsgHead; // Head of free messages headers
-  int m_nMeasused256; // Current count of 256 message buffers
+  int m_nMeasUsed256; // Current count of 256 message buffers
   int m_nMeasUsed1024; // Current count of 1024 message buffers
   int m_nMeasUsed4096; // Current count of 4096 message buffers
   int m_nMeasUsed16384; // Current count of 16384 mesage buffers
@@ -358,6 +364,7 @@ private:
   int m_nMeasHigh256; // High count of 256 message buffers
   int m_nMeasHigh1024; // High count of 1024 message buffers
   int m_nMeasHigh4096; // High count of 4096 message buffers
+  int m_nMeasHigh16384; // High count of 16384 message buffers
   int m_nMeasHighOut;  // High count of outgoing buffers
   int m_nSearch256; // Starting search index 256 message buffers
   int m_nSearch1024; // Starting search index 1024 message buffers
@@ -368,7 +375,7 @@ private:
   MHenvType m_envType; // Current environment type
 
   Short host_hash[MHhostHashTblSz];  // hashing of host names
-  Short global_hash[MHtothashTblSz]; // global hash for all names together
+  Short global_hash[MHtotHashTblSz]; // global hash for all names together
   Short m_leadcc; // hostid of the lead CC
   Bool sparebool;
   int free_head; // Head of the free list
@@ -382,7 +389,7 @@ private:
                                 // because of total buffer exhaustion
   U_long m_nMeasFailedSend; // Number of times msgsnd failed
   int m_nMaxCargo; // Max number of messages to cargo at a time
-  int m_minCargoSz; // min number of bytes before cargo sent
+  int m_MinCargoSz; // min number of bytes before cargo sent
   int m_CargoTimer; // Frequency of cargo message polling in ms
 public:
   Bool m_buffered; // Controls if buffered scheme is used
@@ -391,14 +398,14 @@ public:
   int m_n4096; // Number of 4096 byte buffers
   int m_n16384; // Number of 16384 byte buffers
   int m_nextQid; // Next qid to start searching from
-  int m_NumChunks // Number of outping buffer chunks
-  mutex_t m_dgLock; //Distributive queue mutex
+  int m_NumChunks; // Number of outping buffer chunks
+  pthread_mutex_t m_dqLock; //Distributive queue mutex
   U_long m_dqcnt; //Distributive queue mutex audit
   Long m_spare[8183]; // spare for future/su use
   Short fillshort;
   Short m_vhostActive; // Index of the active vhost
   Short m_oamLead; // Index of the oam lead
-  Short secondaryHostIndex; // second host index used in mixed clusters
+  Short SecondaryHostIndex; // second host index used in mixed clusters
                             //always peer host
   int percentLoadOnActive; // the percent of load to be distributed to active
   MHgdCtl m_gdCtl[MHmaxGd]; // Global data objects control information

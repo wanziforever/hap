@@ -19,7 +19,7 @@
 ** NOTES:
 */
 
-#include "hdr/GLreturns.hh"
+#include "hdr/GLreturns.h"
 
 enum MHresult {
 	MHnoEnt = MSGH_FAIL,    // not exist ( = -12000)

@@ -17,8 +17,8 @@
 #include <sys/types.h> // UNIX-defiend typedefs
 //#include <synch.h>
 #include <pthread.h>
-#include "hdr/GLtypes.hh"
-#include "hdr/GLreturns.hh"
+#include "hdr/GLtypes.h"
+#include "hdr/GLreturns.h"
 #include "cc/hdr/init/INshmkey.hh"
 //#include "cc/hdr/cr/CRciMem.hh"
 
@@ -230,9 +230,9 @@ typedef struct {
   Short  error_count; // Number of system accumulated errors
   Short  fill; // 64 bit alignemnt fill
   int shm_lock_cnt;
-  struct CRciMem ci_data; // SYSTAT critical indicator data
-  pthread_mutex shm_lock;
-  struct INshmemInfo INshmemInfo shmem[INmaxSegs];
+  //struct CRciMem ci_data; // SYSTAT critical indicator data
+  pthread_mutex_t shm_lock;
+  struct INshmemInfo shmem[INmaxSegs];
   IN_PTAB in_ptab[IN_SNPRCMX];
 } IN_SDATA;
 

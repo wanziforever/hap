@@ -9,9 +9,9 @@
 #include <stdio.h>  /* For printf() declaration */
 #include <signal.h>
 
-#include "hdr/GLtypes.hh" /* SN-wide typedefs */
-#include "hdr/GLreturns.hh" // SN-wide return values
-#include "hdr/GLmsgs.hh"
+#include "hdr/GLtypes.h" /* SN-wide typedefs */
+#include "hdr/GLreturns.h" // SN-wide return values
+#include "hdr/GLmsgs.h"
 
 #include "cc/hdr/init/INinit.hh" // INIT data structures & constants
 #include "cc/hdr/init/INproctab.hh" // INIT data structures modified
@@ -23,7 +23,7 @@
 #define NORM_MODE (int) 0x0202 // Run processes in Normal Mode
 
 #if defined(c_plusplus) | defined(__cplusplus)
-extern "C" Short sysinit(int, char *[], SN_LVL, U_CHAR);
+extern "C" Short sysinit(int, char *[], SN_LVL, U_char);
 extern "C" Short procinit(int, char *[], SN_LVL, U_char);
 extern "C" Short cleanup(int, char *[], SN_LVL, U_char);
 extern "C" Short process(int, char *[], SN_LVL, U_char);

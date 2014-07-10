@@ -6,11 +6,11 @@
 //  or virtual functions. (And anything in the class
 //  can not contain any.)
 
-#include "hdr/GLreturns.hh"
+#include "hdr/GLreturns.h"
 #include "cc/hdr/msgh/MHpriority.hh"
-#include "cc//hdr/msgh/MHqid.hh"
+#include "cc/hdr/msgh/MHqid.hh"
 
-class MHmsgbase {
+class MHmsgBase {
 public:
   MHmsgBase() : priType(0), msgType(0) {}
   Void printname();

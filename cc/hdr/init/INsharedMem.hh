@@ -7,7 +7,7 @@
 // allocated/deallocate shared memory segments so that INIT
 // can manage all shared memory usage on the SCN.
 
-#include "hdr/GLtypes.hh"
+#include "hdr/GLtypes.h"
 #include "cc/hdr/init/INshmkey.hh"
 #include <sys/ipc.h>
 
@@ -32,6 +32,6 @@ private:
   static U_short next_seg;
 };
 
-extern INshareMem INshmem;
+extern INsharedMem INshmem;
 
 #endif

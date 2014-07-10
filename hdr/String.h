@@ -8,9 +8,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <Pool.h>
 #include <memory.h>
 #include <iostream>
+#include "Pool.hh"
 
 using namespace std;
 
@@ -58,6 +58,21 @@ public:
   int size() { return i; }
 };
 
+
+enum {MaxIntSz = 16, MaxLongSz = 32};
+
+inline String int_to_str(int i) {
+  char in[MaxIntSz] = {'\0'};
+  sprintf(in, "%d", i);
+  return String(in);
+}
+
+inline String long_to_str(long l) {
+  char in[MaxLongSz] = ['\0'];
+  sprintf(in, "%d", l);
+  return String(l);
+}
+
 class String {
   Srep *d;
   friend class Tmpstring;
@@ -72,7 +87,7 @@ public:
   String(const char*);
   String(const char*, unsigned);
   String(char c) { d = Srep::new_srep(1); d->str[0]=c; }
-  String(Stringsize s) { d = Srep::new_srep(s, i); d->len=0; }
+  String(Stringsize s) { d = Srep::new_srep(s.i); d->len=0; }
   String(const String& s) {
     d = s.d; d->rcinc();
     if (d->refc == 0 && d->max !=0) s.overflow();
@@ -80,7 +95,7 @@ public:
   inline String(const Tmpstring&);
   inline String(const Substring&);
   friend String int_to_str(int);
-  friend String long_to_string(long);
+  friend String long_to_str(long);
   inline operator const char*() const;
   ~String() { d->rcdec(); }
   // ASSIGNMENT
@@ -91,14 +106,14 @@ public:
   String& operator=(Stringsize);
   // CHANGE SIZE
   void reserve(Stringsize n) {
-    if (n.i >= d->max) reserve_grow(n, i);
+    if (n.i >= d->max) reserve_grow(n.i);
   }
-  inline void shrink(int);
+  inline void shrink(unsigned int);
   // special version for G2++
-  void g2_shrink(int newlen) { if(newlen < d->len) d-> = newlen; }
+  void g2_shrink(unsigned int newlen) { if(newlen < d->len) d->len = newlen; }
   // APPENDING
   String& operator+=(const String&);
-  void append(const char*, unsigend len);
+  void append(const char*, unsigned len);
   String& operator+=(const char*);
   inline String& operator+=(char);
   inline String& put(const String&);
@@ -116,7 +131,7 @@ public:
   void g2_pad(int n, int att_pad_char = -1) {
     if (n + d->len >= d->max) reserve_grow(n + d->len);
     if (att_pad_char != -1) memset(&d->str[d->len], att_pad_char, n);
-    d>len += n;
+    d->len += n;
   }
   unsigned length() const { return d->len; }
   int is_empty() const { return d->len ? 0:1; }
@@ -127,8 +142,8 @@ public:
   inline void uniq();
   inline char char_at(unsigned) const;
   char& operator[](unsigned);
-  char& operaator[](int i) { return ((*this).operator[]((unsigned) i)); }
-  inline char operator[](unsigned) cosnt;
+  char& operator[](int i) { return ((*this).operator[]((unsigned) i)); }
+  inline char operator[](unsigned) const;
   char operator[](int i) const { return ((*this).operator[]((unsigned) i)); }
   Substring operator()(unsigned, unsigned);
   Substring operator()(unsigned);
@@ -136,7 +151,7 @@ public:
   String chunk(unsigned) const;
   int index(const String&, unsigned pos = 0) const;
   int index(char, unsigned pos = 0) const;
-  int hasval() const;
+  int hashval() const;
   char *dump(char *s) const {
     memcpy(s, d->str, d->len);
     s[d->len] = '\0'; return s;
@@ -150,7 +165,7 @@ public:
   inline int firstX(char&) const;
   inline int lastX(char&) const;
   // COMPARISON OPERATORS
-  inline in compare(const String&) const;
+  inline int compare(const String&) const;
   inline int compare(const char*) const;
   friend inline int operator==(const String&, const String&);
   friend inline int operator==(const String&, const char*);
@@ -167,7 +182,7 @@ public:
   int strchr(char) const;
   int strrchr(char) const;
   int strpbrk(const String&) const;
-  int strspn(consst String&) const;
+  int strspn(const String&) const;
   int strcspn(const String&) const;
   // MISCELLANEOUS
   int match(const String&) const;
@@ -192,7 +207,7 @@ public:
   Tmpstring(Srep* r) { strung=0; d=r; }
   Tmpstring(const String& s) {
     strung = 0; d = s.d; s.d->rcinc();
-    if (d->refc == 0 && d->max != 0) t.overflow();
+    if (d->refc == 0 && d->max != 0) s.overflow();
   }
   Tmpstring(const Tmpstring& t) {
     strung = 0; d = t.d; d->rcinc();
@@ -205,12 +220,12 @@ public:
   friend ostream& operator<<(ostream&, const Tmpstring&);
 };
 
-class Substrin {
-  firend class String;
+class Substring {
+  friend class String;
   String *ss;
-  int ool
+  int oo;
   int ll;
-  Substring(String &1, int o, int l) : ss(&i), oo(o), ll(l) {}
+  Substring(String &i, int o, int l) : ss(&i), oo(o), ll(l) {}
 public:
   Substring(const Substring&);
   void operator=(const Substring& s) { operator=(String(s)); }
@@ -218,7 +233,7 @@ public:
   String *it() const { return ss; }
   int offset() const { return oo; }
   int length() const { return ll; }
-  frient ostream& operator<<(ostream&, const Substring&);
+  friend ostream& operator<<(ostream&, const Substring&);
 };
 
 // inline functions
@@ -263,16 +278,14 @@ String::operator=(char c) {
   return *this;
 }
 
-inline String&
-String::compare(const String& s) const {
+inline int String::compare(const String& s) const {
   register int dlen = d->len;
   register int slen = s.d->len;
   register int i = memcmp(d->str, s.d->str, dlen < slen?dlen : slen);
   return i ? i : (dlen - slen);
 }
 
-inline int
-String::compare(const char* s) const {
+inline int String::compare(const char* s) const {
   register int dlen = d->len;
   register int ln = s ? strlen(s) : 0;
   register int i = memcmp(d->str, s, (dlen < ln ? dlen : ln));
@@ -290,7 +303,7 @@ compare(const String& s, const String& t) { return s.compare(t); }
 
 inline int
 operator==(const String& t, const String& s) {
-  register int dlen = t.d->len;
+  register unsigned int dlen = t.d->len;
   register int retval;
   if ((dlen != s.d->len) || (dlen && t.d->str[0] != s.d->str[0]) || (dlen>1 && t.d->str[1] != s.d->str[1]))
      retval = 0;
@@ -301,7 +314,7 @@ operator==(const String& t, const String& s) {
 
 inline int
 operator==(const String& t, const char* s) {
-  register int dlen = t.d->len;
+  register unsigned int dlen = t.d->len;
   register int retval;
   if (!s || (dlen && t.d->str[0]!=s[0]) || (dlen>1 && s[0]!='\0' && t.d->str[1]!=s[1]))
      retval = 0;
@@ -315,7 +328,7 @@ operator==(const char* s, const String& t) { return t==s; }
 
 inline int
 operator!=(const String& t, const String& s) {
-  register int dlen = t.d > len;
+  register unsigned int dlen = t.d->len;
   register int retval;
   if ((dlen != s.d->len) || (dlen && t.d->str[0] != s.d->str[0]) || (dlen>1 && t.d->str[1] != s.d->str[1]))
      retval = 1;
@@ -326,7 +339,7 @@ operator!=(const String& t, const String& s) {
 
 inline int
 operator!=(const String& t, const char* s) {
-  register int dlen = t.d->len;
+  register unsigned int dlen = t.d->len;
   register int retval;
   if (!s || (dlen && t.d->str[0]!=s[0]) || (dlen>1 && s[0]!='\0' && t.d->str[1]!=s[1]))
      retval = 1;
@@ -408,14 +421,14 @@ String::lastX(char &c) const {
 }
 
 inline int length(const String& s) { return s.length(); }
-inline int hashval(const Srting& s) { return s.hashval(); }
+inline int hashval(const String& s) { return s.hashval(); }
 
 String sgets(istream&);
-int fgets(String&, int, FILES*);
-int fgets(String&, FILES*);
+int fgets(String&, int, FILE*);
+int fgets(String&, FILE*);
 int gets(String&);
 
-char* Memcpy_String_ATTLC(register char*, register const char*, int);
+char* Memcpy_String(register char*, register const char*, int);
 
 inline String& String::operator+=(char c) {
   int append_to_current = 1;
@@ -429,10 +442,9 @@ inline String& String::operator+=(char c) {
 
 inline String& String::put(const String& s) {return *this += s; }
 inline String& String::put(const char* s) { return *this += s; }
-inline String& string::put(char c) { return *this += c; }
+inline String& String::put(char c) { return *this += c; }
 
-inline vod
-String::uniq() {
+inline void String::uniq() {
   register Srep *x;
   if (d->refc > 1) {
     x = Srep::new_srep(d->len);
@@ -443,7 +455,7 @@ String::uniq() {
 }
 
 inline void
-String::shrink(int newlen) {
+String::shrink(unsigned int newlen) {
   uniq();
   if (newlen < d->len)
      d->len = newlen;

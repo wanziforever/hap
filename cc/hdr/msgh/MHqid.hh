@@ -1,7 +1,7 @@
 #ifndef _MHQID_H
 #define _MHQID_H
 
-#include "hdr/GLtypes.hh"
+#include "hdr/GLtypes.h"
 #include <iosfwd>
 
 
@@ -11,11 +11,11 @@ class MHqid {
   friend class MHrt;
   friend class MHinfoExt;
   friend Long MHprocessmsg(MHqid&);
-  friend void MHhdlLrgMsg(MHlrgmsg*);
+  friend void MHhdlLrgMsg(MHlrgMsg*);
   friend std::ostream& operator << (std::ostream&, const MHqid&);
 
 public:
-  int operator==(const MHqid qid) cosnt {
+  int operator==(const MHqid qid) const {
     return(id == qid.id);
   }
   int operator!=(const MHqid qid) const {
@@ -49,12 +49,10 @@ extern String int_to_str(MHqid qid);
 extern int MHnullq;
 #define MHnullQ (*(MHqid*)&MHnullq)
 
-typedef struct {
-  int id;
-} MHqid;
+//typedef struct {
+//  int id;
+//} MHqid;
 
-extern MHqid MHnullQ;
-
-#define MHnullQ -1
+//extern MHqid MHnullQ;
 
 #endif

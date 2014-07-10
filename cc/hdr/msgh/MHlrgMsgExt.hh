@@ -10,7 +10,7 @@
 //        this file change. then the shared memory used by INIT
 //        will be impacted
 
-#include "hdr/GLtypes.hh" // SN-specific typedefs
+#include "hdr/GLtypes.h" // SN-specific typedefs
 
 // Size and number of shared memory blocks that can be allocated
 // for a process

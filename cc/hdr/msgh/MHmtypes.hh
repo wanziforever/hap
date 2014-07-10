@@ -9,7 +9,7 @@
 ** Time:		19:19:16
 ** Newest applied delta:05/12/03
 */
-#include "hdr/GLmsgs.hh"
+#include "hdr/GLmsgs.h"
 const U_short MHregNameTyp = MHMSGBASE;         // register name msg 
 const U_short MHregAckTyp = MHMSGBASE+1;        // register name ACK msg
 const U_short MHrmNameTyp = MHMSGBASE+2;        // remove name msg

@@ -6,8 +6,8 @@
 //  are available to any process in the system. not necessarily
 //  only one running under INIT control
 
-#include "hdr/GLtypes.hh"  // SN-wide typedefs
-#include "hdr/GLreturns.hh" // SN-wide return values
+#include "hdr/GLtypes.h"  // SN-wide typedefs
+#include "hdr/GLreturns.h" // SN-wide return values
 
 #if defined(c_plusplus) | defined(__cplusplus)
 extern "C" Long INvmemsize();

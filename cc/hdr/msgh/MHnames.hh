@@ -8,7 +8,7 @@
 //  Note that this name restriction is only for the Queue name.
 //  The machine name can be another MHmaxNameLen bytes long.
 
-#include "hdr/GLtypes.hh"
+#include "hdr/GLtypes.h"
 
 // Number of characters in a name recognized by the MSGH
 // If this is ever changed, be sure to update the version

@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 
-#include "hdr/GLreturns.hh"
+#include "hdr/GLreturns.h"
 #include "cc/hdr/init/INinit.hh"
 #include "cc/hdr/msgh/MHnames.hh"
 #include "cc/hdr/msgh/MHqid.hh"
@@ -22,9 +22,9 @@
 
 #define IN_SHM_ERR 254
 
-#define IN_PATHNMMAX 164 // Max Characters in Pathname
-#define IN_EPATHNMMAX 124 // Max Characters in Ext Pathname
-#define IN_OPATHNMMAX 80 // Max Characters in Ofc Pathname
+#define IN_PATHNMMX 164 // Max Characters in Pathname
+#define IN_EPATHNMMX 124 // Max Characters in Ext Pathname
+#define IN_OPATHNMMX 80 // Max Characters in Ofc Pathname
 
 #define IN_NAMEMX (MHmaxNameLen+1) // Max space for characters in process name
 #define IN_NUMINITS 10 // Max number of system-wide inits, for
@@ -40,7 +40,7 @@
                               INprio_map[priority]:INprio_map[IN_MAXPRIO/2])
 #define INmaxResourceGroups 32
 #define INmaxResource 31
-#define INmaxNodename 15
+#define INmaxNodeName 15
 #define INmaxVhosts 2
 #define INfixQ  4096
 
@@ -162,7 +162,7 @@ typedef struct {
     U_char prun_lvl;  // Last run Level
     char fillChar;
     Short fillshort;
-    Char msgh_name[iN_NAMEMX]; // Proc. which requested on initialization
+    Char msgh_name[IN_NAMEMX]; // Proc. which requested on initialization
   } init_data[IN_NUMINITS];
 } IN_INFO;
 
@@ -175,7 +175,7 @@ typedef struct {
   Short shortspare;
   Short ps;   // Processor set this process belongs to
   U_long startime; // Process ID
-  thread_t tid; // thread id of third party thread
+  pthread_t tid; // thread id of third party thread
   U_short peg__intvl;  // Process Sanity interval
   U_short rstrt_intvl; // Interval over which the process
                        // restart threashold is to be measured
@@ -238,7 +238,7 @@ typedef struct {
   Long time_missedsan;  // Time (sec) since sanity pegged
   IN_SYNCSTEP gqsync; // Synchronization step for global queue
   Long q_size;  // Unix queue size
-  MHqid gqid[INmaxgQids]; // GLobal queue id
+  MHqid gqid[INmaxQids]; // GLobal queue id
   MHqid realQ;
 } IN_PROCESS_DATA;
 
@@ -319,7 +319,7 @@ typedef struct {
   // Nodes that can be active
   char active_nodes[INmaxResourceGroups][INmaxNodeName+1];
   // Nodes that can be oam lead
-  char oam_lead[INmaxResourceGroups][INmaxNodename+1];
+  char oam_lead[INmaxResourceGroups][INmaxNodeName+1];
   // Nodes in oam cluster that cannot take over as lead
   char oam_other[INmaxResourceGroups][INmaxNodeName+1];
 

@@ -16,10 +16,10 @@
 
 
 #include <sys/types.h>
-#include <pthread.h>
-//#include <synch.h>
 #include <netinet/in.h>
-#include "hdr/GLtypes.hh"
+#include "pthread.h"
+//#include "synch.h"
+#include "hdr/GLtypes.h"
 #include "cc/hdr/msgh/MHresult.hh"
 #include "cc/hdr/msgh/MHnames.hh"
 #include "cc/hdr/msgh/MHqid.hh"
@@ -43,7 +43,7 @@ enum MHregisterTyp {
   MH_GLOBAL, /* Register within a system if defined , otherwise register
                 in all known nodes */
   MH_LOCAL,  /* Register on this machine only. */
-  MH_DEFALUT, /* Register to default - GLOBAL for libplat users,
+  MH_DEFAULT, /* Register to default - GLOBAL for libplat users,
                  LOCAL for libplatn users */
   MH_CLUSTER_GLOBAL /* Register within all nodes in the cluster regardless
                        if system is defined or not */
@@ -61,7 +61,7 @@ enum MHoamMemberType {
   MH_oamOther /* Return only members not capable of being OA&M lead */
 };
 
-enum MHcluserScope {
+enum MHclusterScope {
   MH_scopeSystemAll, /* All member of a system */
   MH_scopeSystemPilot, /* Only oam lead (pilot) nodes */
   MH_scopeSystemOther, /* Only ono-pilot nodes */
@@ -89,7 +89,7 @@ public:
   MHinfoExt();
   GLretVal attach(char *attach_address = 0); // attach to MSGH subsystem
   GLretVal detach(); // detach from the MSGH subsystem
-  GLretVal getMHqid(const Char *name, MHqid &mhqid, Bool unused=FALSE) const;
+  GLretVal getMhqid(const Char *name, MHqid &mhqid, Bool unused=FALSE) const;
   GLretVal getMhqidOnNextHost(Short& hostid, const Char *name,
                               MHqid &mhqid) const;
   GLretVal getMhqidOnNextHost(Short& hostid, const Char *name, MHqid &mhqid,
@@ -116,6 +116,8 @@ public:
                       Long time=0, Bool buffered=TRUE);
   // Gets the real queue currently to this global queue
   GLretVal global2Real(MHqid globalQ, MHqid &realQ);
+  // get logical name of my host i.e cc0
+  GLretVal getMyHostName(char* name);
   // return logical name for a specific hostid
   GLretVal hostid2Name(Short hostid, char* name);
   // get hostid from logical name
@@ -145,7 +147,7 @@ public:
                      Bool buffered=TRUE) const;
   int sendToAllHosts(const Char *name, Char *msgp, Long msgsz,
                      MHclusterScope scope, Long time=0, Bool buffered=TRUE) const;
-  GLretVal receive(MHqid mhqid, Char *msgp, Long &msgsz, Long ptype=0,
+  GLretVal receive(MHqid mhqid, Char *msgp, Short &msgsz, Long ptype=0,
                    Long time=0) const;
   GLretVal receive(MHqid mhqid, Char *msgp, Long &msgsz, Long ptype=0,
                    Long time=0) const;
@@ -181,12 +183,12 @@ public:
   Bool audMutex();
   GLretVal getNetState(Short &hostid, Bool &net0, Bool &net1);
   GLretVal getEnvType(MHenvType &env);
-  GLretVal getIpAddress(const Char *lname, unsigned int inum, sockaddr__in6& addr);
+  GLretVal getIpAddress(const Char *lname, unsigned int inum, sockaddr_in6& addr);
   // TRUE if the logical host name is a CC
   Bool isCC(const char *name);
 
   // Rretreive measurement statistics for a queue
-  GlretVal getQidStats(MHqid qid, MHqStats& qdata);
+  GLretVal getQidStats(MHqid qid, MHqStats& qdata);
   // Rreset queue statistics
   GLretVal resetQidStats(MHqid qid);
   GLretVal emptyQueue(MHqid qid);
@@ -206,16 +208,16 @@ private:
   GLretVal regQueue(const Char* name, MHqid realQ, MHqid& virtualQ,
                     Bool bKeepOnLead, Bool ClusterGlobal, Bool isGlobal);
   // Map the UNIX error to an MSGH error
-  static GlretVal MHmapError(int, short, MHqid qid=MHnullQ);
+  static GLretVal MHmapError(int, short, MHqid qid=MHnullQ);
   static Bool isAttach; // =TRUE if attached to MSGH
   static MHrt *rt; // point to routing tables
   static MHqid msghMhqid; // MSGH process's mhqid
   static pid_t pid; // process id
   static U_short nameCount; // number of names for this process
   static int sock_id; // Socket number for UDP comm
-  static U_short imsgid; // long message id
+  static U_short lmsgid; // long message id
   static int *pSigFlg; // Flag to check prior to calling msgrcv
-  static mutex_t m_lock; // Used to make send thread safe
+  static pthread_mutex_t m_lock; // Used to make send thread safe
   static char* m_buffers; // Address of buffer shared memory
 
   static char *m_free256;

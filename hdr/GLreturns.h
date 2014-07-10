@@ -15,7 +15,7 @@
 */
 
 #if defined(c_plusplus) | defined(__cplusplus)
-#	include "hdr/GLtypes.hh"
+#	include "hdr/GLtypes.h"
 #	define GLsuccess	0
 #	define GLfail		-1
 #else

@@ -10,7 +10,7 @@
 // between these two parts
 
 #include <sys/types.h>
-#include "hdr/GLtypes.hh"
+#include "hdr/GLtypes.h"
 #include "cc/hdr/msgh/MHmsgBase.hh"
 #include "cc/hdr/msgh/MHdefs.hh"
 #include "cc/hdr/msgh/MHmtypes.hh"
@@ -36,7 +36,7 @@ struct MHregName {
   Long ptype;   // priority type
   MHqid sQid;   // Source queue
   MHqid toQue;  // The qid send To - used by MSGH for network sends
-  SHort mtype;  // message type
+  Short mtype;  // message type
   Short msgSz;  // message size - used by MSGH only
   U_short seq;  // Sequence number of messages
   U_short rSeq;
@@ -51,7 +51,7 @@ struct MHregName {
   Bool global;  // QID sent globally or not
   MHqid mhqid;  // requested QID (-1 for assgin one to me)
   Long q_size;  // Size of this queue
-  Short q_limit // limit for number of messages
+  Short q_limit; // limit for number of messages
   Bool rcvBroadcast; // True if this queue receives broadcast messages
   Bool gQ;  // True if global queue
   Bool dQ;  // True if distributive queue
@@ -205,7 +205,7 @@ struct MHdQMap {
   MHdQData dqdata[MHdQaudEntries]; 
 };
 
-struct MHgQset {
+struct MHgQSet {
   Long ptype;   // priority type
   MHqid sQid;   // Source queue
   MHqid toQue;  // The qid sent TO - used by MSGH for network sends
@@ -225,7 +225,7 @@ struct MHdQSet {
   Long ptype;  // priority type
   MHqid sQid;  // Source queue
   MHqid toQue; // The qid sent TO - used by MSGH for network sends
-  Short mytype; // message type
+  Short mtype; // message type
   Short msgSz; // message size - used by MSGH only
   U_short seq; // Sequence number of messages
   U_short rSeq;

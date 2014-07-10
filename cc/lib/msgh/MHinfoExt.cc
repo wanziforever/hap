@@ -9,7 +9,8 @@
 #include <errno.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <sys/times.h> // setitimer()
+#include <sys/time.h> // setitimer()
+#include <sys/times.h>
 #include <string.h>
 #include <setjmp.h>
 #include <memory.h>
@@ -31,7 +32,7 @@
 //#include <cc/hdr/cr/CRdebugMsg.hh>
 
 // self defined string class and utils
-#include <String.h>
+#include "String.h"
 
 // defined in time.h, used to convert the result of clock() to seconds
 static int MHLCLK_TCK = CLOCKS_PER_SEC;
@@ -45,8 +46,9 @@ ostream& operator<<(ostream& output, const MHqid& qid) {
   return(output);
 }
 
+
 String int_to_str(MHqid qid) {
-  return(int_to_str(qid << 0));
+  return int_to_str(qid << 0);
 }
 
 // Table of mod values for unbalanced distributive queue traffic
@@ -77,11 +79,11 @@ Bool MHinfoExt::isAttach = FALSE; // not attach to MSGH
 MHrt *MHinfoExt::rt = (MHrt *) 0;
 MHqid MHinfoExt::msghMhqid = MHnullQ;
 pid_t MHinfoExt::pid = 0;
-U_short MHinfoEt::nameCount = 0;
+U_short MHinfoExt::nameCount = 0;
 int MHinfoExt::sock_id = -1;
 U_short MHinfoExt::lmsgid = 0;
 int *MHinfoExt::pSigFlg = NULL;
-mutex_t MHinfoExt::m_lock;
+pthread_mutex_t MHinfoExt::m_lock;
 char* MHinfoExt::m_buffers;   // Address of buffer shared memory
 char* MHinfoExt::m_free256;   // Free status of 256 byte buffers
 char* MHinfoExt::m_free1024;  // Free status of 1024 byte buffers
@@ -95,22 +97,26 @@ MHenvType MHinfoExt::prefEnv;
 
 MHinfoExt::MHinfoExt() {}
 
-GLretval MHinfoExt::GetSocket() {
+GLretVal MHinfoExt::GetSocket() {
   int ret;
   if (isAttach == FALSE)
      return (MHnoAth);
 
   if (sock_id < 0) {
     // Our first off-host message, set up the socket
-    if ((socket_id = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-      MHERROR(("MHinfoExt::GetSocket - Couldn't get socket "
-               "errno %d", errno));
+    if ((sock_id = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+      //MHERROR(("MHinfoExt::GetSocket - Couldn't get socket "
+      //         "errno %d", errno));
+      printf("MHinfoExt::GetSocket - Couldn't get socket "
+             "errno %d", errno);
       return(MHmapError(errno, __LINE__));
     }
     ret = fcntl(sock_id, F_SETFL, O_NDELAY);
     if (ret < 0) {
-      MHERROR(("MHinfoExt::GetSocket - Couldn't set socket %d to "
-               "nodelay errno %d", errno));
+      //MHERROR(("MHinfoExt::GetSocket - Couldn't set socket %d to "
+      //         "nodelay errno %d", errno));
+      printf("MHinfoExt::GetSocket - Couldn't set socket %d to "
+             "nodelay errno %d", sock_id, errno);
       return(MHmapError(errno, __LINE__));
     }
   }
@@ -122,7 +128,7 @@ GLretval MHinfoExt::GetSocket() {
 // IBM swerbner 20061009 add default param to signature
 GLretVal MHinfoExt::MHmapError(int unixError, short line, MHqid qid) {
   GLretVal ret;
-  MHDEBUG((CRmsgh+1, ("MHmapError: Line %d Errno %d", line, unixError)));
+  //MHDEBUG((CRmsgh+1, ("MHmapError: Line %d Errno %d", line, unixError)));
   switch (unixError) {
   case EAGAIN:
     ret = MHagain;
@@ -146,8 +152,8 @@ GLretVal MHinfoExt::MHmapError(int unixError, short line, MHqid qid) {
     ret = MHintr;
     break;
   default:
-    MHDEBUG_PRINT((CRmsgh+1, ("MHmapError: Line %d Unkown errno %d, "
-                              "qid %s", line, unixError, qid.display())));
+    //MHDEBUG_PRINT((CRmsgh+1, ("MHmapError: Line %d Unkown errno %d, "
+    //                          "qid %s", line, unixError, qid.display())));
     ret = MHother;
     break;
   }
@@ -202,12 +208,12 @@ GLretVal MHinfoExt::attach(Char *attach_address) {
   if (m_buffers == (char *)-1) {
     return (MHnoMem); // data space is not big enough
   }
-  m_free256 = mbuffers;
+  m_free256 = m_buffers;
   m_free1024 = m_free256 + rt->m_n256;
   m_free4096 = m_free4096 + rt->m_n4096;
   m_free16384 = m_free4096 + rt->m_n4096;
   MHrt::datafree = m_free16384 + rt->m_n16384;
-  m_buffer256 = MHrt::datafree + rt->NumChunks;
+  m_buffer256 = MHrt::datafree + rt->m_NumChunks;
   m_buffer1024 = m_buffer256 + (rt->m_n256 << 8);
   m_buffer4096 = m_buffer1024 + (rt->m_n1024 << 10);
   m_buffer16384 = m_buffer4096 + (rt->m_n4096 << 12);
@@ -216,7 +222,7 @@ GLretVal MHinfoExt::attach(Char *attach_address) {
   pid = getpid();  // get process id
   isAttach = TRUE; // update flag
   nameCount = 0; //reset counter
-  memset(&m_lock, 0x0, sizeof(mutex_t));
+  memset(&m_lock, 0x0, sizeof(pthread_mutex_t));
   MHmaxCargoSz = rt->m_MinCargoSz + MHmsgSz;
 
   if (rt->percentLoadOnActive > 50) {
@@ -225,7 +231,7 @@ GLretVal MHinfoExt::attach(Char *attach_address) {
 
   // In homogenous clusters, preferred environment is unambigulious
   // In mixed clusters, MH_standard will always be default on AA members
-  prefEnv = rt->envType;
+  prefEnv = rt->m_envType;
   return (GLsuccess);
 }
 
@@ -250,7 +256,7 @@ GLretVal MHinfoExt::detach() {
 // A findDeleted argument has been deleted as being not usefull,
 // and hard to implement in the new architecture.
 GLretVal MHinfoExt::getMhqid(const Char *name, MHqid &mhqid, Bool) const {
-  if (isAttach = FALSE)
+  if (isAttach == FALSE)
      return (MHnoAth);
   if ((mhqid = rt->findName(name)) == MHnullQ) {
     return (MHnoEnt);
@@ -276,7 +282,7 @@ GLretVal MHinfoExt::getMhqidOnNextHost(Short& hostid, const Char *name,
 }
 
 GLretVal MHinfoExt::getMhqidOnNextHost(Short& hostid, const Char *name,
-                                       MHqid &mhqid, MHclusterScop scope) const {
+                                       MHqid &mhqid, MHclusterScope scope) const {
   if (isAttach == FALSE)
      return (MHnoAth);
   while (TRUE) {
@@ -344,7 +350,7 @@ GLretVal MHinfoExt::getName(MHqid mhqid, Char *name, Bool) const {
 GLretVal MHinfoExt::regName(const Char *name, MHqid &mhqid,
                             Bool isCondReg, Bool getnewQ, Bool,
                             MHregisterTyp regtyp, Bool RcvBroadcast,
-                            init *sigFlag) {
+                            int *sigFlg) {
   MHregName regName; // reg name message
   MHregAck regAck; // reg name ACK message
 
@@ -385,7 +391,7 @@ GLretVal MHinfoExt::regName(const Char *name, MHqid &mhqid,
   regName.mhqid = MHnullQ;
   switch (regtyp) {
   case MH_GLOBAL:
-    regName.global = TURE;
+    regName.global = TRUE;
     break;
   case MH_LOCAL:
     regName.global = FALSE;
@@ -406,7 +412,7 @@ GLretVal MHinfoExt::regName(const Char *name, MHqid &mhqid,
         rt->localdata[MHQID2QID(rt->rt[procindex].mhqid)].pid != (pid_t) -1 &&
         kill(rt->localdata[MHQID2QID(rt->rt[procindex].mhqid)].pid, 0) < 0) {
       rt->localdata[MHQID2QID(rt->rt[procindex].mhqid)].pid == pid;
-      mhqid = rt->[procindex].mhqid;
+      mhqid = rt->rt[procindex].mhqid;
       //if (strcmp(name, "INIT") != 0 && strcmp(name, "MHPROC") != 0 &&
       //    strcmp(name, "INITMON") != 0) {
       //  CRomBrevityCtl::attachGDO();
@@ -429,7 +435,7 @@ GLretVal MHinfoExt::regName(const Char *name, MHqid &mhqid,
   regName.pid = pid;
   regName.rcvBroadcast = RcvBroadcast;
   regName.gQ = FALSE;
-  regName.DQ = FALSE;
+  regName.dQ = FALSE;
   regName.realQ = MHnullQ;
   regName.bKeepOnLead = FALSE;
   regName.q_size = IN_Q_SIZE_LIMIT();
@@ -450,13 +456,13 @@ GLretVal MHinfoExt::regName(const Char *name, MHqid &mhqid,
                      msgSz, MHregPtyp, MHregTimeOut)) != GLsuccess) {
     if (ret == MHintr)
        goto reAgain;
-    rt->localdata[MHQID2QID(regName.mhqid)].inuse = FALSE;
+    rt->localdata[MHQID2QID(regName.mhqid)].inUse = FALSE;
     rt->localdata[MHQID2QID(regName.mhqid)].pid = (pid_t)-1;
     return (MHnoCom);
   }
   if (regAck.mtype == MHregAckTyp) {
     if (regAck.reject == TRUE) {
-      rt->localdata[MHQID2QID(regName.mhqid)].inuse = FALSE;
+      rt->localdata[MHQID2QID(regName.mhqid)].inUse = FALSE;
       rt->localdata[MHQID2QID(regName.mhqid)].pid = (pid_t)-1;
       return (MHnoCom);
     } else {
@@ -552,10 +558,10 @@ GLretVal MHinfoExt::rmName(MHqid mhqid, const Char *name, Bool isUncondRm) {
 // function return immediately; otherwise, the function will try
 // to send the message out in the milliseconds. If the message
 // can not be send out before time expireation, the function returns.
-GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
+GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
                          Long time, Bool buffered) const {
   struct timespec tsleep;
-  static unsigned in sndcount = 0;
+  static unsigned int sndcount = 0;
 
   if (isAttach == FALSE) {
     return (MHnoAth);
@@ -584,7 +590,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
   // if host is a lobal queue, perform translation to real
   // queue before continuing
   if (host == MHgQHost) {
-    if (qid >= (MHsystemGloabl + MHmaxgQid)) {
+    if (qid >= (MHsystemGlobal + MHmaxgQid)) {
       return (MHbadQid);
     }
     int selectedQ = rt->gqdata[qid].m_selectedQ;
@@ -592,27 +598,27 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
       // No process exists to handle this global Q
       return (MHnoQAssigned);
     }
-    mhqid = rt->gqdata[qid].m_realQ[selectdQ];
+    mhqid = rt->gqdata[qid].m_realQ[selectedQ];
     host = MHQID2HOST(mhqid);
     qid = MHQID2QID(mhqid);
   } else if (host == MHdQHost) { // Distributive queue
-    mutex_lock(&rt->m_dqLock);
+    pthread_mutex_lock(&rt->m_dqLock);
     rt->m_dqcnt++;
     distRetry:
-    sndCount++;
+    sndcount++;
     if (rt->dqdata[qid].m_nextQ == MHempty) {
-      mutex_unlock(&rt->m_qdLock);
+      pthread_mutex_unlock(&rt->m_dqLock);
       return (MHnoQAssigned);
     }
     int i;
     for (i = 0; i < rt->dqdata[qid].m_maxMember; i++) {
       if (rt->dqdata[qid].m_enabled[rt->dqdata[qid].m_nextQ]) {
-        mhqid = rt->dqdata[qid].m_realQ[rt->dqdata[qid].nextQ];
+        mhqid = rt->dqdata[qid].m_realQ[rt->dqdata[qid].m_nextQ];
         rt->dqdata[qid].m_nextQ++;
         if (rt->dqdata[qid].m_nextQ >= rt->dqdata[qid].m_maxMember) {
           rt->dqdata[qid].m_nextQ = 0;
         }
-        host = mHQID2HOST(mhqid);
+        host = MHQID2HOST(mhqid);
         break;
       }
       rt->dqdata[qid].m_nextQ++;
@@ -621,7 +627,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
       }
     }
     if (i == rt->dqdata[qid].m_maxMember) {
-      mutex_unlock(&rt->m_dqLock);
+      pthread_mutex_unlock(&rt->m_dqLock);
       return (MHnoQAssigned);
     }
     // If unbalanced load is need see if the queue needs to be  recalculated
@@ -633,11 +639,11 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
       int c = sndcount % modVal;
 
       if (c > MHcompValue) {
-        goto disRetry;
+        goto distRetry;
       }
     }
     qid = MHQID2QID(mhqid);
-    mutex_unlock(&rt->m_dqLock);
+    pthread_mutex_unlock(&rt->m_dqLock);
   }
 
   if (host >= MHmaxHostReg || host < 0) {
@@ -657,7 +663,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
       // makes sure the src queue conforms with the view of the receiver
       Short srcHostId = MHQID2HOST(mp->srcQue);
       if (srcHostId != rt->getActualLocalHostIndex(host) &&
-          srcHostID == rt->LocalHostIndex) {
+          srcHostId == rt->LocalHostIndex) {
         mp->srcQue = MHMAKEMHQID(rt->getActualLocalHostIndex(host),
                                  MHQID2QID(mp->srcQue));
       }
@@ -666,7 +672,8 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
     // Message send to remote host. Allow message to MSGH process
     if (rt->isHostActive(host) == FALSE) {
       if (qid != 0 && qid != 1) {
-        MHDEBUG((CRmsgh+1, ("Attempt to send to mhqid %s failed, bad host", mhqid.display())));
+        //MHDEBUG((CRmsgh+1, ("Attempt to send to mhqid %s failed, bad host", mhqid.display())));
+        printf("Attempt to send to mhqid %s failed, bad host", mhqid.display());
         mp->srcQue = tmpSrcQue;
         return (MHnoHost);
       } else {
@@ -680,7 +687,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
       return (retval);
     }
 
-    mp->toQueu = mhqid;
+    mp->toQue = mhqid;
     MHsetHostId(mp, rt->getActualLocalHostIndex(host));
 
     if (msgsz <= MHmsgLimit) {
@@ -712,12 +719,12 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
 
       lmsg->m_size = msgsz;
       lmsg->m_pid = pid;
-      mutex_lock(&m_lock);
+      pthread_mutex_lock(&m_lock);
       lmsg->m_id = lmsgid;
       lmsgid++;
-      mutex_unlock(&m_lock);
+      pthread_mutex_unlock(&m_lock);
       char *pdata = msgp;
-      long ata_left;
+      long data_left;
       int wait_count = 0;
       int wait_limit = 0;
       int size_send;
@@ -727,17 +734,17 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
       }
       lmsg->toQue = MHMAKEMHQID(host, MHrprocQ);
       MHsetHostId(lmsg, rt->getActualLocalHostIndex(host));
-      lmsg->msgTYpe = MHlrtgMsgTyp;
+      lmsg->msgType = MHlrgMsgTyp;
       lmsg->priType = MHintPtyp;
       int i;
       for (i = 0; pdata < msgp + msgsz; i++) {
-        ata_left = msgp + msgsz - pdata;
+        data_left = msgp + msgsz - pdata;
         if (data_left > MHlgDataSz) {
           size_send = MHlgDataSz;
         } else {
           size_send = data_left;
         }
-        memcpy(&lmg->m_data, pdata, size_send);
+        memcpy(&lmsg->m_data, pdata, size_send);
         lmsg->m_seq = i;
         lmsg->msgSz = size_send + MHlgDataHdrSz;
         while ((ret = rt->Send(host, (char*)lmsg,
@@ -749,7 +756,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
           nanosleep(&tsleep, NULL);
           wait_count ++;
           lmsg->toQue = MHMAKEMHQID(host, MHrprocQ);
-          MHsetHostId(lmsg, rt->getActuallLocalHostIdex(host));
+          MHsetHostId(lmsg, rt->getActualLocalHostIndex(host));
           lmsg->msgType = MHlrgMsgTyp;
           lmsg->priType = MHintPtyp;
         }
@@ -757,8 +764,8 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
           break; // for i
         }
         pdata += size_send;
-        if (! & 0x1) {
-          tsleep.v_sec = 0;
+        if (i & 0x1) {
+          tsleep.tv_sec = 0;
           tsleep.tv_nsec = 10000000;
           nanosleep(&tsleep, NULL);
         }
@@ -766,7 +773,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
       free(lmsg);
     }
 
-    if (ret != GLsucess && ret > 0) {
+    if (ret != GLsuccess && ret > 0) {
       mp->srcQue = tmpSrcQue;
       return (MHmapError(ret, __LINE__, mhqid));
     }
@@ -837,7 +844,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
     freeArray = m_free4096;
     pnMeasHigh = &rt->m_nMeasHigh4096;
     pnMeasUsed = &rt->m_nMeasUsed4096;
-    buffer = m_bufer4096;
+    buffer = m_buffer4096;
   } else {
     shift = 14;
     nChunks = (msgsz >> 14) + 1;
@@ -853,7 +860,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
   int i;
   int startIndex;
 
-  mutex_lock(&rt->m_msgLock);
+  pthread_mutex_lock(&rt->m_msgLock);
   rt->m_msgLockCnt++;
 
   for (i = 0; i < nBuffers && got_chunks < nChunks;
@@ -870,7 +877,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
   }
 
   if (rt->m_freeMsgHead < 0 || i == nBuffers) {
-    mutext_unlock(&rt->m_msgLock);;
+    pthread_mutex_unlock(&rt->m_msgLock);;
     return (MHagain);
   }
 
@@ -893,7 +900,7 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
   int msgHead = rt->m_freeMsgHead;
   rt->m_freeMsgHead = rt->msg_head[rt->m_freeMsgHead].m_next;
   rt->msg_head[msgHead].m_next = MHempty;
-  mutex_unlock(&rt->m_msgLock);
+  pthread_mutex_unlock(&rt->m_msgLock);
   // copy the message
   memcpy(to, msgp, msgsz);
 
@@ -901,20 +908,20 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
   // queue. Obtain the mutex for queue and insert the message
   // Wake up the receiver as well, should it be done every time
   // or is there a way to optimize that?
-  mutex_lock(&qData->m_qLock);
+  pthread_mutex_lock(&qData->m_qLock);
   qData->m_qLockCnt++;
   qData->m_qLockPid = pid;
 
   if (qData->pid == (pid_t)(-1)) {
     // This check is here to prevent adding messages after queue
     // has been emptied. Let the audit clean up any buffers that were stranded
-    mutex_unlick(&qData->m_qLock);
+    pthread_mutex_unlock(&qData->m_qLock);
     return (MHbadQid); // bad mhqid
   }
 
   if (qData->m_msgstail == MHempty) {
     qData->m_msgs = msgHead;
-    qData->m_msgstail = msghHead;
+    qData->m_msgstail = msgHead;
     qData->nCount = 0;
     qData->nBytes = 0;
   } else {
@@ -922,23 +929,23 @@ GLretVal MHinfoExt::sned(MHqid mhqid, Char *msgp, Long msgsz,
     qData->m_msgstail = msgHead;
   }
 
-  qData->nButes += msgsz;
+  qData->nBytes += msgsz;
   if (qData->nBytes > qData->nBytesHigh) {
     qData->nBytesHigh = qData->nBytes;
   }
 
   qData->nCount++;
   if (qData->nCount > qData->nCountHigh) {
-    qData->nCountHigh = qData->nCOunt;
+    qData->nCountHigh = qData->nCount;
   }
 
-  cond_signal(&qData->m_cv);
-  mutext_unlock(&qData->m_qLock);
+  pthread_cond_signal(&qData->m_cv);
+  pthread_mutex_unlock(&qData->m_qLock);
 
-  return (SLsuccess);
+  return (GLsuccess);
 }
 
-Short MHinfExt::Qid2Host(MHqid mhqid) {
+Short MHinfoExt::Qid2Host(MHqid mhqid) {
   return (MHQID2HOST(mhqid));
 }
 
@@ -946,10 +953,10 @@ Short MHinfoExt::Qid2Qid(MHqid mhqid) {
   return (MHQID2QID(mhqid));
 }
 
-GLretVal MHinfoExt::hostId2Name(Short hostid, char* name) {
+GLretVal MHinfoExt::hostid2Name(Short hostid, char* name) {
   name[0] = 0;
   if (isAttach == FALSE) {
-    return (MHoAth);
+    return (MHnoAth);
   }
   if (hostid < 0 || hostid >= MHmaxHostReg || !rt->hostlist[hostid].isused) {
     return(MHinvHostId);
@@ -980,8 +987,8 @@ int MHinfoExt::sendToAllHosts(const Char* name, Char* msgp,
 // the given name. It return the number of hosts that message
 // was send to
 int MHinfoExt::sendToAllHosts(const Char* name, Char* msgp,
-                              Long msgsz, MHclusterScope.
-                              long time, Bool buffered) const {
+                              Long msgsz, MHclusterScope scope,
+                              Long time, Bool buffered) const {
   Short hostid = -1;
   int nHosts =0;
   GLretVal ret;
@@ -1001,7 +1008,7 @@ int MHinfoExt::sendToAllHosts(const Char* name, Char* msgp,
 GLretVal MHinfoExt::sendToNextHost(Short& hostid, const Char *name,
                                    Char *msgp, Long msgsz, Long time,
                                    Bool buffered) const {
-  return(sendToNextHost(hostid, name, msgp, msgsz, MH_scopeSstemAll,
+  return(sendToNextHost(hostid, name, msgp, msgsz, MH_scopeSystemAll,
                         time, buffered));
 }
 
@@ -1014,9 +1021,9 @@ GLretVal MHinfoExt::sendToNextHost(Short& hostid, const Char *name,
 // message got send. Hosts that are equipped but not active are not
 // checked. i.e. if the host is not accessible this send will act as if
 // the name did not exist on that host
-GLreetVal MHinfoExt::sendToNextHost(Short& hostid, const Char *name,
+GLretVal MHinfoExt::sendToNextHost(Short& hostid, const Char *name,
                                     Char *msgp, Long msgsz,
-                                    MHclusterScop scope,
+                                    MHclusterScope scope,
                                     Long time, Bool buffered) const {
   MHqid mhqid;
   if (isAttach == FALSE)
@@ -1051,6 +1058,21 @@ GLreetVal MHinfoExt::sendToNextHost(Short& hostid, const Char *name,
   return(send(mhqid, msgp, msgsz, time, buffered));
 }
 
+// Sends a message to the process specified by 'name'.
+// The description is similar to that of the above function.
+// This version will be used for sending of large message
+GLretVal MHinfoExt::send(const Char *name, Char *msgp, Long msgsz,
+                         Long time, Bool buffered) const {
+  MHqid mhqid;
+  if (isAttach == FALSE)
+     return (MHnoAth);
+
+  if ((mhqid = (*rt).findName(name)) == MHnullQ) {
+    return (MHbadName);
+  }
+  return (send(mhqid, msgp, msgsz, time, buffered));
+}
+
 GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Short &msgsz,
                             Long ptype, Long time) const {
   Long new_msgsz;
@@ -1061,7 +1083,7 @@ GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Short &msgsz,
   return (ret);
 }
 
-GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
+GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Long &msgsz,
                             Long ptype, Long time) const {
   GLretVal retval;
   int timeSet = FALSE;
@@ -1090,7 +1112,7 @@ GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
 
   MHmsgHead* pMsgHead;
   MHmsgHead* prevMsg;
-  mutex_lock(&qData->m_qLock);
+  pthread_mutex_lock(&qData->m_qLock);
   getMessage:
   qData->m_qLockCnt ++;
   qData->m_qLockPid = pid;
@@ -1103,7 +1125,25 @@ GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
   }
 
   MHmsgBase *mp;
-  while (pMsgHead != NULL) {
+  while(pMsgHead != NULL) {
+    mp = (MHmsgBase*)(m_buffers + pMsgHead->m_msgBuf);
+    if (ptype == 0 || mp->priType == ptype) {
+      break;
+    }
+
+    if (pMsgHead->m_next != MHempty) {
+      prevMsg = pMsgHead;
+      pMsgHead = &rt->msg_head[pMsgHead->m_next];
+    } else {
+      pMsgHead = NULL;
+    }
+  }
+
+  int nChunks;
+  char *freeArray;
+  int freeIndex;
+  int *pnMeasUsed;
+  if (pMsgHead != NULL) {
     // Unlink the message from the message list
     if (prevMsg == NULL) {
       qData->m_msgs = pMsgHead->m_next;
@@ -1122,9 +1162,9 @@ GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
     qData->nBytesRcvd += pMsgHead->m_len;
     qData->nCountRcvd++;
 
-    mutex_unlock(&qData->m_qLock);
+    pthread_mutex_unlock(&qData->m_qLock);
 
-    if (((unsigned int)(pMsgHead->m_len)) <= msgsz) {
+    if (((unsigned int)(pMsgHead->m_len)) <= (unsigned int)msgsz) {
       memcpy(msgp, (char*)mp, pMsgHead->m_len);
       msgsz = pMsgHead->m_len;
       retval = GLsuccess;
@@ -1132,10 +1172,10 @@ GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
       memcpy(msgp, (char*)mp, msgsz);
       retval = MH2Big;
     } else {
-      CRDEBUG_PRINT(0x01, ("Invalid message len %d, freed counts %d",
-                           pMsgHead->m_len, rt->m_bufferFreedCnt,
-                           rt->m_headerFreedCnt));
-      mutex_lock(&qData->m_qLock);
+      //CRDEBUG_PRINT(0x01, ("Invalid message len %d, freed counts %d",
+      //                     pMsgHead->m_len, rt->m_bufferFreedCnt,
+      //                     rt->m_headerFreedCnt));
+      pthread_mutex_lock(&qData->m_qLock);
       goto getMessage;
     }
 
@@ -1159,28 +1199,28 @@ GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
       nChunks = (pMsgHead->m_len >> 14) + 1;
       freeArray = m_free16384;
       freeIndex = ((char*)mp - m_buffer16384) >> 14;
-      pnMeasUsed = &m_nMeasUsed16384;
+      pnMeasUsed = &rt->m_nMeasUsed16384;
     }
     pMsgHead->m_len = MHempty;
-    for (int count == 0; count < nChunks; count++, freeIndex++) {
+    for (int count = 0; count < nChunks; count++, freeIndex++) {
       freeArray[freeIndex] = TRUE;
     }
     // Put the message header on the free list
-    mutex_lock(&rt->m_msgLock);
+    pthread_mutex_lock(&rt->m_msgLock);
     rt->m_msgLockCnt++;
-    *pnMeaUsed -= nChunks;
+    *pnMeasUsed -= nChunks;
     pMsgHead->m_next = rt->m_freeMsgHead;
     rt->m_freeMsgHead = pMsgHead - rt->msg_head;
-    mutex_unlock(&rt->m_msgLock);
-    CRDEBUG(CRmsgh+8, ("to %s from %s size %d type 0x%x prio %d",
-                       mhqid.display(),
-                       ((MHmsgBase*)msgp)->srcQue.display(), msgsz,
-                       ((MHmsgBase*)msgp)->msgTpe,
-                       ((MHmsgBase*)msgp)->priType));
+    pthread_mutex_unlock(&rt->m_msgLock);
+    //CRDEBUG(CRmsgh+8, ("to %s from %s size %d type 0x%x prio %d",
+    //                   mhqid.display(),
+    //                   ((MHmsgBase*)msgp)->srcQue.display(), msgsz,
+    //                   ((MHmsgBase*)msgp)->msgTpe,
+    //                   ((MHmsgBase*)msgp)->priType));
     return (retval);
   }
 
-  timestruc_t twait;
+  struct timespec twait;
   struct timeval timeOfDay;
   int ret;
 
@@ -1196,8 +1236,8 @@ GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
     } else {
       // For retries, calculate how much time is left
       // or we will wait too long if we get an error or a message
-      int deltaticks = time(&atms) - startticks;
-      twait.tv_sec = (time/1000) - (deltaticks / MHCLK_TCK);
+      int deltaticks = times(&atms) - startticks;
+      twait.tv_sec = (time/1000) - (deltaticks / MHLCLK_TCK);
       twait.tv_nsec = ((time % 1000) * 1000000) -
          ((deltaticks % MHLCLK_TCK) * (1000000000 / MHLCLK_TCK));
       if (twait.tv_nsec < 0) {
@@ -1205,51 +1245,51 @@ GLretVal MHinfoExt::receive(MHqid mhqid, CHar *msgp, Long &msgsz,
         twait.tv_sec--;
       }
       if (twait.tv_sec < 0) {
-        mutext_unlock(&qData->m_qLock);
+        pthread_mutex_unlock(&qData->m_qLock);
         return(MHtimeOut);
       }
     }
 
     if (pSigFlg != NULL && *pSigFlg != 0) {
-      mutex_unlock(&qData->m_qLock);
+      pthread_mutex_unlock(&qData->m_qLock);
       return(MHintr);
     }
     TMisInBlockingReceive = TRUE;
 
-    if ((ret = cond_reltimedwait(&qData->m_cv,
-                                 &qData->qLock,
-                                 &twait)) != 0) {
+    if ((ret = pthread_cond_timedwait(&qData->m_cv,
+                                      &qData->m_qLock,
+                                      &twait)) != 0) {
       TMisInBlockingReceive = FALSE;
       if (ret == ETIME) {
-        mutex_unlock(&qData->m_qLock);
+        pthread_mutex_unlock(&qData->m_qLock);
         return(MHtimeOut);
       } if (ret == EINTR) {
-        mutex_unlock(&qData->m_qLock);
+        pthread_mutex_unlock(&qData->m_qLock);
         return(MHintr);
       } else if (ret == EWOULDBLOCK) {
         // IGNORE this and treat as a retry (Linux only case)
       } else {
-        mutex_unlock(&qData->m_qLock);
-        CRDEBUG(CRmsgh+14, ("Unexpected return from cond_reltimedwait,"
-                            "errno %d", ret));
+        pthread_mutex_unlock(&qData->m_qLock);
+        //CRDEBUG(CRmsgh+14, ("Unexpected return from cond_reltimedwait,"
+        //                    "errno %d", ret));
         return(MHother);
       }
     }
-    TMisInBlockingReceeive = FALSE;
+    TMisInBlockingReceive = FALSE;
     goto getMessage;
   } else if (time == 0) {
-    mutex_unlock(&qData->m_qLock);
+    pthread_mutex_unlock(&qData->m_qLock);
     return(MHnoMsg);
   } else {
     // Block forever for a message
     TMisInBlockingReceive = TRUE;
-    if ((ret = cond_wait(&qData->m_cv, &qData->m_qLock)) != 0) {
+    if ((ret = pthread_cond_wait(&qData->m_cv, &qData->m_qLock)) != 0) {
       TMisInBlockingReceive = TRUE;
       if (ret == EINTR) {
-        mutex_unlock(&qData->m_qLock);
+        pthread_mutex_unlock(&qData->m_qLock);
         return(MHintr);
       } else {
-        mutex_unlock(&qData->m_qLock);
+        pthread_mutex_unlock(&qData->m_qLock);
         return(MHother);
       }
     }
@@ -1274,7 +1314,7 @@ GLretVal MHinfoExt::emptyQueue(MHqid mhqid) {
   MHmsgHead* pMsgHead;
   MHmsgHead* ptmpMsgHead;
 
-  mutex_lock(&qData->m_qLock);
+  pthread_mutex_lock(&qData->m_qLock);
   qData->m_qLockCnt++;
   if (qData->m_msgs >= 0) {
     pMsgHead = &rt->msg_head[qData->m_msgs];
@@ -1321,7 +1361,7 @@ GLretVal MHinfoExt::emptyQueue(MHqid mhqid) {
     }
     qData->nCount--;
     ptmpMsgHead->m_next = rt->m_freeMsgHead;
-    rt->m_freeMsgHead = ptmpMsgHead - rt>msg_head;
+    rt->m_freeMsgHead = ptmpMsgHead - rt->msg_head;
     ptmpMsgHead->m_len = MHempty;
     *pnMeasUsed -= nChunks;
   }
@@ -1331,8 +1371,8 @@ GLretVal MHinfoExt::emptyQueue(MHqid mhqid) {
   qData->nBytes = 0;
   qData->nBytesRcvd = 0;
   qData->nCountRcvd = 0;
-  mutex_unlock(&qData->m_qLock);
-  mutex_unlock(&rt-m_msgLock);
+  pthread_mutex_unlock(&qData->m_qLock);
+  pthread_mutex_unlock(&rt->m_msgLock);
   return(GLsuccess);
 }
 
@@ -1344,7 +1384,7 @@ GLretVal MHinfoExt::broadcast(MHqid sQid, Char *msgp,
 }
 
 GLretVal MHinfoExt::broadcast(MHqid sQid, Char *msgp,
-                              Short msgsz, MHclusterScop scope,
+                              Short msgsz, MHclusterScope scope,
                               Long time, Bool bAllNodes) {
   GLretVal failCount = 0; // Number of failed sends
   if (isAttach == FALSE) {
@@ -1362,7 +1402,7 @@ GLretVal MHinfoExt::broadcast(MHqid sQid, Char *msgp,
       if ((send(mhqid, msgp, msgsz, time)) < 0) failCount--;
     }
   }
-  if (bAllNods == FALSE) {
+  if (bAllNodes == FALSE) {
     return (failCount);
   }
 
@@ -1370,19 +1410,19 @@ GLretVal MHinfoExt::broadcast(MHqid sQid, Char *msgp,
     Long align;
     char buffer[MHmsgLimit];
   };
-  MHbcast *mmsg = (MHbcast*)buffer;
+  MHbcast *bmsg = (MHbcast*)buffer;
   Bool isUsed;
   Bool isActive;
 
   bmsg->ptype = MHintPtyp;
   bmsg->mtype = MHbcastTyp;
-  bmsg->msgsz = sizeof(MHbcast) -1 + msgsz;
+  bmsg->msgSz = sizeof(MHbcast) -1 + msgsz;
   bmsg->time = time;
   memcpy(bmsg->data, msgp, msgsz);
 
   for (i = 0;i < MHmaxHostReg; i++) {
     Status(i, isUsed, isActive);
-    if (!isUsed || !isActive || i == rt->LocalHostIndex !!
+    if (!isUsed || !isActive || i == rt->LocalHostIndex ||
         i == rt->SecondaryHostIndex) {
       continue;
     }
@@ -1398,7 +1438,7 @@ GLretVal MHinfoExt::broadcast(MHqid sQid, Char *msgp,
       continue;
     }
     // Send to MHRPROC on each host
-    if (send(MHMAKEMHQID(i, MHRPROCQ), buffer, bmsg->msgSz, time) < 0) {
+    if (send(MHMAKEMHQID(i, MHrprocQ), buffer, bmsg->msgSz, time) < 0) {
       failCount --;
     }
   }
@@ -1413,10 +1453,10 @@ GLretVal MHinfoExt::setEnetState(Short nEnet, Bool bIsUsable) {
 
   stateMsg.ptype = MHintPtyp;
   stateMsg.mtype = MHenetStateTyp;
-  statemsg.nEnet = nEnet;
-  statemsg.bIsUsable = bIsUsable;
+  stateMsg.nEnet = nEnet;
+  stateMsg.bIsUsable = bIsUsable;
 
-  if (send(msghMhqid, (char*)&statemsg, sizeof(stateMsg), 0) < 0) {
+  if (send(msghMhqid, (char*)&stateMsg, sizeof(stateMsg), 0) < 0) {
     return (MHnoCom); // lost communication to MSGH process
   }
 
@@ -1433,7 +1473,7 @@ GLretVal MHinfoExt::getRealHostname(const Char* hostname, Char *realname) {
 }
 
 GLretVal MHinfoExt::getLogicalHostname(const Char *realname, Char *hostname) {
-  if (isAttach -- FALSE)
+  if (isAttach == FALSE)
      return (MHnoAth);
   if (rt->getLogicalHostname(realname, hostname) == MHempty) {
     return(MHnoMat);
@@ -1448,7 +1488,7 @@ Short MHinfoExt::getLocalHostIndex() {
   if (rt->SecondaryHostIndex == MHnone) {
     return (rt->LocalHostIndex);
   } else {
-    if (perfEnv == MH_peerCluster) {
+    if (prefEnv == MH_peerCluster) {
       return (rt->SecondaryHostIndex);
     } else {
       return (rt->LocalHostIndex);
@@ -1456,7 +1496,7 @@ Short MHinfoExt::getLocalHostIndex() {
   }
 }
 
-GlretVal MHinfoExt::Status(int hostid, Bool& isUsed, Bool& isActive) {
+GLretVal MHinfoExt::Status(int hostid, Bool& isUsed, Bool& isActive) {
   if (isAttach == FALSE || hostid < 0 || hostid >= MHmaxHostReg) {
     return(MHnoAth);
   } else {
@@ -1511,15 +1551,8 @@ GLretVal MHinfoExt::checkPid(MHqid msgh_qid, pid_t &argpid) const {
 // The following method will determine whether a given
 // MSGH name passed as an arg. to the method is a
 // registered MSGH name.
-GLretVal MHinfoExt::isReg(const Char *name) {
-  return ((rt->findName(name)) == MHnullQ ? GLfail : GLsuccess);
-}
-
-// The following method will determine whether a given
-// MSGH name passed as an arg, to the method is a
-// registered MSGH name.
 GLretVal MHinfoExt::IsReg(const Char *name) {
-  return((rt->findName(name)) == MHnullQ ? GLfail : GLsuccess);
+  return ((rt->findName(name)) == MHnullQ ? GLfail : GLsuccess);
 }
 
 GLretVal MHinfoExt::regGlobalName(const Char *name, MHqid realQ,
@@ -1538,7 +1571,7 @@ GLretVal MHinfoExt::global2Real(MHqid globalQ, MHqid& realQ) {
   // if host is a global queue, perform translation to real
   // queue before continuing
   if (host == MHgQHost) {
-    int selectdQ = rt->gqdata[qid].m_selectedQ;
+    int selectedQ = rt->gqdata[qid].m_selectedQ;
     if (selectedQ == MHempty) {
       return(MHnoQAssigned);
     }
@@ -1637,7 +1670,7 @@ GLretVal MHinfoExt::setDistState(const MHqid distQ,
       if (rt->dqdata[qid].m_realQ[i] == realQ) {
         rt->dqdata[qid].m_enabled[i] = enable;
         // Send the message to lead
-        MHdQSet setMsg;
+        MHdQSet setmsg;
         setmsg.mtype = MHdQSetTyp;
         setmsg.ptype = MHintPtyp;
         setmsg.sQid = MHMAKEMHQID(getLocalHostIndex(), MHmsghQ);
@@ -1681,7 +1714,7 @@ GLretVal MHinfoExt::getDistState(const MHqid distQ,
     int i;
     for (i = 0; i < MHmaxDistQs; i++) {
       if (rt->dqdata[qid].m_realQ[i] == realQ) {
-        enable = rt->dqdata[qid].m_enabed[i];
+        enable = rt->dqdata[qid].m_enabled[i];
         break;
       }
     }
@@ -1719,10 +1752,10 @@ GLretVal MHinfoExt::getNextQ(const MHqid queue, int& index,
       return (MHnoEnt);
     }
   } else if (host == MHdQHost) {
-    while (index < MHmaxdistQs) {
+    while (index < MHmaxDistQs) {
       index++;
       if (rt->dqdata[qid].m_realQ[index] != MHnullQ) {
-        if (enableOnly && !rt->dqdata[qid].m_enabled) {
+        if (enabledOnly && !rt->dqdata[qid].m_enabled) {
           continue;
         }
         realQ = rt->dqdata[qid].m_realQ[index];
@@ -1746,7 +1779,7 @@ GLretVal MHinfoExt::getNextQ(const MHqid queue, int& index,
 }
 
 int MHinfoExt::sendToAllQueues(const MHqid queue, char* msgp,
-                               Long msgsz, Bool enableOnly,
+                               Long msgsz, Bool enabledOnly,
                                Long time, Bool buffered) {
   int index = -1;
   MHqid realQ;
@@ -1770,7 +1803,7 @@ GLretVal MHinfoExt::regQueue(const Char *name, MHqid realQ,
   GLretVal retval;
 
 #ifndef PROC_UNDER_INIT
-  return(MHnother);
+  return(MHother);
 #endif
   if (isAttach == FALSE) {
     return (MHnoAth);
@@ -1816,7 +1849,7 @@ GLretVal MHinfoExt::regQueue(const Char *name, MHqid realQ,
   regName.clusterGlobal = ClusterGlobal;
   regName.fill = MHR26;
 
-  if ((retval = MHmsgh.send(leadMhqid, (Char *)&regName.
+  if ((retval = MHmsgh.send(leadMhqid, (Char *)&regName,
                             sizeof(MHregName), 0L)) != GLsuccess) {
     return(retval);
   }
@@ -1824,7 +1857,7 @@ GLretVal MHinfoExt::regQueue(const Char *name, MHqid realQ,
   Long msgSz = sizeof(regAck);
   int count = 0;
 
-  MHregAgaain:
+  MHregAgain:
   if ((retval = MHmsgh.receive(realQ, (Char*)&regAck, msgSz,
                                MHregPtyp, MHregTimeOut)) != GLsuccess) {
     count++;
@@ -1904,7 +1937,7 @@ GLretVal MHinfoExt::getEnvType(MHenvType& env) {
   return(GLsuccess);
 }
 
-GLretVal MHinfoExt::getIpAddress(const char* lname, unsigend int inum,
+GLretVal MHinfoExt::getIpAddress(const char* lname, unsigned int inum,
                                  sockaddr_in6& addr) {
   if (isAttach == FALSE) {
     return (MHnoAth);
@@ -1919,7 +1952,7 @@ GLretVal MHinfoExt::getIpAddress(const char* lname, unsigend int inum,
     return(MHnoHost);
   }
 
-  add = rt->hostlist[hostid].saddr[inum];
+  addr = rt->hostlist[hostid].saddr[inum];
   return(GLsuccess);
 }
 
@@ -2016,7 +2049,7 @@ GLretVal MHinfoExt::setPreferredEnv(MHenvType env) {
 }
 
 
-GlretVal MHinfoExt::convQue(MHqid& qid, Short hostid) {
+GLretVal MHinfoExt::convQue(MHqid& qid, Short hostid) {
   if (isAttach == FALSE)
      return(MHnoAth);
 
@@ -2028,7 +2061,7 @@ GlretVal MHinfoExt::convQue(MHqid& qid, Short hostid) {
   return(GLsuccess);
 }
 
-GLretVal MHinfoExt::sendQueLimits(MHqid qid, int nMessages, int nBytes) {
+GLretVal MHinfoExt::setQueLimits(MHqid qid, int nMessages, int nBytes) {
   if (isAttach == FALSE)
      return (MHnoAth);
 
@@ -2060,7 +2093,7 @@ Short MHinfoExt::getOAMLead() {
 }
 
 Short MHinfoExt::getActiveVhost() {
-  if (isAttach -- FALSE)
+  if (isAttach == FALSE)
      return (MHnoAth);
 
   return(rt->m_vhostActive);
@@ -2070,7 +2103,7 @@ Bool MHinfoExt::isOAMLead() {
   if (isAttach == FALSE)
      return(FALSE);
 
-  return(rt-LocalHostIndex == rt->m_oamLead ||
+  return(rt->LocalHostIndex == rt->m_oamLead ||
          (rt->m_oamLead != MHempty &&
           rt->SecondaryHostIndex == rt->m_oamLead));
 }
