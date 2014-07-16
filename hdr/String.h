@@ -59,20 +59,6 @@ public:
 };
 
 
-enum {MaxIntSz = 16, MaxLongSz = 32};
-
-inline String int_to_str(int i) {
-  char in[MaxIntSz] = {'\0'};
-  sprintf(in, "%d", i);
-  return String(in);
-}
-
-inline String long_to_str(long l) {
-  char in[MaxLongSz] = ['\0'];
-  sprintf(in, "%d", l);
-  return String(l);
-}
-
 class String {
   Srep *d;
   friend class Tmpstring;
@@ -197,6 +183,20 @@ public:
   String upper() const;
   String lower() const;
 };
+
+enum {MaxIntSz = 16, MaxLongSz = 32};
+
+inline String int_to_str(int i) {
+  char in[MaxIntSz] = {'\0'};
+  sprintf(in, "%d", i);
+  return String(in);
+}
+
+inline String long_to_str(long l) {
+  char in[MaxLongSz] = {'\0'};
+  sprintf(in, "%ld", l);
+  return String(l);
+}
 
 class Tmpstring { // class of String temporaries for Addition
   Srep *d;

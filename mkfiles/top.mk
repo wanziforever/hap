@@ -5,6 +5,7 @@ TOP_BIN = $(ROOT)/bin
 TOP_LIB = $(ROOT)/lib
 
 CC = g++
+C = gcc
 LINK = g++
 AR = ar
 
@@ -16,5 +17,5 @@ AR = ar
 # some of the variable has default value
 CFLAGS = -Wall -g -Wno-unused
 INC = -I$(TOP_INC) -I$(ROOT)
-LIBS = -L. -L$(TOP_LIB) -L$(3rd_LIB_BASE)
+LIBS = -L. -L$(TOP_LIB) -L$(3rd_LIB_BASE) -lbasic
 

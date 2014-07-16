@@ -282,7 +282,7 @@ public:
   Bool isHostInScope(Short hostid, MHclusterScope scope) const;
   Bool rcvBroadcast(Short localqid);
   GLretVal Send(Short host, Char *msgp, Long msgsz, Bool resetSeq,
-                bool buffered=TRUE, Bool doLock=TRUE);
+                Bool buffered=TRUE, Bool doLock=TRUE);
   GLretVal ReSend(Short host, int sndIndex, U_short count=0);
   Void CheckReject();
   Void CheckReject(int);
@@ -360,7 +360,7 @@ private:
   int m_nMeasUsed1024; // Current count of 1024 message buffers
   int m_nMeasUsed4096; // Current count of 4096 message buffers
   int m_nMeasUsed16384; // Current count of 16384 mesage buffers
-  int m_nMeasusedOut; // current count of outoing buffers
+  int m_nMeasUsedOut; // current count of outoing buffers
   int m_nMeasHigh256; // High count of 256 message buffers
   int m_nMeasHigh1024; // High count of 1024 message buffers
   int m_nMeasHigh4096; // High count of 4096 message buffers
