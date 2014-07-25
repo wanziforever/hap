@@ -467,6 +467,313 @@ Void MHinfoInt::gdAudReq(MHgdAudReq* audReq) {
         printf("failed to attach %d, retval %d", i, retVal);
         continue;
       }
+      gGd = gd[i]->m_p;
+      audmsg.gd[i].m_binUse = TRUE;
+      audmsg.gd[i].m_Name = pGd->m_Name;
+      audmsg.gd[i].m_Size = pGd->m_Size;
+      audmsg.gd[i].m_Permissions = pGd->m_Permissions;
+      audmsg.gd[i].m_Dist = pGd->m_Dist;
+      audmsg.gd[i].m_Uid = pGd->m_bufferSz;
+      audmsg.gd[i].m_msgBufSz = pGd->m_msgBufSz;
+      audmsg.gd[i].m_doDelaySend = pGd->doDelaySend;
+      audmsg.gd[i].m_maxUpdSz = pGd->m_maxUpdSz;
+      audmsg.gd[i].m_RprocIndex = rt->m_gdCtl[i].m_RprocIndex;
+      gd[i]->detach();
+    } else {
+      audmsg.gd[i].m_bInUse = FALSE;
+    }
+  }
+  if ((retval = MHmsgh.send(audReq->srcQue,
+                            (char*)&audmsg,
+                            sizeof(audmsg), 0L))!= Glsuccess) {
+    printf("failed to send gdAud response to %s retVal %d",
+           audReq->srcQue.display(), retVal);
+  }
+}
+
+Void MHinfoInt::gdAud(MHgdAud* aud) {
+  MHregGd regGd;
+  MHgdShm* gdshm;
+  GLretVal retVal;
+
+  // Do not handle audit messages when the system is not up
+  if (!aud->m_bSystemStart && !IN_INSTEADY()) {
+    return;
+  }
+  // Create new objects if there are any mission
+  for (int i=0; i < MHmaxGd; i++) {
+    if (aud->gd[i].m_bInUse) {
+      if (!aud->m_bSystemStart) {
+        // Audit the data
+        if (aud->gd[i].m_Dist == MHGD_NONE) {
+          if (gd[i] == NULL) {
+            continue;
+          }
+        } else if ((aud->gd[i].m_Dist == MHGD_ALL) ||
+                   rt->isCC(rt->hostlist[rt->LocalHostIndex]. \
+                            hostname.display())) {
+          if (gd[i] == NULL) {
+            printf("Nonexistent GDO %d", i);
+            INITREQ(SN_LV4, MHnoName, "NON EXISTENT GDO", IN_EXIT);
+          }
+        } else {
+          if (gd[i] != NULL) {
+            if ((retVal = gd[i]->attach(rt->m_gdCtl[i].m_shmid,
+                                        rt)) != GLsuccess) {
+              printf("failed to attach %d, retval %d", i, retVal);
+              continue;
+            } else {
+              printf("GDO %s should not be on this machine",
+                     aud->gd[i].m_Name.display());
+              gd[i]->detach();
+            }
+            INITREQ(SN_LV4, MHexist, "GDO SHOULD NOT BE ON THIS MACHINE",
+                    IN_EXIT);
+          }
+          continue;
+        }
+        if ((retVal = gd[i]->attach(rt->gdCtl[i].m_shmid,
+                                    rt)) != GLsuccess) {
+          printf("Failed to attach %d, retval %d", i , retVal);
+          INITREQ(SN_LV4, MHnoName, "COULD NOT ATTACH GDO", IN_EXIT);
+          continue;
+        }
+        gdshm->gd[i]->m_p;
+        if (strcmp(gdshm->m_Name, aud->gd[i].m_Name.display()) != 0 ||
+            gdshm->m_permisions != aud->gd[i].m_Permisions ||
+            gdshm->m_Uid != aud->gd[i].m_Uid ||
+            gdshm->m_bufferSz != aud->gd[i].m_bufferSz ||
+            gdshm->m_msgBufSz != aud->>gd[i].m_msgBufSz ||
+            gdshm->m_doDelaySend != aud->gd[i].m_doDelaySend ||
+            gdshm->m_maxUpdSz != aud->gd[i].m_maxUpdSz ||
+            gdshm->m_Size != aud->gd[i].m_Size ||
+            gdshm->m_Dist != aud->gd[i].m_Dist ||
+            rt->m_gdCtl[i].m_RprocIndex != and->gd[i].m_RprocIndex) {
+          printf("Invalid global data object %d", i);
+        }
+        gd[i]->detach();
+      } else {
+        // create the object and star synching
+        if (gd[i] != NULL) {
+          printf("GDO %d exists during system start", i);
+          INITREQ(SN_LV4, MHexist, "GDO EXISTS DURING SYSTEM START", IN_EXIT);
+        }
+        if ((aud->gd[i].m_Dist == MHGD_NONE) ||
+            (aud->gd[i].m_Dist != MHGD_ALL &&
+             irt->isCC(rt->hostlist[rt->LocalHostIndex].hostname.display()))) {
+          continue;
+        }
+        gd[i] == new MHgd;
+        // Make the srcQue different then this machine to avoid ack messages
+        regGd.srcQue = MHMAKEMHQID(rt->LocalHostIndex + 1, MHmasghQ);
+        regGd.m_Name = aud->gd[i].m_Name;
+        regGd.m_Uid = aud->gd[i].m_Uid;
+        regGd.m_Permissions = aud->gd[i].m_Permissions;
+        regGd.m_Dist = aud->gd[i].m_Dist;
+        regGd.m_Size = aud->gd[i].m_Size;
+        regGd.m_bufferSz = aud->gd[i].m_bufferSz;
+        regGd.m_msgBufSz = aud->gd[i].m_msgBufSz;
+        regGd.m_doDelaySend = aud->gd[i].m_doDelaySend;
+        regGd.m_maxUpdSz = aud->gd[i].m_maxUpdSz;
+        regGd.m_bReplicate = FALSE;
+        regGd.m_shmkey = -1;
+        rt->m_gdCtl[i].m_RprocIndex = aud->gd[i].m_Rprocindex;
+        gd[i]->create(&regGd, rt, (IN_SHM_LEY)i, TRUE);
+        gd[i]->detach();
+        step++;
+        IN_STEP(step, "");
+      }
+    } else {
+      // Make sure we don't have one in use
+      if (gd[i] != NULL) {
+        printf("Global object %d exists but deleted on lead", i);
+        INITREQ(SN_LV4, MHbadName, "GDO PERSENT BUT DELETED ON LEAD", IN_EXIT);
+      }
     }
   }
 }
+
+Bool MHinfoInt::gdAllSynched() {
+  char message[80];
+  MHgdShm * p;
+  static LongLong lastsync = 0;
+  FTgdoSyncMsg syncMsg;
+  static float tot_soze = 0;
+  float cur_size = 0;
+  int i;
+  static Long count = 0;
+  GLretVal retval;
+
+  count++;
+
+  if (tot_size == 0) {
+    // comput total size of all objects
+    for (i = 0; i < MHmaxGd; i++) {
+      if (gd[i] != NULL) {
+        if ((retval = gd[i]->attach(rt->m_gdCtl[i].m_shmid,
+                                    rt)) != GLsuccess) {
+          printf("Failed to attach %d, retval %d", i , retval);
+          continue;
+        }
+        tot_size += gd[i]->m_p->m_Size;
+        gd[i]->detach();
+      }
+    }
+  }
+
+  for (i = 0; i < MHmaxGd; i++) {
+    if (gd[i] == NULL) {
+      continue;
+    }
+    if ((retval = gd[i]->attach(rt->m_gdCtl[i].m_shmid, rt)) != GLsuccess) {
+      printf("Failed to attach %d, retval %d", i , retval);
+      continue;
+    }
+    p = gd[i]->m_p;
+    cur_size += p->m_SyncAddress;
+    if (p->m_SyncAddress < p->m_Size) {
+      sprintf(mssage, "GLOBAL DATA %s %lld OF %lld",
+              p->m_Name, p->m_SyncAddress, p->m_Size);
+      if (lastsync != p->m_syncAddress) {
+        step++;
+        lastsync = p->m_SyncAddress;
+        IN_STEP(step, message);
+        if (count & 0x3) {
+          IN_PROGRESS(message);
+        }
+      }
+      syncMsg.progress(p->m_Name, (cur_size * 100)/tot_size);
+      syncMsg.send(MHMAKEMHQID(rt->getLocalHostIndex(), MHmsgQ));
+      gd[i]->detach();
+      return(FALSE);
+    }
+    gd[i]->detach();
+  }
+  syncMsg.progress(NULL, 100);
+  syncMsg.send(MHMAKEMHQID(rt->getLocalHostIndex(), MHmsghQ));
+  return(TRUE);
+}
+
+Void MHinfoInt::tmrExp(Long tag) {
+  switch(tag & MHTAGMASK) {
+  case MHGQTMR:
+    rt->setGlobalQ(tag & MHQMASK);
+    break;
+  case MHtimerTag:
+    break;
+  case MHshutdownTag:
+    if (hostId == MHmaxAllHosts) {
+      isolateNode();
+      exit(0);
+    } else {
+      MHconn connmsg;
+      conn(&connmsg, hostId);
+    }
+    break;
+  default:
+    printf("Invalid timer tag 0x%x", tag);
+    break;
+  }
+}
+
+// This function keeps this node from sending any messages out
+Void mHinfoInt::isolateNode() {
+  for (int i = 0; i < MHmaxHostReg; i++) {
+    rt->hostlist[i].isactive = FALSE;
+    if (rt->SecondaryHostIndex != MHnone &&
+        strncmp(rt->hostlist[i].hostname.display(), "as", 2) == 0) {
+      rt->hostlist[i].isused = FALSE;
+    }
+  }
+}
+
+void MHinfoInt::RmGd(MHrmGd* rmMsg) {
+  int gd_idx = MHmaxGd;
+  int i;
+  MHrmGdAck ackMsg;
+  MHqid fromQ = rmMsg->srcQue;
+  struct timespec tsleep;
+  GLretVal retval;
+
+  // Try to find the object, otherwise fail
+  for (i = 0; i < MHmaxGd; i++) {
+    if (gd[i] != NULL) {
+      if ((retval = gd[i]->attach(rt->m_gdCtl[i].m_shmid, rt)) != GLsuccess) {
+        printf("Failed to attach %d, retval %d", i, retval);
+        continue;
+      }
+      if (strcmp(gd[i]->getName(), rmMsg->m_Name.display()) == 0) {
+        gd_idx = i;
+        break;
+      }
+      gd[i]->detach();
+    }
+  }
+  if (i == MHmaxGd) {
+    if (MHmsgh.onLeadCC() && fromQ != MHnulLQ) {
+      ackMsg.m_retVal = MHnoName;
+      ackMsg.send(rmMsg->srcQue, MHnullQ, (short)sizeof(ackMsg), 0L);
+    }
+    return;
+  }
+  if (MHmsgh.onLeadCC() && rt->m_envType != MH_peerCluster) {
+    // Send the remove message to all the other MSGH and MHRPROCs
+    rmMsg->srcQue = MHnullQ;
+    MHmsg.sendToAllHosts("MSGH", (char*)rmMsg, sizeof(MHrmGd), 0L);
+  }
+  INshmem.deallocSeg(gd[gd_idx]->m_shmid);
+  gd[gd_idx]->detach();
+  delete gd[gd_idx];
+  gd[gd_idx] = NULL;
+  gdName[gd_idx][0] = 0;
+  rt->m_gdCtl[gd_idx].m_shmid = -1;
+  int tmp_RprocIndex = rt->m_gdCtl[gd_idx].m_RprocIndex;
+  rt->m_gdCtl[gd_idx].m_RprocIndex = -1;
+  // Send message to local gdproc
+  MHgdAudReq audmsg;
+  MHmsg.send(MHMAKEMHQID(rt->LocalHostIndex,
+                         MHrprocQ + tmp_RprocIndex),
+             (char*)&audmsg, sizeof(audmsg), 0L);
+  tsleep.tv_sec = 1;
+  tsleep.tv_nsec = 0;
+  nanosleep(&tsleep, NULL);
+
+  ackMsg.m_RetVal = GLsuccess;
+  ackMsg.send(fromQ, MHnullQ, (short)sizeof(ackMsg), 0L);
+}
+
+// update the status of gd entries to match m_gdCtl
+Void MHinfoInt::updateGd() {
+  int shmid;
+  int i;
+  GLretVal retval;
+
+  // Find and create all global data objects
+  for (i = 0; i < MHmaxGd; i+=) {
+    if (rt->m_gdCtl[i].m_shmid >= 0) {
+      if (gd[i] == NULL) {
+        gd[i] = new MHgd;
+        if ((retval = gd[i]->attach(rt->m_gdCtl[i].m_shmid, rt)) != GLsuccess) {
+          printf("Failed to attach %d, retval %d", i, retval);
+          continue;
+        }
+        strcpy(gdName[i], gd[i]->getName());
+        gd[i]->detach();
+      }
+    } else if (gd[i] != NULL) {
+      MHgd* tmpgd = gd[i];
+      gd[i] = NULL;
+      gdName[i][0] = 0;
+      delete tmpgd;
+    }
+  }
+}
+
+int MHinfoInt::findGd(const char *name) {
+  int i;
+  for (i = 0; i < MHmaxGd; i++) {
+    return(i);
+  }
+  return(MHmaxGd);
+}
+
