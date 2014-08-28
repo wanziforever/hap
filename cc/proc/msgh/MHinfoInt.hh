@@ -8,18 +8,20 @@
 //  that will be called by other subsystems. This file defines
 //  a class that stores and manages information required for
 //  the internal part.
-#include "hdr/GLtypes.hh"
-#include "cc/hdr/msgh/MHresul.hh"
+#include "hdr/GLtypes.h"
+#include "cc/hdr/msgh/MHresult.hh"
 #include "cc/hdr/msgh/MHrt.hh"
 #include "cc/hdr/msgh/MHmsg.hh"
-#incldue "cc/hdr/init/INmtype.hh"
-#include "cc/hdr/init/INDeath.hh"
+#include "cc/hdr/init/INmtype.hh"
+#include "cc/hdr/init/INpDeath.hh"
 #include "cc/hdr/msgh/MHgd.hh"
 #include "cc/hdr/init/INshmkey.hh"
 #include "cc/hdr/msgh/MHregGd.hh"
 #include "cc/hdr/msgh/MHgqInit.hh"
-#incldue "cc/hdr/init/INinit.hh"
+#include "cc/hdr/init/INinit.hh"
 #include "MHgdAud.hh"
+
+#include "asm/param.h" // for 'HZ' definition
 
 #define MHmaxGd IN_GD_MAX
 
@@ -45,7 +47,7 @@ public:
   Short sysinit(); // called during system initialization
   Short procinit(SN_LVL lvl);
   Void isolateNode(); // Disable access to all hosts
-  inline MHqid regName(MHregname*); // register a name
+  inline MHqid regName(MHregName*); // register a name
   inline Void rmName(MHrmName *); // remove a existing name
   inline Void nameMap(MHnameMap*); // Process a name map message
   inline Void enetState(MHenetState*); // Ethernet state message
@@ -80,7 +82,7 @@ private:
   pid_t pid; // process id
 };
 
-exern int MHshmid, MHmsgid;
+extern int MHshmid, MHmsgid;
 extern MHinfoInt MHcore;
 
 inline MHinfoInt::MHinfoInt() {
@@ -99,8 +101,8 @@ inline Short MHinfoInt::shmDt() {
 // routing table and return a mhqid (either a new one or an existing one)
 // under successful completion; returns (-1) otherwise
 inline MHqid MHinfoInt::regName(MHregName *reg) {
-  return (rt->insetName(reg->mhname.display(), reg->mhqid,
-                        reg->qid, reg->global,
+  return (rt->insertName(reg->mhname.display(), reg->mhqid,
+                        reg->pid, reg->global,
                         reg->netinfo.fullreset, reg->netinfo.SelectedNet,
                         reg->rcvBroadcast, reg->q_size, reg->gQ, reg->realQ,
                         reg->bKeepOnLead, reg->dQ, reg->q_limit,
@@ -109,23 +111,23 @@ inline MHqid MHinfoInt::regName(MHregName *reg) {
 
 // Removes a name from the routing table
 inline void MHinfoInt::rmName(MHrmName *rm) {
-  rt->deletename(rm->mhname, rm->mhqid, rm->pid);
+  rt->deleteName(rm->mhname, rm->mhqid, rm->pid);
 }
 
 // Processes name map message from remote host
 inline void MHinfoInt::nameMap(MHnameMap *nm) {
-  rt->conform(MHID2HOST(nm->sQid), nm->names, nm->startqid,
+  rt->conform(MHQID2HOST(nm->sQid), nm->names, nm->startqid,
               nm->count, nm->fullreset);
 }
 
 // Process global queue map message from remote host
 inline void MHinfoInt::gQMap(MHgQMap* nm) {
-  rt->gQconform(nm->gqdata, nm->startqid, nm->count, nm->fullreset, nm-sQid);
+  rt->gQconform(nm->gqdata, nm->startqid, nm->count, nm->fullreset, nm->sQid);
 }
 
 // Process distributive queue map message from remote host
 inline void MHinfoInt::dQMap(MHdQMap* nm) {
-  rt->dQconform(nm->dqdata, nm->startqid, nm-count, nm->fullreset, nm->sQid);
+  rt->dQconform(nm->dqdata, nm->startqid, nm->count, nm->fullreset, nm->sQid);
 }
 
 // Processes ethernet status message from FT
@@ -144,11 +146,11 @@ inline void MHinfoInt::hostDel(MHhostDel* hostDel) {
               hostDel->onEnet, hostDel->clusterLead);
 }
 
-inline Void MhinfoInt::gqInitAck(MHgqInitAck* ackMsg) {
+inline Void MHinfoInt::gqInitAck(MHgqInitAck* ackMsg) {
   rt->gqInitAck(ackMsg->m_gqid, ackMsg->m_retVal);
 }
 
-inline Void MHinfoInt::inDeath(INpDeath* pmsg) {
+inline Void MHinfoInt::inpDeath(INpDeath* pmsg) {
   rt->inpDeath(pmsg);
 }
 

@@ -45,6 +45,8 @@ extern "C" Long _in_q_size_limit(); // Queue size limit
 extern "C" Long _in_dfault_q_size_limt(); // Default queue size limit
 extern "C" Short _in_msg_limit(); // Process msg limit
 extern "C" Short _in_default_msg_limit(); // process default msg limit
+// Process initialization complete
+extern "C" GLretVal _in_init_complete(); 
 // process reached critical functionality
 extern "C" GLretVal _in_crit_complete();
 extern "C" GLretVal _in_shutdown(); // Application shutdown
@@ -268,7 +270,7 @@ typedef struct {
 
 // Cluster information
 // Return members capable of being OA&M lead
-#define InoamMembersLead 2
+#define INoamMembersLead 2
 #define INGETOAMMEMBERS(names, type) _in_get_oam_members(names, type)
 #define INGETRESOURCEGROUP(hostid) _in_get_resources_group(hostid)
 

@@ -1,9 +1,8 @@
-INmain.o: ../../../src/lib/init/INmain.cc \
-  ../../../src/hdr/init/inusrinit.hh ../../../src/hdr/init/indata.hh \
-  ../../../src/hdr/GLtypes.hh ../../../src/hdr/GLreturns.hh \
-  ../../../src/hdr/GLtypes.hh ../../../src/hdr/msgh/MHnames.hh \
-  ../../../src/hdr/cr/CRprmMsg.hh ../../../src/hdr/cr/CRmsg.hh \
-  ../../../src/hdr/cr/CRmsgClass.hh ../../../src/hdr/cr/CRalarmLevel.hh \
-  ../../../src/hdr/cr/CRomBrevityCtl.hh ../../../src/hdr/cr/CRdebugMsg.hh \
-  ../../../src/hdr/msgh/MHmsgBase.hh ../../../src/hdr/msgh/MHpriority.hh \
-  ../../../src/hdr/msgh/MHnames.hh ../../../src/hdr/msgh/MHqid.hh
+INmain.o: ../../../cc/lib/init/INmain.cc ../../../cc/hdr/linux/sysent.h \
+ ../../../hdr/GLtypes.h ../../../hdr/GLreturns.h \
+ ../../../cc/hdr/init/INsbt.hh ../../../cc/hdr/init/INlibinit.hh \
+ ../../../cc/hdr/init/INusrinit.hh ../../../hdr/GLmsgs.h \
+ ../../../cc/hdr/init/INinit.hh ../../../cc/hdr/init/INshmkey.hh \
+ ../../../cc/hdr/init/INproctab.hh ../../../cc/hdr/msgh/MHnames.hh \
+ ../../../cc/hdr/msgh/MHqid.hh ../../../cc/hdr/msgh/MHdefs.hh \
+ ../../../cc/hdr/init/INlib.hh

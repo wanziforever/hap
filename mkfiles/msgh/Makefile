@@ -1,7 +1,7 @@
 TOP = ..
 include $(TOP)/top.mk
 ROOT = $(TOP)/$(TOP_ROOT)
-MSGH_PATH = $(TOP_SRC)/lib/msgh
+MSGH_PATH = $(TOP_SRC)/proc/msgh
 MSGH_SRC = $(MSGH_PATH)
 MSGH_HEADER = $(TOP_INC)
 MSGH_BIN = $(TOP_BIN)
@@ -15,7 +15,9 @@ LIB_PATH := $(MSGH_LIB)
 BIN_PATH := $(MSGH_BIN)
 
 SRC := \
-	MHinfoExt.cc
+	MHproc.cc \
+	MHrt2.cc \
+	MHinfoInt.cc
 
 #LIBS := $(LIBS) $(LIB_PATH)/INmain.a -lpq -lom -ldbi -lmisc -lmsgh -lehhandler -ltimer -lutils
 

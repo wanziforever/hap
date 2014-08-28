@@ -11,24 +11,23 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/time.h.
+#include <sys/time.h>
 #include <time.h>
 #include <memory.h>
 
 #include "hdr/GLtypes.h"
 #include "cc/hdr/msgh/MHinfoExt.hh"
 #include "cc/hdr/init/INusrinit.hh"
-#include "cc/msgh/proc/MHinfoInt.hh"
+#include "cc/proc/msgh/MHinfoInt.hh"
 #include "cc/hdr/eh/EHhandler.hh"
 #include "cc/hdr/init/INmtype.hh"
 #include "cc/hdr/init/INpDeath.hh"
 #include "cc/hdr/tim/TMreturns.hh"
-#include "cc/hdr/tim/INtmrExp.hh"
+#include "cc/hdr/tim/TMtmrExp.hh"
 #include "cc/hdr/init/INinitialize.hh"
-#include "cc/hdr/init/INswcc.hh"
-#include "cc/hdr/init/INswcc.hh"
+//#include "cc/hdr/init/INswcc.hh"
 #include "cc/hdr/msgh/MHshm.hh"
-#include "cc/lib/msgh/MHrt.hh"
+#include "cc/hdr/msgh/MHrt.hh"
 #include "MHgdAud.hh"
 
 // Maximum number of timers that can be used by MSGH
@@ -194,7 +193,7 @@ Long MHprocessmsg(MHqid &myQid) {
 
        // No Ack is needed for off-processor registration messages
        // except if this is a global queue registration and we are on lead
-       if (MHQID2HOST(regAck,mhqid) == MHcore, getLocalHostIndex()) {
+       if (MHQID2HOST(regAck.mhqid) == MHcore.getLocalHostIndex()) {
          // Send an ACK to the source process
          // msqid is used and lowlevel send because the queue
          // may not have been successfully inserted so mhqid is invalid
@@ -237,7 +236,7 @@ Long MHprocessmsg(MHqid &myQid) {
        nameMap->fullreset = pmsg->fullreset;
        nameMap->startqid = 0;
        nameMap->count = MHmaxQid;
-       memset(nameMap->names, 0x0x, sizeof(nameMap->names)*2);
+       memset(nameMap->names, 0x0, sizeof(nameMap->names)*2);
 
        int i = 0;
        while (i < pmsg->count) {

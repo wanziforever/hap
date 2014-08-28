@@ -171,7 +171,7 @@ typedef enum {
   IN_HALT,      // Process is beginning IN_HALT Phase
   IN_EHALT,     // Process is ending HALT Phase
   IN_BSTARTUP,  // Process is beginning the STARTUP Phase
-  in_STARTUP,   // Process is IN_STARTUP Phase
+  IN_STARTUP,   // Process is IN_STARTUP Phase
   IN_ESTARTUP,  // Process is ending STARTUP Phase
   IN_BSYSINIT,  // Process is beginning the SYSINIT Phase
   IN_SYSINIT,   // Process is in IN_SYSINIT Phase
@@ -187,6 +187,7 @@ typedef enum {
   IN_BSTEADY,   // System is in the STEADY State Phase
   IN_STEADY,    // Process is in IN_STEADY Phase
   IN_BCLEANUP,  // System is in the CLEANUP Phase
+  IN_CLEANUP,   // System is in the CLEANUP Phase
   IN_ECLEANUP,  // Process Ending CLEANUP Phase
   IN_MAXSTEP,   // Used for range checking , new process step
   // should be added BEFORE this one
@@ -243,6 +244,8 @@ typedef struct {
 #define IN_SDSHMLOCK (IN_sdata->shm_lock)
 #define IN_SDSHMLOCKCNT (IN_sdata->shm_lock_cnt)
 #define IN_SDSHMDATA (IN_sdata->shmem)
+
+extern IN_SDATA *IN_sdata;
 
 #if defined(c_plusplus) | defined(__cplusplus)
 extern const char *IN_procstnm[];

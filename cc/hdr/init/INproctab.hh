@@ -261,6 +261,7 @@ typedef struct {
   char percent_load_on_active; // The percent of the load to be send to Active
   unsigned char AlmCoreFull; // True if core full alarm was issued
   unsigned char AlmSoftChk; // True if softchk inhibited alarm was issued
+  off_t lbolt; // kernel address of lbolt
 #if defined(c_plusplus) | defined(__cplusplus)
   GLretVal bkret; // Result of execution of backout script
 #else
@@ -315,7 +316,7 @@ typedef struct {
   int num4096;  // Number of 4096 byte MSGH buffers
   int num16384; // Number of 16384 byte MSGH buffers
   char resource_groups[INmaxResourceGroups]; // Resource group to be assigned
-  Short resource_host[INmaxResource + 1]; // Host that has specific resource
+  Short resource_hosts[INmaxResource + 1]; // Host that has specific resource
   // Nodes that can be active
   char active_nodes[INmaxResourceGroups][INmaxNodeName+1];
   // Nodes that can be oam lead

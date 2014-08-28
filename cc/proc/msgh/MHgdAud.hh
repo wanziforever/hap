@@ -54,7 +54,7 @@ public:
     priType = MHintPtyp;
     msgType = MHgdSyncDataTyp;
   }
-  LongLOng m_SyncAddress; // Address of the data
+  LongLong m_SyncAddress; // Address of the data
   int m_GdId; // Id of the global data object
   Long m_Length;
   Char m_Data[1];

@@ -22,11 +22,13 @@
 
 #include <sys/time.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "cc/hdr/init/INsbt.hh"
 #include "cc/hdr/init/INreturns.hh"
-#include "cc/lib/init/INlibinit.hh"
+#include "cc/hdr/init/INlibinit.hh"
 
 const char* INcompleteStr = "INIT COMPLETE";
 
@@ -118,7 +120,7 @@ Void _insync() {
       // Generate a stack trace if this cleanup is triggered by
       // INIT initialization request caused by sanity timer expiring
       if (IN_SDPTAB[IN_PINDX].ireq_lvl == SN_LV0 ||
-          IN_SDPTAB[IN_PIDNX].ireq_lvl == SN_LV1) {
+          IN_SDPTAB[IN_PINDX].ireq_lvl == SN_LV1) {
         switch (IN_SDPTAB[IN_PINDX].ecode) {
         case IN_SANTMR_EXPIRED:
         case IN_SYNCTMR_EXPIRED:
@@ -179,7 +181,7 @@ Void _insync() {
       // Check global shared memory data pointer just in case the .bss
       // section was corrupted in procinit!!!
 
-      if (IN_sdata != tmpsdata || IN_procdata != tmp_procdata) {
+      if (IN_sdata != tmp_sdata || IN_procdata != tmp_procdata) {
         printf("REPT INIT %s REQUESTED INIT DUE TO BAD SHARED MEMORY POINTERS",
                IN_LDPTAB[IN_PINDX].proctag);
         exit(0);
@@ -205,7 +207,7 @@ Void _insync() {
     default:
       // IN_ERROR
       printf("INsync.c: _insync(): invalid step encoutered -> exiting:\n\t"
-             "procstep = %d\n\tprocess = %s", (iN_SDPTAB[IN_PINDX].procstep,
+             "procstep = %d\n\tprocess = %s", (IN_SDPTAB[IN_PINDX].procstep,
                                                IN_LDPTAB[IN_PINDX].proctag));
       break;
     }
@@ -227,7 +229,7 @@ Void _insync() {
     signal(SIGVTALRM, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
     signal(SIGALRM, SIG_IGN);
-    signal(SIGALRM);
+    sighold(SIGALRM);
     signal(SIGCLD, SIG_IGN);
     signal(SIGUSR1, SIG_IGN);
     struct timespec tsleep;
@@ -583,7 +585,7 @@ GLretVal _in_init_complete() {
   // not achieved.
   if (IN_SDPTAB[IN_PINDX].procstep != IN_CPREADY &&
       IN_SDPTAB[IN_PINDX].procstep != IN_EPROCESS) {
-    if ((IN_LDSTATE.sofchk != IN_INHSOFTCHK &&
+    if ((IN_LDSTATE.softchk != IN_INHSOFTCHK &&
          IN_LDPTAB[IN_PINDX].softchk != IN_INHSOFTCHK) ||
         IN_SDPTAB[IN_PINDX].procstep != IN_PROCESS) {
       if (IN_SDPTAB[IN_PINDX].procstep != IN_STEADY) {
@@ -594,10 +596,10 @@ GLretVal _in_init_complete() {
       return(GLfail);
     } else {
       printf("REPT INIT %s COMPETED INIT WITHOUT CRITICAL FUNCTIONALITY",
-             IN_LDPTAB[IN_PINDX].proctga);
+             IN_LDPTAB[IN_PINDX].proctag);
     }
   } else {
-    if (IN_LDPTAB[IN_PINDXf.print_progress]) {
+    if (IN_LDPTAB[IN_PINDX].print_progress) {
       IN_PROGRESS(INcompleteStr);
     }
   }
@@ -623,7 +625,7 @@ GLretVal _in_init_complete() {
 //
 GLretVal _in_crit_complete() {
   // Check if the previous state valid for transition to occur
-  if (IN_SDPTAB[IN_INDX].procstep != IN_PROCESS) {
+  if (IN_SDPTAB[IN_PINDX].procstep != IN_PROCESS) {
     return(GLfail);
   }
 
@@ -658,7 +660,7 @@ Long _in_q_size_limit() {
   }
 }
 
-Void _in_brev_parms(int *low, int *high, int* intreval) {
+Void _in_brev_parms(int *low, int *high, int* interval) {
   if (IN_PINDX != -1) {
     *low = IN_LDPTAB[IN_PINDX].brevity_low;
     *high = IN_LDPTAB[IN_PINDX].brevity_high;
@@ -686,14 +688,15 @@ Short _in_default_msg_limit() {
   }
 }
 
-int _in_get_resource_group() {
-  for (int i = 0; i < INmaResourceGroups; i++) {
+int _in_get_resource_group(short hostid) {
+  for (int i = 0; i < INmaxResourceGroups; i++) {
     if (hostid == IN_procdata->resource_hosts[i])
        return(i);
   }
+  return(GLfail);
 }
 
-short _in_get_oam_members() {
+short _in_get_oam_members(char names[][INmaxNodeName+1], int type) {
   switch (type) {
   case INoamMembersLead:
     memcpy(names, IN_procdata->oam_lead, sizeof(IN_procdata->oam_lead[0]) * 2);

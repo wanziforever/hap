@@ -7,19 +7,20 @@
 //  _in_percentLoadOnActive() - get the percent of load to be sent to Active
 //  _in_lrg_buf() - get the number of large message buffers in MHRPROC
 
-#include <sysent.h>    // exit(), pause(), getpid()
 #include <errno.h>     // UNIX error return values
 #include <signal.h>    // UNIX signal processing info
 #include <malloc.h>    // malloc() info
 #include <sys/types.h>  // Unix typedefs
-#include <sys.stat.h>
+#include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/nmain.h>
+#include <sys/mman.h>
 #include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/param.h>
 #include <stdlib.h>
 #include <time.h>
 
+#include "sysent.h"    // exit(), pause(), getpid()
 #include "hdr/GLtypes.h"
 #include "hdr/GLreturns.h"
 //#include "cc/hdr/cr/CRdebugMsg.hh"
@@ -27,7 +28,7 @@
 //#include "cc/hdr/cr/CRprocname.hh"
 
 #include "cc/hdr/init/INsbt.hh"
-#include "cc/lib/init/INlibinit.hh"
+#include "cc/hdr/init/INlibinit.hh"
 
 extern U_long* TMtimes;
 //
@@ -62,23 +63,23 @@ void INmain(short argc, char *argv[]) {
 
   // This CRERRINIT call will allow us to ignore signals if
   //   bit CRinit+60 is set
-  CRERRINIT(argv[0]);
+  // CRERRINIT(argv[0]);
 
   if (!IN_IS_LAB()) {
     if (IN_LBOLT != -1 && getuid() == 0) {
       // mmap lbolt
       int kmem_fd;
-      if ((kmem_fd = open("/dev/kmem", 0, RDONLY)) < 0) {
+      if ((kmem_fd = open("/dev/kmem", 0, O_RDONLY)) < 0) {
         printf("REPT INIT ERROR FAILED TO OPEN /dev/kmem, ERRNO = %d", errno);
       }
       void *tmp_ptr;
-      if ((tmp_ptr = mmap(0, PAGESIZE, PORT_READ, MAP_SHARED, kmem_fd,
-                          (IN_LBOLT & PAGEMASK))) == (void8)-1) {
+      if ((tmp_ptr = mmap(0, PAGESIZE, PROT_READ, MAP_SHARED, kmem_fd,
+                          (IN_LBOLT & PAGEMASK))) == (void*)-1) {
         printf("REPT INIT ERROR FAILED TO MMAP LBOLT, ERRNO = %d", errno);
       } else {
         // ifndef _LP64
         TMtimes = (U_long*)(((char*)tmp_ptr) + (IN_LBOLT & PAGEOFFSET));
-        TMtimes = (U_long)(((char*)tmp_ptr)+ sizeof(u_long) + (IN_LBOLT & PAGEOFFSET));
+        //TMtimes = (U_long)(((char*)tmp_ptr)+ sizeof(u_long) + (IN_LBOLT & PAGEOFFSET));
       }
       close(kmem_fd);
     }
@@ -126,7 +127,7 @@ void INmain(short argc, char *argv[]) {
       exit(0);
     }
 
-    printf("REPT INIT %S LAB MODE INIT COMPLETE", arv[0]);
+    printf("REPT INIT %s LAB MODE INIT COMPLETE", argv[0]);
     IN_SDPTAB[0].procstep = IN_STEADY;
 
     // Now invoke "process" forever...
@@ -140,10 +141,11 @@ void INmain(short argc, char *argv[]) {
       process(argc, argv, SN_NOINIT, dbg_runlvl);
     }
   }
-
+#endif
+  
   // Initialzie the pointer to the assert function that CRERROR and
   // CRASSERT will call.
-  CRsetAssetFn(_inassert);
+  //CRsetAssetFn(_inassert);
 
   IN_ldata->argc = argc;
   IN_ldata->argv = argv;
@@ -156,29 +158,29 @@ void INmain(short argc, char *argv[]) {
   // Setup SIGTERM signal handler
   signal(SIGTERM, SIG_DFL);
   IN_SDPTAB[IN_PINDX].ireq_lvl = SN_NOINIT;
-  struct timespect tsleep;
+  struct timespec tsleep;
   tsleep.tv_sec = 0;
   tsleep.tv_nsec = 50000000;
   IN_SDPTAB[IN_PINDX].procstate = IN_HALTED;
   IN_SDPTAB[IN_PINDX].procstep = IN_EHALT;
   while (IN_SDPTAB[IN_PINDX].procstate == IN_HALTED); {
-    nonosleep(&tsleep, NULL);
+    nanosleep(&tsleep, NULL);
   }
 
   _insync();
 
   // At this point, the process has completed its initialization.
-  // If the process is not critical, invoke the macros to transition
+  // If the process is not critical, invo=e the macros to transition
   // the other steps before calling process().
-  if (IN_LDPTAB[IN_PINDX].proc_category !+ IN_CP_CRITICAL) {
+  if (IN_LDPTAB[IN_PINDX].proc_category != IN_CP_CRITICAL) {
     IN_CRIT_COMPLETE();
     IN_INIT_COMPLETE();
   }
 
   signal(SIGCLD, SIG_DFL);
-  (VOid) sigaction(SIGUSR2, &act, NULL);
+  (Void) sigaction(SIGUSR2, &act, NULL);
 #ifndef NOMAIN
-  process(argc, argv, in_LDPTAB[IN_PINDX].sn_lvl, IN_LDSTATE.run_lvl);
+  process(argc, argv, IN_LDPTAB[IN_PINDX].sn_lvl, IN_LDSTATE.run_lvl);
 
   // Now, peg the sanity flag and invoke "process()"...forever...
   for (;;) {
@@ -211,16 +213,16 @@ void INmain_init() {
     // Environment variable not setup, must be in lab mode
     IN_ldata->mode = LAB_MODE;
   } else {
-    IN_lddata->mode = NORM_MODE;
+    IN_ldata->mode = NORM_MODE;
     // Set up CRprocname[], This heps in properly identifying
     // the process generating messages, before standard CR
     // initialization takes place.
-    strcpy(CRprocname, msgh_name);
+    //strcpy(CRprocname, msgh_name);
   }
 
   if (IN_IS_LAB()) {
     IN_sdata = (IN_SDATA*)INsdata;
-    IN_procdata = (iN_PROCDATA*)INldata;
+    IN_procdata = (IN_PROCDATA*)INldata;
 
     IN_PINDX = 0;
 
@@ -232,7 +234,7 @@ void INmain_init() {
     IN_SDPTAB[0].progress_mark = 0;
     IN_SDPTAB[0].procstate = IN_RUNNING;
     IN_SDPTAB[0].procstep = IN_READY;
-    IN_SDPTAB[0].proctag[IN_NAMEMX-1] = '\0';
+    IN_LDPTAB[0].proctag[IN_NAMEMX-1] = '\0';
     IN_LDPTAB[0].pathname[0] = '\0';
     IN_LDPTAB[0].msgh_qid = -1;
   } else {
@@ -269,7 +271,7 @@ void INmain_init() {
       exit(IN_SHM_ERR);
     }
 
-    if ((iN_PINDX = _ingetindx(msgh_name)) < 0) {
+    if ((IN_PINDX = _ingetindx(msgh_name)) < 0) {
       // Process dost not exist in INIT's tables
       exit(IN_SHM_ERR);
     }
@@ -278,7 +280,7 @@ void INmain_init() {
 
 // Return the current state of the node identified by the host id
 char _in_getNodeState(short hostId) {
-  return(IN_NODE_STATE(hostId));
+  return(IN_NODE_STATE[hostId]);
 }
 
 // Return the current state of the local watchdog interface
@@ -359,7 +361,7 @@ int _in_shutdown_timer() {
 //  UNIX - this is the entry point for the process.
 //
 
-int main(short argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   INmain_init();
   // INmain() never returns
   INmain(argc, argv);

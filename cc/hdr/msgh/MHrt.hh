@@ -240,7 +240,7 @@ public:
   int findName(Short& hostid, const Char *name, MHclusterScope scope) const;
   GLretVal getProcName(Char *name, MHqid mhqid) const;
   Short findMhqid(MHqid mhqid, Char *name) const;
-  MHqid insertname(const Char *, MHqid, pid_t, Bool global,
+  MHqid insertName(const Char *, MHqid, pid_t, Bool global,
                    Bool fullreset, Short Selectednet=0,
                    Bool RcvBroadcast=TRUE, Long q_size=-1,
                    Bool gQ=FALSE, MHqid realQ=MHnullQ,
