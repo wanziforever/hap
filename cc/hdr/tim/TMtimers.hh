@@ -79,7 +79,7 @@ public:
   // initialize timers
   GLretVal tmrInit(Bool atim = FALSE, Long nTCB = TM_DEF_nTCBs);
   Void tmrReinit();
-  Short setRtmr(Long Time, U_short tag,
+  Short setRtmr(Long time, U_short tag,
                 Bool c_flag = FALSE, Bool hz_flag = FALSE) {
     if (nTCBs <= MAXSHORT) {
       return((short)setlRtmr(time, (U_long)tag, c_flag, hz_flag));

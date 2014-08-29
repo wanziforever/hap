@@ -10,7 +10,7 @@
 #include "cc/hdr/init/INsharedMem.hh"
 #include "cc/hdr/init/INusrinit.hh"
 #include "cc/proc/msgh/MHinfoInt.hh"
-#include "cc/proc/msgh/MHqdAud.hh"
+#include "cc/proc/msgh/MHgdAud.hh"
 #include "cc/hdr/eh/EHhandler.hh"
 
 Long MHinfoInt::step = 0;

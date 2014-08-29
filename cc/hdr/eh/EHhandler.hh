@@ -53,8 +53,12 @@ inline GLretVal EHhandler::getEvent(MHqid msgqid, Char *msgp, Short &msgsz,
   // have the effect of alternating between first checking for
   // messages which have been received and first checking for
   // expired timers
+
+  // for compiling error "no conversiion from short int to int&"
+  // a work around for msgsz
+  Long sz = msgsz;
   msgFirst_flg = ((msgFirst_flg == TRUE) ? FALSE : TRUE);
-  return (getEvent(msgqid, msgp, msgsz, ptype, block_flg,
+  return (getEvent(msgqid, msgp, sz, ptype, block_flg,
                    evtype, msgFirst_flg));
 }
 

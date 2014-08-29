@@ -128,13 +128,13 @@ struct MHhostdata {
   Bool isactive; // Boolean for we think it's accessible
   Short spare2;
   Short SelectedNet; // Active network for communication to this host
-  Short Preferrednet; // Preferred network for communication to this host
+  Short PreferredNet; // Preferred network for communication to this host
   Bool netup[MHmaxNets]; // True if that network is upShort
   sockaddr_in6 saddr[MHmaxNets]; // Socket addresses for the host
   sockaddr_in6 alias[MHmaxNets][MHmaxAlias]; // Alias socket address for host
   Short next; // Pointer for next element in host hash
   Short delay; // Delay in trying to connect hosts
-  Short windowSz; // Protocol window size for this host
+  Short windowsSz; // Protocol window size for this host
   Short nDelMsgs;
   U_long nMeasSeqReset; //Number of sequencing resets
   Bool isR26;
@@ -234,7 +234,7 @@ public:
   MHrt();
 
   Void rtInit(Bool shmNoExist);
-  GLretVal readhostFile(Bool resetalldata);
+  GLretVal readHostFile(Bool resetalldata);
   GLretVal readHostFileCC(Bool resetalldata);
   MHqid findName(const Char *name) const;
   int findName(Short& hostid, const Char *name, MHclusterScope scope) const;
@@ -371,7 +371,7 @@ private:
   int m_nSearch4096; // Starting search index 4096 message buffers
   int m_nSearch16384; // Starting search index 16384 message buffers
   unsigned int m_BufIndex; // Indx of last allocated chunk
-  U_long nbuffFreed; // Number of wrongly busy sendbuffers
+  U_long nBuffFreed; // Number of wrongly busy sendbuffers
   MHenvType m_envType; // Current environment type
 
   Short host_hash[MHhostHashTblSz];  // hashing of host names

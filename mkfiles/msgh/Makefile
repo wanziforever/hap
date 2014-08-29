@@ -28,6 +28,8 @@ VPATH := $(subst " ", ":", $(src_dirs))
 ###########################
 OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 .PHONY : clean info Prepare
+LINUX_HDR = ${TOP_SRC}/hdr/linux
+INC := ${INC} -I${LINUX_HDR}
 
 all: info Prepare $(TARGET)
 

@@ -26,7 +26,7 @@
 extern "C" Short sysinit(int, char *[], SN_LVL, U_char);
 extern "C" Short procinit(int, char *[], SN_LVL, U_char);
 extern "C" Short cleanup(int, char *[], SN_LVL, U_char);
-extern "C" Short process(int, char *[], SN_LVL, U_char);
+extern "C" Void process(int, char *[], SN_LVL, U_char);
 extern "C" Void _inargchk(Short argc, Char *argv[],
                           SN_LVL *sn_lvl, U_char *run_lvl);
 extern "C" Short _ingetindx(char *); // Get index into INIT Tables

@@ -9,7 +9,7 @@
 #include "cc/hdr/msgh/MHmsgBase.hh"
 #include "cc/hdr/tim/TMmtype.hh"
 
-class TMtmrExp : public MHmsgbase {
+class TMtmrExp : public MHmsgBase {
 public:
   U_long tmrTag; // Tag of expired timer
 };

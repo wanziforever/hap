@@ -23,16 +23,16 @@
 #include <string.h>
 
 #include "hdr/GLportid.h"
-#include "cc/lib/msgh/MHrt.hh"
-#include "cc/lib/msgh/MHmsg.hh"
+#include "cc/hdr/msgh/MHrt.hh"
+#include "cc/hdr/msgh/MHmsg.hh"
 //#include "cc/hdr/cr/CRdebugMsg.hh"
 #include "cc/hdr/init/INusrinit.hh"
 #include "cc/hdr/msgh/MHinfoExt.hh"
 #include "cc/hdr/eh/EHhandler.hh"
 #include "cc/hdr/msgh/MHgqInit.hh"
 #include "cc/hdr/msgh/MHgq.hh"
-#include "cc/hdr/msgh/MHnetStChg.hh"
-#include "cc/lib/msgh/MHcargo.hh"
+//#include "cc/hdr/msgh/MHnetStChg.hh"
+//#include "cc/lib/msgh/MHcargo.hh"
 #include "MHinfoInt.hh"
 
 #define MHaudDelay 300
@@ -56,13 +56,13 @@ Void MHrt::rtInit(Bool shmNoExist) {
   int i, j;
   memset(localdata, 0x0, sizeof(localdata));
   memset(gqdata, 0x0, sizeof(gqdata));
-  memset(dqdata, 0x0x, sizeof(dqdata));
+  memset(dqdata, 0x0, sizeof(dqdata));
   for (i = 0; i < MHmaxQid; i++) {
     localdata[i].pid = MHempty;
     localdata[i].m_msgs = MHempty;
     localdata[i].m_msgstail = MHempty;
     pthread_mutex_init(&localdata[i].m_qLock, USYNC_PROCESS, NULL);
-    pthread_cond_init(&localata[i].m_cv, USYNC_PROCESS, NULL);
+    pthread_cond_init(&localdata[i].m_cv, USYNC_PROCESS, NULL);
     gqdata[i].m_selectedQ = MHempty;
     gqdata[i].m_tmridx = -1;
     dqdata[i].m_nextQ = MHempty;
@@ -83,10 +83,10 @@ Void MHrt::rtInit(Bool shmNoExist) {
     rt[i].globalnext = MHempty;
     rt[i].nextfree = i + 1; // Build up linked list of free elems
   }
-  rt[MHtotnameSlotsSz - 1].nextfree = Mhempty;
+  rt[MHtotNameSlotsSz - 1].nextfree = MHempty;
   free_tail = MHtotNameSlotsSz-1; // Finish linked list of elems
 
-  memset(hostlist, 0x0x, sizeof(hostlist));
+  memset(hostlist, 0x0, sizeof(hostlist));
   for (i = 0; i < MHmaxAllHosts; i++) {
     hostlist[i].SelectedNet = MHmaxNets;
     hostlist[i].PreferredNet = MHmaxNets;
@@ -109,11 +109,11 @@ Void MHrt::rtInit(Bool shmNoExist) {
       hostlist[i].sendQ[j].m_length = MHempty;
     }
     for (j = 0; j < MHmaxSQueue; j++) {
-      hostlist[i].rcvQ[j].m_lenth = MHempty;
+      hostlist[i].rcvQ[j].m_length = MHempty;
     }
   }
 
-  memset(RCStoHostId, oxff, sizeof(RCStoHostId));
+  memset(RCStoHostId, 0xff, sizeof(RCStoHostId));
 
   // isused and active set to TRUE since the global
   // queue host is always available
@@ -123,7 +123,7 @@ Void MHrt::rtInit(Bool shmNoExist) {
   hostlist[MHdQHost].isused = TRUE;
   hostlist[MHdQHost].isactive = TRUE;
 
-  for (i = 0; i < MHhosthashTblSz; i++) {
+  for (i = 0; i < MHhostHashTblSz; i++) {
     host_hash[i] = MHempty;
   }
 
@@ -153,7 +153,7 @@ Void MHrt::rtInit(Bool shmNoExist) {
   m_lockcnt = 0;
   m_buffered = IN_BUFFERED();
   m_leadcc = MHempty;
-  m_clusterlead = MHempty;
+  m_clusterLead = MHempty;
   m_oamLead = MHempty;
   m_vhostActive = MHempty;
   m_lastActive = 1;
@@ -162,9 +162,9 @@ Void MHrt::rtInit(Bool shmNoExist) {
   m_MinCargoSz = IN_MIN_CARGOSZ();
   m_CargoTimer = IN_CARGO_TMR();
   m_Version = MH_SHM_VER;
-  mutex_init(&m_lock, USYNC_PROCESS, NULL);
-  mutex_init(&m_msgLock, USYNC_PROCESS, NULL);
-  mutex_init(&m_dqLock, USYNC_PROCESS, NULL);
+  pthread_mutex_init(&m_lock, USYNC_PROCESS, NULL);
+  pthread_mutex_init(&m_msgLock, USYNC_PROCESS, NULL);
+  pthread_mutex_init(&m_dqLock, USYNC_PROCESS, NULL);
   m_nMeasUsed256 = 0;
   m_nMeasUsed1024 = 0;
   m_nMeasUsed4096 = 0;
@@ -215,13 +215,13 @@ GLretVal MHrt::readHostFileCC(Bool resetalldata) {
 GLretVal MHrt::readHostFile(Bool resetalldata) {
   percentLoadOnActive = IN_PERCENT_LOAD_ON_ACTIVE();
   INGETOAMMEMBERS((char(*)[MHmaxNameLen+1])&oam_lead, INoamMembersLead);
-  int hostCCexists = FALSE;
+  int hostsCCexists = FALSE;
 
   if (readHostFileCC(resetalldata) == GLfail) {
     // there was no valid msghosts.cc assume peer cluster
     m_envType = MH_peerCluster;
   } else {
-    hostsCCexists = TRUE:
+    hostsCCexists = TRUE;
     // On A/A but no lead yet, do not read the peer info
     if (m_leadcc == MHempty) {
       return(GLsuccess);
@@ -256,7 +256,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
   }
 
   Char systemName[SYS_NMLN];
-  strcpy(systermName, un.nodename);
+  strcpy(systemName, un.nodename);
   int k = strlen(systemName) - 1;
   int nDash = 0;
 
@@ -284,7 +284,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
 
   Bool localfound = FALSE;
   Short numfound = 0;
-  Short oldindex = MHempty;
+  Short oldIndex = MHempty;
   char hostfound[MHmaxHostReg];
   memset(hostfound, 0x0, sizeof(hostfound));
   struct addrinfo* res;
@@ -335,12 +335,13 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
       }
       e_name[i] = startptr;
       Char *tmp_name = (e_name[i][0] == '*' ? &e_name[i][1] : e_name[i]);
-      struct addrinfo *ents_p = NUll;
+      struct addrinfo *ents_p = NULL;
       struct addrinfo hints = { AI_ALL | AI_V4MAPPED, 0,0,0,0,NULL, NULL, NULL};
       int ret;
 
       if ((ret = getaddrinfo(tmp_name, NULL, &hints, &ents_p)) != 0) {
-        printf("MHrt::readHostFile(%s'%d): getaddrinfo failed for %d lname %s errno %d",
+        printf("MHrt::readHostFile(%s'%d): getaddrinfo failed for %d "
+               "lname %s rname %s errno %d",
                msghost, lineno, hostnum, logicalname, tmp_name, ret);
         sleep(100);
         break;
@@ -400,7 +401,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
         strcmp(localname, aarealname1) == 0) {
       if (localfound == TRUE) {
         printf("MHrt::readHostFile(%s'%d): %d has local name and so does %d!",
-               mshhost, lineno, hostnum, LocalHostIndex);
+               msghost, lineno, hostnum, LocalHostIndex);
         continue;
       }
       localfound = TRUE;
@@ -422,10 +423,10 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
         isdigit(realname[systemNameLen+3]) &&
         isdigit(realname[systemNameLen+5]) &&
         (isdigit(realname[systemNameLen+6]) || realname[systemNameLen+6] == 0)) {
-      rack = realnamee[systemNameLen+1]&0xf;
+      rack = realname[systemNameLen+1]&0xf;
       chassis = realname[systemNameLen+3]&0xf;
       slot = atoi(&realname[systemNameLen+5]);
-      if (rack > mHmaxRack || chassis > MHmaxChassis || slot > MHmaxSlot) {
+      if (rack > MHmaxRack || chassis > MHmaxChassis || slot > MHmaxSlot) {
         printf("MHrt::readHostFile(%s'%d) invalid r%dc%ds%d",
                msghost, lineno, rack, chassis, slot);
         continue;
@@ -452,7 +453,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
     startptr = strtok((Char *const)0, " \t");
     if (startptr == NULL) {
       printf("MHrt::readHostFile(%s'%d): no ping interval for %d logical "
-             "name %s, skipping", msghost, linenum, logicalname);
+             "name %s, skipping", msghost, lineno, logicalname);
     } else {
       ping = atoi(startptr)/IN_MSGH_PING();
     }
@@ -472,10 +473,10 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
       if (hostlist[hostnum].hostname != logicalname) {
         printf("MHrt::readHostFile(%s'%d): audit %d failed !\n\tlname %s != %s",
                msghost, lineno, hostnum, logicalname,
-               hostlist[hostnum.hostname.displa()]);
+               hostlist[hostnum].hostname.display());
       }
     }
-    if (strcmp(logcalname, realname) == 0 || strcmp(localname, aarealname0) == 0
+    if (strcmp(localname, realname) == 0 || strcmp(localname, aarealname0) == 0
         || strcmp(localname, aarealname1) == 0) {
       if (!hostsCCexists) {
         LocalHostIndex = hostnum;
@@ -504,7 +505,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
     }
     int j;
     hostfound[hostnum] = TRUE;
-    hostlist[hostnum].windowSz = windowSz;
+    hostlist[hostnum].windowsSz = windowSz;
     hostlist[hostnum].ping = ping;
     if (IN_NETWORK_TIMEOUT() > 0) {
       hostlist[hostnum].maxMissed = ((((IN_NETWORK_TIMEOUT() * 1000)  \
@@ -518,7 +519,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
     if (rack >= 0) {
       RCStoHostId[rack][chassis][slot] = hostnum;
       strncpy(hostlist[hostnum].nameRCS,
-              &realname[systemNamelen+1], MHmaxRCSName);
+              &realname[systemNameLen+1], MHmaxRCSName);
     }
     if (oldIndex == MHempty) {
       hostlist[hostnum].nRcv = MHmaxSeq + 1;
@@ -580,7 +581,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
       ClearRcvQueue(hostnum);
       // delete this entry
       Short key = (Short)(hostlist[hostnum].hostname.foldKey() % MHhostHashTblSz);
-      Short hostidnex = host_hash[key];
+      Short hostindex = host_hash[key];
       if (hostindex == oldIndex) {
         host_hash[key] = hostlist[hostnum].next;
       } else {
@@ -592,7 +593,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
           printf("could not find host to be delete %s on hostlist",
                  hostlist[hostnum].hostname.display());
         } else {
-          hhostlist[hostindex].next = hostlist[oldIndex].next;
+          hostlist[hostindex].next = hostlist[oldIndex].next;
         }
       }
       continue;
@@ -634,7 +635,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
 MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
                        Bool fullreset, Short SelectedNet, Bool RcvBroadcast,
                        Long q_size, Bool gQ, MHqid realQ, Bool bKeepOnLead,
-                       Bool dQ, Short qlimit, Bool clusterGlobal) {
+                       Bool dQ, Short q_limit, Bool clusterGlobal) {
   Short procindex = MHempty;
   // Got a good slot on the host, use it.
   if (TotalNamesReg >= MHmaxNamesReg) {
@@ -661,7 +662,7 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
       }
       if (MHQID2HOST(mhqid) != MHgQHost) {
         printf("Non global queue %s sent for global registration of %s",
-               mhqid,display(), name);
+               mhqid.display(), name);
         return(MHnullQ);
       }
     } else if ((procindex = findNameOnHost(MHgQHost, name)) == MHempty) {
@@ -746,7 +747,8 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
           return(MHnullQ);
         }
         i = oldest;
-        mhqid = MHMAKEMHQID(MHQHost, i);
+        mhqid = MHMAKEMHQID(MHgQHost, i);
+        deleteName(rt[hostlist[MHdQHost].indexlist[i]].mhname, mhqid, -1);
       }
     } else {
       mhqid = rt[procindex].mhqid;
@@ -783,7 +785,7 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
       if (q_size > 0) {
         localdata[qid].nByteLimit = q_size;
       } else {
-        localdata[qid].nByteLimit = IN_default_Q_SIZE_LIMIT();
+        localdata[qid].nByteLimit = IN_DEFAULT_Q_SIZE_LIMIT();
       }
       if (q_limit > 0) {
         localdata[qid].nCountLimit = q_limit;
@@ -832,7 +834,7 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
         int j;
         for (j = 0; j < MHmaxRealQs; j++) {
           if (gqdata[qid].m_realQ[j] == MHnullQ) {
-            if (free_slot == MHmaxRrealQs) {
+            if (free_slot == MHmaxRealQs) {
               free_slot = j;
             }
           } else if (gqdata[qid].m_realQ[j] == realQ) {
@@ -912,7 +914,7 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
   rt[procindex].global = glob;
   rt[procindex].mhqid = mhqid;
   rt[procindex].globalnext = MHempty;
-  rt[procindex].hostnext = Mhempty;
+  rt[procindex].hostnext = MHempty;
 
   if (LocalHostIndex == hostindex) {
     MHmsgh.emptyQueue(mhqid);
@@ -929,7 +931,7 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
   MHname mhname(name);
 
   // Then put on global hashed list of names
-  Short key = (Short ) (mhname.foldkey() % MHtotHashTblSz);
+  Short key = (Short ) (mhname.foldKey() % MHtotHashTblSz);
 
   rt[procindex].globalnext = global_hash[key];
   // The next line atomically puts the name at the head of global hash list
@@ -951,7 +953,7 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
   // nodes, i.e. globally known real queue or a global queue.
   if (((glob != FALSE) && (MHQID2HOST(mhqid) == LocalHostIndex)) ||
       gQ == TRUE || (dQ == TRUE && m_leadcc == LocalHostIndex)) {
-    sendName(name, mhqid, realQ, bkeepOnlead, glob);
+    sendName(name, mhqid, realQ, bKeepOnLead, glob);
   }
   if (gQ == TRUE) {
     gqdata[qid].m_realQ[0] = realQ;
@@ -996,7 +998,7 @@ Void MHrt::sendName(const Char *name, MHqid mhqid, MHqid realQ,
     regName.gQ = FALSE;
   }
   if (MHQID2HOST(mhqid) == MHdQHost) {
-    if (m_envType == MH_peerCLuster || m_leadcc != LocalHostIndex) {
+    if (m_envType == MH_peerCluster || m_leadcc != LocalHostIndex) {
       return;
     }
     regName.dQ = TRUE;
@@ -1008,7 +1010,7 @@ Void MHrt::sendName(const Char *name, MHqid mhqid, MHqid realQ,
   regName.global = glob;
   regName.ptype = MHintPtyp;
   regName.mtype = MHregNameTyp;
-  regName.netinfo.Selectednet = MHmaxNets;
+  regName.netinfo.SelectedNet = MHmaxNets;
   if (TotalNamesReg == 1) {
     // Only MSGH is registered - tell to reset list
     regName.netinfo.fullreset = TRUE;
@@ -1022,9 +1024,9 @@ Void MHrt::sendName(const Char *name, MHqid mhqid, MHqid realQ,
 
   int i;
   for (i = 0; i < MHmaxHostReg; i++) {
-    if (i == LocalhostIndex || i == SecondaryHostIndex)
+    if (i == LocalHostIndex || i == SecondaryHostIndex)
        continue; // Don't register with ourselves
-    regname.sQid = MHMAKEMHQID(getActualLocalHostIndex(i), 0);
+    regName.sQid = MHMAKEMHQID(getActualLocalHostIndex(i), 0);
     if (mhqid != MHnullQ && regName.gQ == FALSE && regName.dQ == FALSE) {
       regName.mhqid = MHMAKEMHQID(getActualLocalHostIndex(i),
                                   MHQID2QID(mhqid));
@@ -1033,7 +1035,7 @@ Void MHrt::sendName(const Char *name, MHqid mhqid, MHqid realQ,
     if (hostlist[i].isused == TRUE) {
       // In mixed clusters global and distributive queues are registered
       // on some nodes but not others
-      if (MHQID2HOST(mhqid) == mHgQHost) {
+      if (MHQID2HOST(mhqid) == MHgQHost) {
         // Do not distribute cluster global names to other cc's
         if (MHQID2QID(mhqid) >= MHclusterGlobal &&
             MHQID2QID(mhqid) < MHsystemGlobal) {
@@ -1058,7 +1060,7 @@ Void MHrt::sendName(const Char *name, MHqid mhqid, MHqid realQ,
         }
       }
       // This send assumes MSGH is queue 0! Ignore return value
-      MHmsgh.send(MHMAKEMHQID(1, 0), (Char*)&regName, sizeof(MHregname), 0);
+      MHmsgh.send(MHMAKEMHQID(1, 0), (Char*)&regName, sizeof(MHregName), 0);
     }
   }
 }
@@ -1086,7 +1088,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
     tsleep.tv_nsec = (100000000 + (10000000L * LocalHostIndex)) % 1000000000L;
     if (fullreset && (LocalHostIndex != m_leadcc ||
                       m_envType == MH_peerCluster) && IN_INSTEADY()) {
-      nanosleep(&sleep, NULL);
+      nanosleep(&tsleep, NULL);
     }
     tsleep.tv_nsec = delay;
     int i;
@@ -1103,7 +1105,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
       hostDel.clusterLead = m_clusterLead;
       hostDel.bReply = FALSE;
       hostDel.enet = hostlist[hostindex].SelectedNet;
-      hostDel.onEnt = hostDel.enet;
+      hostDel.onEnet = hostDel.enet;
       MHmsgh.send(MHMAKEMHQID(i, MHmsghQ), (Char *)&hostDel,
                   sizeof(MHhostDel), 0, TRUE);
     }
@@ -1136,11 +1138,11 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
           }
         }
       }
-      regmap.count = j;
-      regMap.msgSz = (regMap.names - (char *)&regmap) + j;
+      regMap.count = j;
+      regMap.msgSz = (regMap.names - (char *)&regMap) + j;
       MHmsgh.send(mhqid, (Char*)&regMap, regMap.msgSz, 0);
     } else {
-      MHnamemap nameMap; // Name map to send last
+      MHnameMap nameMap; // Name map to send last
       memset(nameMap.names, 0x0, sizeof(nameMap.names));
       nameMap.ptype = MHintPtyp;
       nameMap.mtype = MHnameMapTyp;
@@ -1167,7 +1169,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
           // time to send the message
           nameMap.count = j;
           MHmsgh.send(mhqid, (Char *)&nameMap, sizeof(nameMap), 0);
-          memset(nameMap.names, 0x0x, sizeof(nameMap.names));
+          memset(nameMap.names, 0x0, sizeof(nameMap.names));
           nameMap.startqid = i + 1;
           j = 0;
           // nanosleep(&tsleep, NULL);
@@ -2497,7 +2499,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
       pthread_mutex_unlock(&m_lock);
       // if the message is addressed to MHrproc, call the
       // message processing function directly
-      if (MHQID@QID(msgp->toQue) != MHrprocQ) {
+      if (MHQID2QID(msgp->toQue) != MHrprocQ) {
         if ((retval = msgp->send(msgp->toQue, msgp->srcQue,
                                  msgp->msgSz, 0)) != Glsuccess) {
           m_nMeasFailedSend++;

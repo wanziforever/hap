@@ -61,7 +61,7 @@ Void process(int, Char *[], SN_LVL, U_char) {
 
   ret = MHevent.getMhqid(msghName, myQid); // msqid created by the msgh process
   // set a cyclic timer to fire every minute
-  if ((MHtmrIndx = MHevent.setLRtmr(MHauditTime, MHtimerTag, TRUE, FALSE)) < 0) {
+  if ((MHtmrIndx = MHevent.setlRtmr(MHauditTime, MHtimerTag, TRUE, FALSE)) < 0) {
     printf("MHproc : ERROR: setRtmr() FAILED. RETUEN CODE %d", MHtmrIndx);
     INITREQ(SN_LV0, ret, "FAILED TO SET AUDIT TIMER", IN_EXIT);
   }
@@ -100,7 +100,7 @@ void* MHgdChange(void* msg) {
     return(NULL);
   }
   if ((creatpid = fork()) == 0) {
-    switch (((MHmsgBasse*)&lmsg)->msgType) {
+    switch (((MHmsgBase*)&lmsg)->msgType) {
     case MHregGdTyp:
       MHcore.RegGd((MHregGd*)&lmsg);
       break;
@@ -139,7 +139,7 @@ void* MHgdChange(void* msg) {
       ((MHgdAud*)&lmsg)->m_bSystemStart == TRUE) {
     bFinishedGdoCreate = TRUE;
   }
-  pthread_mutx_unlock(&regGdLock);
+  pthread_mutex_unlock(&regGdLock);
   return(NULL);
 }
 
@@ -175,9 +175,9 @@ Long MHprocessmsg(MHqid &myQid) {
      {
        MHregName* regName;
        regName = (MHregName*) msgBufPtr;
-       MHrt* rt = MHmsgh.getRT();
+       MHrt* rt = MHmsgh.getRt();
        if (regName->fill == MHR26) {
-         rt->hostlist[MHmsgh.Qid2Host(regname->mhqid)].isR26 = TRUE;
+         rt->hostlist[MHmsgh.Qid2Host(regName->mhqid)].isR26 = TRUE;
        }
 
        if ((regAck.mhqid = MHcore.regName(regName)) == MHnullQ) {
@@ -207,12 +207,12 @@ Long MHprocessmsg(MHqid &myQid) {
                   regName->mhname.display(), regAck.mhqid.display(), retval);
          }
        } else if ((MHQID2HOST(regAck.mhqid) == MHgQHost ||
-                   MHQID2Host(regAck.mhqid) ==MHdQHost) &&
+                   MHQID2HOST(regAck.mhqid) ==MHdQHost) &&
                   (MHQID2HOST(regName->realQ) == rt->LocalHostIndex ||
                    MHQID2HOST(regName->realQ) == rt->SecondaryHostIndex)) {
          // Global queue registration and we are on lead
          if ((retval = MHevent.send(regName->realQ, (char*)&regAck, sizeof(MHregAck), 0L)) != GLsuccess) {
-           printf("MHproc: Global ACK_send FAILED! name=%s mhqid=%s mhqid=%s retval=%d",
+           printf("MHproc: Global ACK_send FAILED! name=%s mhqid=%s retval=%d",
                   regName->mhname.display(), regName->realQ.display(), retval);
          }
        }
@@ -221,7 +221,7 @@ Long MHprocessmsg(MHqid &myQid) {
   case MHrmNameTyp: // remove name message
     MHcore.rmName((MHrmName*)&msg);
     break;
-  case MHameMapTyp: // Received name map message
+  case MHnameMapTyp: // Received name map message
     MHcore.nameMap((MHnameMap*)&msg);
     break;
   case MHregMapTyp:
@@ -232,7 +232,7 @@ Long MHprocessmsg(MHqid &myQid) {
        MHnameMap* nameMap = (MHnameMap*)space;
        MHregMap* pmsg = (MHregMap*)&msg;
 
-       nameMap->sQid = pnsg->sQid;
+       nameMap->sQid = pmsg->sQid;
        nameMap->fullreset = pmsg->fullreset;
        nameMap->startqid = 0;
        nameMap->count = MHmaxQid;
@@ -249,7 +249,7 @@ Long MHprocessmsg(MHqid &myQid) {
          }
        }
 
-       MHcore.namemap(nameMap);
+       MHcore.nameMap(nameMap);
        break;
      }
   case MHgQMapTyp: // received name map message
@@ -265,7 +265,7 @@ Long MHprocessmsg(MHqid &myQid) {
     break;
 
   case MHconnTyp:
-    MHcore.conn((Mhconn*)&msg);
+    MHcore.conn((MHconn*)&msg);
     break;
 
   case MHhostDelTyp:
@@ -288,7 +288,7 @@ Long MHprocessmsg(MHqid &myQid) {
     break;
   case MHrmGdTyp:
     if (bGotAudMsg) {
-      memcpy(&tmpmsg[idnex], &msg, sizeof(MHrmGd));
+      memcpy(&tmpmsg[index], &msg, sizeof(MHrmGd));
       // Do this in a thread, if object locking is used
       // it can take a while
       if (thr_create(NULL, thr_min_stack()+64000, MHgdChange, &tmpmsg[index], THR_DETACHED, NULL) != 0) {
@@ -302,7 +302,7 @@ Long MHprocessmsg(MHqid &myQid) {
     }
     break;
 
-  case MHgdAudregTyp:
+  case MHgdAudreqTyp:
     MHcore.gdAudReq((MHgdAudReq*)&msg);
     break;
 
@@ -325,7 +325,7 @@ Long MHprocessmsg(MHqid &myQid) {
      }
      break;
 
-  case MHgdInitAckTyp:
+  case MHgqInitAckTyp:
     MHcore.gqInitAck((MHgqInitAck*)&msg);
     break;
 
@@ -334,12 +334,12 @@ Long MHprocessmsg(MHqid &myQid) {
     break;
 
   case MHdQSetTyp:
-    MHcore.dQset((MHdQSet*)&msg);
+    MHcore.dQSet((MHdQSet*)&msg);
     break;
 
-  case CRdbCmdMsgTyp:  // a debug on/off control msg
-    ((CRdbCmdMsg*)msgBufPtr)->unload();
-    break;
+  //case CRdbCmdMsgTyp:  // a debug on/off control msg
+  //  ((CRdbCmdMsg*)msgBufPtr)->unload();
+  //  break;
 
   case INpDeathTyp:
      {
@@ -348,65 +348,65 @@ Long MHprocessmsg(MHqid &myQid) {
      }
   case INinitializeTyp:
      {
-       INinitializaAck ackmsg;
+       INinitializeAck ackmsg;
        if ((retval = ackmsg.send(myQid)) != GLsuccess) {
          INITREQ(SN_LV0, retval, "FAILED TO SEND INITMSG ACK", IN_EXIT);
        }
        break;
      }
 
-  case INswccTyp:
-     {
-       INswcc *pmsg = (INswcc*)&msg;
-       char mhNmae[MHmaxNameLen+1];
-       MHevent.getMyHostName(myName);
-       // if we are not lead and we are a CC, cause global queue failover
-       if (MHevent.onLeadCC() &&
-           MHevent.Qid2Host(pmsg->srcQue) == MHevent.getLocalHostIndex()) {
-         MHcore.hostId = MHmaxAllHosts;
-         MHevent.setlRtmr(MHleadShutTime, MHshutdownTag, FALSE, TRUE);
-       } else if (MHevent.getRT()->isCC(myName)) {
-         MHcore.hostId = MHevent.Qid2Host((pmsg->srcQue));
-         MHevent.setlRtmr(MHactShutTime, MHshutdownTag, FALSE, TRUE);
-       }
-       break;
-     }
+//  case INswccTyp:
+//     {
+//       INswcc *pmsg = (INswcc*)&msg;
+//       char mhNmae[MHmaxNameLen+1];
+//       MHevent.getMyHostName(myName);
+//       // if we are not lead and we are a CC, cause global queue failover
+//       if (MHevent.onLeadCC() &&
+//           MHevent.Qid2Host(pmsg->srcQue) == MHevent.getLocalHostIndex()) {
+//         MHcore.hostId = MHmaxAllHosts;
+//         MHevent.setlRtmr(MHleadShutTime, MHshutdownTag, FALSE, TRUE);
+//       } else if (MHevent.getRT()->isCC(myName)) {
+//         MHcore.hostId = MHevent.Qid2Host((pmsg->srcQue));
+//         MHevent.setlRtmr(MHactShutTime, MHshutdownTag, FALSE, TRUE);
+//       }
+//       break;
+//     }
+//
+//  case MSsnapshotDumpMeasTyp:
+//     {
+//       // Snapshort measurement values associated with all ORACLE tables
+//       // listed in this message but do not reset count
+//       MSsnapshot *snapPtr;
+//       snapPtr = (MSsnapshort *)msgBufPtr;
+//       meas->snapshot(snapPtr, FALSE);
+//       break;
+//     }
+//
+//  case MSsnapshotTyp:
+//     {
+//       // Deliver measurement table specified in this message as an
+//       // SQL INSERT command in a MSmeasData message
+//       MSdeliver *delivPtr;
+//       delivPtr = (MSdeliver *) msgBufPtr;
+//       meas->deliver(delivPtr);
+//       break;
+//     }
+//  case MSackMeasTyp:
+//     {
+//       // ACK for last MSmeasData message sent from this process; possibly
+//       // can ask for another measurement table to deliver also; if it
+//       // does, deliver it as an SQL INSET command in a MSmeasData message
+//       MSackMeas *ackPtr;
+//       ackPtr = (MSackMeas *)msgBufPtr;
+//       meas->ack(ackPtr);
+//       break;
+//     }
+//
+  // Hanlde the field update case for MSGH
 
-  case MSsnapshotDumpMeasTyp:
-     {
-       // Snapshort measurement values associated with all ORACLE tables
-       // listed in this message but do not reset count
-       MSsnapshot *snapPtr;
-       snapPtr = (MSsnapshort *)msgBufPtr;
-       meas->snapshot(snapPtr, FALSE);
-       break;
-     }
-
-  case MSsnapshotTyp:
-     {
-       // Deliver measurement table specified in this message as an
-       // SQL INSERT command in a MSmeasData message
-       MSdeliver *delivPtr;
-       delivPtr = (MSdeliver *) msgBufPtr;
-       meas->deliver(delivPtr);
-       break;
-     }
-  case MSackMeasTyp:
-     {
-       // ACK for last MSmeasData message sent from this process; possibly
-       // can ask for another measurement table to deliver also; if it
-       // does, deliver it as an SQL INSET command in a MSmeasData message
-       MSackMeas *ackPtr;
-       ackPtr = (MSackMeas *)msgBufPtr;
-       meas->ack(ackPtr);
-       break;
-     }
-
-     // Hanlde the field update case for MSGH
-
-  case SUexitTyp:
-    exit(0);
-    break;
+//  case SUexitTyp:
+//    exit(0);
+//    break;
   case TMtmrExpTyp:
     MHcore.tmrExp(((TMtmrExp*)msgBufPtr)->tmrTag);
     return(((TMtmrExp*)msgBufPtr)->tmrTag);
@@ -421,7 +421,7 @@ Long MHprocessmsg(MHqid &myQid) {
 // Called during process initialization, Currently, MSGH needs to
 // read messages from its queue for other processes' registration.
 // The future INIT implementation will not require this.
-Short procinit(int, Char *[]. SN_LVL sn_lvl, U_char) {
+Short procinit(int, Char *[], SN_LVL sn_lvl, U_char) {
   /* CRERRINIT(msghName) // input subsystem name */
 
   GLretVal rtn;
@@ -469,7 +469,7 @@ Short procinit(int, Char *[]. SN_LVL sn_lvl, U_char) {
   MHmsgh.getMhqid(msghName, myQid); // msqid created by the msgh process
 
   // initialize measurements class
-  meas = new MHmeas(myQid);
+  // meas = new MHmeas(myQid);
 
   for (;;) {
     tmrtype = MHprocessmsg(myQid);
@@ -495,8 +495,8 @@ Short procinit(int, Char *[]. SN_LVL sn_lvl, U_char) {
     }
   }
 
-  rt = MHmsgh.getRT();
-  rt->updateClusterlead(rt->getLocalHostIndex());
+  rt = MHmsgh.getRt();
+  rt->updateClusterLead(rt->getLocalHostIndex());
   // If not going active or lead, just return procinit
   if (IN_GETNODESTATE(MHevent.getLocalHostIndex()) != S_ACT &&
       IN_GETNODESTATE(MHevent.getLocalHostIndex()) != S_LEADACT) {
