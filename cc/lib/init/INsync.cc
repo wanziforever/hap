@@ -28,7 +28,7 @@
 
 #include "cc/hdr/init/INsbt.hh"
 #include "cc/hdr/init/INreturns.hh"
-#include "cc/hdr/init/INlibinit.hh"
+#include "INlibinit.hh"
 
 const char* INcompleteStr = "INIT COMPLETE";
 
@@ -657,6 +657,14 @@ Long _in_q_size_limit() {
     return (IN_LDPTAB[IN_PINDX].q_size);
   } else {
     return (-1);
+  }
+}
+
+Long _in_default_q_size_limit() {
+  if (IN_procdata != NULL) {
+    return(IN_procdata->default_q_size);
+  } else {
+    return(-1);
   }
 }
 

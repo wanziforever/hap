@@ -36,14 +36,7 @@
 #ifndef PAGEMASK
 #define PAGEMASK (ULONG_MAX ^ (PAGEOFFSET))
 #endif
-//#define PROT_READ 0
-//#define PROT_WRITE 0
-//#define PROT_EXEC 0
-//#define PROT_NONE 0
-//#define PROT_RDWR 0
-//#define MAP_PRIVATE 0
-//#define MAP_SHARED 0
-//#define MAP_FIXED 0
+
 
 /* We can do the following since all uses of memcntl are MC_SYNC.
 #define memcntl(addr, len, op, subop, z1, z2) msync(addr, len, (int)subop)

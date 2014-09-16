@@ -169,7 +169,7 @@ struct MHgQMap {
   Long ptype;  // priority type
   MHqid sQid;  // Source queue
   MHqid toQue; // The qid sent TO -used by MSGH for network sends
-  Short mytpe; // message type
+  Short mtype; // message type
   Short msgSz; // mesasge size - used by MSGH only
   U_short seq;  // Sequence number of messages
   U_short rSeq;

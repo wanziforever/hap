@@ -15,13 +15,15 @@ LIB_PATH := $(EH_LIB)
 BIN_PATH := $(EH_BIN)
 
 SRC = \
-	ehhandler.cc \
+	EHhandler.cc \
 
 LIBS := $(LIBS) -lpthread -lmsgh
 CFLAGS := $(CFLAGS) -fPIC
 
 src_dirs := $(sort $(dir $(addprefix $(SRC_PATH)/, $(SRC))))
 VPATH := $(subst " ", ":", $(src_dirs))
+LINUX_HDR = ${TOP_SRC}/hdr/linux
+INC := ${INC} -I${LINUX_HDR}
 
 OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 .PHONY : clean info Prepare

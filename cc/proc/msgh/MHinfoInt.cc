@@ -5,6 +5,7 @@
 #include <sys/msg.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include "cc/hdr/msgh/MHnames.hh"
 #include "cc/hdr/init/INsharedMem.hh"
@@ -12,6 +13,7 @@
 #include "cc/proc/msgh/MHinfoInt.hh"
 #include "cc/proc/msgh/MHgdAud.hh"
 #include "cc/hdr/eh/EHhandler.hh"
+#include "cc/hdr/linux/luc_compat.h"
 
 Long MHinfoInt::step = 0;
 
@@ -28,7 +30,7 @@ Short MHinfoInt::sysinit() {
   char *pBuffer;
 
   // create a shared memory segment if it is does not exists
-  if ((shmid = INshmem.allocSeq(MHkey, sizeof(MHrt), 0666, noExist)) < 0) {
+  if ((shmid = INshmem.allocSeg(MHkey, sizeof(MHrt), 0666, noExist)) < 0) {
     printf("MHsysinit: allocSeq() FAILED! ret=%d, errn=%d", shmid, errno);
     return (-1);
   }
@@ -44,7 +46,7 @@ Short MHinfoInt::sysinit() {
   int bufferSz = (rt->m_n256 << 8) + (rt->m_n1024 << 10) +  \
      (rt->m_n4096 << 12) + (rt->m_n16384 << 14) + rt->m_n256 +  \
      rt->m_n1024 + rt->m_n4096 + rt->m_n16384;
-  bufferSz += rt->m_NumChunks ++ (rt->m_NumChunks * MHdataChunk);
+  bufferSz += rt->m_NumChunks + (rt->m_NumChunks * MHdataChunk);
 
   // create a the buffer shared memory segment if it does not exist
   if ((shmid = INshmem.allocSeg(MHkey+1, bufferSz, 0666, noExist)) < 0) {
@@ -92,19 +94,19 @@ Short MHinfoInt::procinit(SN_LVL sn_lvl) {
 
   int shmid;
   // Find and create all global data objects
-  memset(gdName, 0x0, sizeof(gdname));
+  memset(gdName, 0x0, sizeof(gdName));
   for (int i = 0; i < MHmaxGd; i++) {
     if ((shmid = INshmem.getSeg(TRUE, (IN_SHM_KEY)i)) >=0) {
       rt->m_gdCtl[i].m_shmid = shmid;
       gd[i] = new MHgd;
-      if ((rtv = gd[i]->attach(rt->m_gdCtl[i].m_shmid,rt)) != GLsuccess) {
+      if ((rtn = gd[i]->attach(rt->m_gdCtl[i].m_shmid,rt)) != GLsuccess) {
         printf("Failed to attach %d, retval %d", i, rtn);
       }
       strcpy(gdName[i], gd[i]->getName());
       gd[i]->detach();
     } else {
       rt->m_gdCtl[i].m_shmid = -1;
-      rt->m_gdCtl[i].mm_RprocIndex = -1;
+      rt->m_gdCtl[i].m_RprocIndex = -1;
     }
   }
 
@@ -122,9 +124,9 @@ Short MHinfoInt::procinit(SN_LVL sn_lvl) {
     rt->SecondaryHostIndex = MHnone;
   }
 
-  if (rt->insertName(MHmsgName, MHMAKEMHQID(rt->getLocalHostIndex(), MHmsghQ),
-                     pid, MH_allNodes, FALSE, 0 TRUE, IN_Q_SIZE_LIMIT(),
-                     FALSE, MUnullQ, FALSE, FALSE, IN_MSG_LIMIT()) == MHnullQ) {
+  if (rt->insertName(MHmsghName, MHMAKEMHQID(rt->getLocalHostIndex(), MHmsghQ),
+                     pid, MH_allNodes, FALSE, 0, TRUE, IN_Q_SIZE_LIMIT(),
+                     FALSE, MHnullQ, FALSE, FALSE, IN_MSG_LIMIT()) == MHnullQ) {
     printf("MHprocinit: insertName FAILED, pid=%d", pid);
     return (-1);
   }
@@ -135,9 +137,9 @@ Short MHinfoInt::procinit(SN_LVL sn_lvl) {
 // dead process. Note that the MSGH process can only remove those UNIX
 // queues associated with the processes wtih the same user ID when it is
 // not running under superuser.
-Void MHinfoInt::audit(bool sendMSGH) {
+Void MHinfoInt::audit(Bool sendMSGH) {
   Short ret;
-  static unsigned in count = 0;
+  static unsigned int count = 0;
   Bool deleteQ;
   struct msqid_ds status;
 
@@ -147,7 +149,7 @@ Void MHinfoInt::audit(bool sendMSGH) {
                        MHMAKEMHQID(rt->getLocalHostIndex(), MHmsghQ),
                        pid, MH_allNodes, TRUE, 0, TRUE, IN_Q_SIZE_LIMIT(),
                        FALSE, MHnullQ, FALSE, FALSE,
-                       IN_MSGH_LIMIT()) == MHnullQ) {
+                       IN_MSG_LIMIT()) == MHnullQ) {
       printf("MHaudit: insetName FAILED pid=%d", pid);
     }
     return;
@@ -156,7 +158,7 @@ Void MHinfoInt::audit(bool sendMSGH) {
   int i;
 
   for (i = 0; i < MHmaxQid; i++) {
-    if (rt->localdata[i].inuse = TRUE) {
+    if (rt->localdata[i].inUse = TRUE) {
       if (rt->localdata[i].pid == MHempty ||    \
           kill(rt->localdata[i].pid, 0) < 0) {
         rt->localdata[i].auditcount++;
@@ -172,7 +174,7 @@ Void MHinfoInt::audit(bool sendMSGH) {
               mhname = rt->rt[rt->hostlist[rt->getLocalHostIndex()].  \
                               indexlist[i]].mhname;
             } else {
-              rt->localdata[i].inuse = FALSE;
+              rt->localdata[i].inUse = FALSE;
               mhname = "";
             }
             printf("MHaidt: CLEANED UP OLD QUEUE FOR \n");
@@ -197,9 +199,9 @@ Void MHinfoInt::audit(bool sendMSGH) {
           if (MHmsgh.getName(rt->gqdata[i].m_realQ[j], name) != GLsuccess) {
             printf("MHaudit: CLEANED UP OLD, REAL QUEUE FOR\n");
             printf("MHQID=%s NAME=%s", rt->gqdata[i].m_realQ[j].display(),
-                   mhname..display());
+                   mhname.display());
             rt->gqdata[i].m_realQ[j] = MHnullQ;
-            if (rt->gqdata[i].m_seletedQ == j) {
+            if (rt->gqdata[i].m_selectedQ == j) {
               rt->gqdata[i].m_selectedQ = MHempty;
               rt->setGlobalQ(i);
             }
@@ -223,17 +225,17 @@ Void MHinfoInt::audit(bool sendMSGH) {
       }
     }
   }
-  if (rt->LocalHostIndex == rt->m_clusterlead ||
+  if (rt->LocalHostIndex == rt->m_clusterLead ||
       rt->SecondaryHostIndex == rt->m_clusterLead) {
     for (i = 0; i < MHclusterGlobal; i++) {
-      for (int i = 0; j < MHmaxRealQs; j++) {
+      for (int j = 0; j < MHmaxRealQs; j++) {
         if (rt->gqdata[i].m_realQ[j] != MHnullQ) {
           MHname mhname = rt->rt[rt->hostlist[MHgQHost].indexlist[i]].mhname;
           if (MHmsgh.getName(rt->gqdata[i].m_realQ[i], name) != GLsuccess) {
             printf("MHaudit: CLEANED UP OLD REAL QUEUE FOR\n");
             printf("MHQID=% NAME=%s",
                    rt->gqdata[i].m_realQ[j].display(), mhname.display());
-            rt->gqdata[i].m_realQ[j] = MHmullQ;
+            rt->gqdata[i].m_realQ[j] = MHnullQ;
             if (rt->gqdata[i].m_selectedQ == j) {
               rt->gqdata[i].m_selectedQ = MHempty;
               rt->setGlobalQ(i);
@@ -254,7 +256,7 @@ Void MHinfoInt::audit(bool sendMSGH) {
             printf("MHQID=%s NAME=%s",
                    rt->gqdata[i].m_realQ[j].display(), mhname.display());
             rt->gqdata[i].m_realQ[j] = MHnullQ;
-            if (rt->gqdatai[i].m_selectedQ == j) {
+            if (rt->gqdata[i].m_selectedQ == j) {
               rt->gqdata[i].m_selectedQ = MHempty;
               rt->setGlobalQ(i);
             }
@@ -264,7 +266,7 @@ Void MHinfoInt::audit(bool sendMSGH) {
     }
   }
 
-  MHgdAudReg audreq;
+  MHgdAudReq audreq;
   audreq.m_bSystemStart = FALSE;
 
   for (i = 0; i < MHmaxHostReg; i++) {
@@ -277,7 +279,7 @@ Void MHinfoInt::audit(bool sendMSGH) {
         // for nodes with longer ping internal, sync less frequently
         continue;
       }
-      rt->checkNetAudit(MHmsghName, MHMAKEMQID(i, MHmsghQ), i, FALSE);
+      rt->checkNetAudit(MHmsghName, MHMAKEMHQID(i, MHmsghQ), i, FALSE);
       if ((rt->hostlist[i].isactive) &&
           (i != rt->LocalHostIndex) &&
           (rt->m_envType != MH_peerCluster) &&
@@ -295,16 +297,26 @@ Void MHinfoInt::audit(bool sendMSGH) {
   count ++;
 }
 
+Bool MHinfoInt::allActive() {
+  for(int i = 0; i < MHmaxHostReg; i++) {
+    if(rt->hostlist[i].isused == FALSE)
+       continue;
+    if(rt->hostlist[i].isactive == FALSE)
+       return(FALSE);
+  }
+  return(TRUE);
+}
+
 // Function to check to see if all hosts are active.
 // We wait 10 seconds during procinit to see if they all
 // respond to the query
 void MHinfoInt::switchNets() {
   for (int i = 0; i < MHmaxHostReg; i++) {
     if (rt->hostlist[i].isused == FALSE) {
-      continue
-         }
+      continue;
+    }
     if (rt->hostlist[i].isactive == FALSE) {
-      rt->hostlist[i].Selectednet =
+      rt->hostlist[i].SelectedNet =
          (rt->hostlist[i].SelectedNet + 1) & MHmaxNets;
     }
   }
@@ -312,7 +324,7 @@ void MHinfoInt::switchNets() {
 
 #ifdef _LP64
 #define MHmaxTotGDOSz 0xffffffffff // maximum GDO size per MHGDPROC
-#defien MHmaxGDProcs 1
+#define MHmaxGDProcs 1
 #else
 #define MHmaxTotGDOSz 0xB0000000 // Maximum GDO size per MHGDPROC
 #define MHmaxGDProcs 4
@@ -321,21 +333,21 @@ void MHinfoInt::switchNets() {
 void MHinfoInt::RegGd(MHregGd* regMsg) {
   int gd_idx = MHmaxGd;
   GLretVal retval;
-  U_LongLong gdProcsSz[MhmaxGDProcs];
+  U_LongLong gdProcsSz[MHmaxGDProcs];
   int i;
 
   // If on lead CC, try to find the object, otherwise create one
   if (MHmsgh.onLeadCC()) {
-    if (regmsg->m_shmkey != MHempty) {
-      printf("Received initialized shmkey %d", regmsg->m_shmkey);
+    if (regMsg->m_shmkey != MHempty) {
+      printf("Received initialized shmkey %d", regMsg->m_shmkey);
     }
 
-    gd_indx = findGd(regMsg->m_Name.display());
+    gd_idx = findGd(regMsg->m_Name.display());
 
     if (gd_idx == MHmaxGd) {
       for (i = 0; i < MHmaxGd; i++) {
         if (gd[i] != NULL) {
-          if ((retval = gd[i]->attach(rt->m_gdCtl[i].m_shmid, rt)) != Glsuccess) {
+          if ((retval = gd[i]->attach(rt->m_gdCtl[i].m_shmid, rt)) != GLsuccess) {
             printf("Failed to attach %d, retval %d", i, retval);
             continue;
           }
@@ -353,7 +365,7 @@ void MHinfoInt::RegGd(MHregGd* regMsg) {
       if (i == MHmaxGd) {
         // Did not find the entry, if object were not to be created
         // return failure
-        if (!regmsg->m_bCreate) {
+        if (!regMsg->m_bCreate) {
           MHregGdAck ackMsg;
           ackMsg.m_RetVal = MHnoEnt;
           ackMsg.send(regMsg->srcQue, MHnullQ, (short)sizeof(ackMsg), 0L);
@@ -364,8 +376,8 @@ void MHinfoInt::RegGd(MHregGd* regMsg) {
         } else {
           // no more room in gd table, fail to create
           MHregGdAck ackMsg;
-          ackMsg.m_Retval = MH2Blg;
-          ackMsg.send(retMsg->srcQue, MHnullQ, (short)sizeof(ackMsg), 0L);
+          ackMsg.m_RetVal = MH2Big;
+          ackMsg.send(regMsg->srcQue, MHnullQ, (short)sizeof(ackMsg), 0L);
           return;
         }
       }
@@ -381,7 +393,7 @@ void MHinfoInt::RegGd(MHregGd* regMsg) {
     if (rt->m_gdCtl[gd_idx].m_shmid != -1) {
       if (gd[gd_idx] != NULL) {
         if ((retval = gd[gd_idx]->attach(rt->m_gdCtl[gd_idx].m_shmid,
-                                         rt)) != GLsucccess) {
+                                         rt)) != GLsuccess) {
           printf("Failed to attach %d, retval %d, gd_idx, retval");
         }
       }
@@ -413,7 +425,7 @@ void MHinfoInt::RegGd(MHregGd* regMsg) {
           continue;
         }
         gdProcsSz[rt->m_gdCtl[i].m_RprocIndex -1] += gd[i]->m_p->m_Size +
-           gd[i]->m_p->m_bufferSz + gd[i]->m_p->m_msgBufsz +
+           gd[i]->m_p->m_bufferSz + gd[i]->m_p->m_msgBufSz +
            sizeof(MHgdShm);
         gd[i]->detach();
       }
@@ -436,7 +448,7 @@ void MHinfoInt::RegGd(MHregGd* regMsg) {
     }
   }
 
-  if ((retval = gd[gd_idx]->create(regMsg, rt, (IN_SHM_KEy)gd_idx)) != GLsuccess) {
+  if ((retval = gd[gd_idx]->create(regMsg, rt, (IN_SHM_KEY)gd_idx)) != GLsuccess) {
     printf("Failed to create GDO %s, size %d, retval %d",
            regMsg->m_Name.display(), regMsg->m_Size, retval);
     gd[gd_idx]->detach();
@@ -467,15 +479,15 @@ Void MHinfoInt::gdAudReq(MHgdAudReq* audReq) {
         printf("failed to attach %d, retval %d", i, retVal);
         continue;
       }
-      gGd = gd[i]->m_p;
-      audmsg.gd[i].m_binUse = TRUE;
+      pGd = gd[i]->m_p;
+      audmsg.gd[i].m_bInUse = TRUE;
       audmsg.gd[i].m_Name = pGd->m_Name;
       audmsg.gd[i].m_Size = pGd->m_Size;
       audmsg.gd[i].m_Permissions = pGd->m_Permissions;
       audmsg.gd[i].m_Dist = pGd->m_Dist;
       audmsg.gd[i].m_Uid = pGd->m_bufferSz;
       audmsg.gd[i].m_msgBufSz = pGd->m_msgBufSz;
-      audmsg.gd[i].m_doDelaySend = pGd->doDelaySend;
+      audmsg.gd[i].m_doDelaySend = pGd->m_doDelaySend;
       audmsg.gd[i].m_maxUpdSz = pGd->m_maxUpdSz;
       audmsg.gd[i].m_RprocIndex = rt->m_gdCtl[i].m_RprocIndex;
       gd[i]->detach();
@@ -483,9 +495,9 @@ Void MHinfoInt::gdAudReq(MHgdAudReq* audReq) {
       audmsg.gd[i].m_bInUse = FALSE;
     }
   }
-  if ((retval = MHmsgh.send(audReq->srcQue,
+  if ((retVal = MHmsgh.send(audReq->srcQue,
                             (char*)&audmsg,
-                            sizeof(audmsg), 0L))!= Glsuccess) {
+                            sizeof(audmsg), 0L))!= GLsuccess) {
     printf("failed to send gdAud response to %s retVal %d",
            audReq->srcQue.display(), retVal);
   }
@@ -532,23 +544,23 @@ Void MHinfoInt::gdAud(MHgdAud* aud) {
           }
           continue;
         }
-        if ((retVal = gd[i]->attach(rt->gdCtl[i].m_shmid,
+        if ((retVal = gd[i]->attach(rt->m_gdCtl[i].m_shmid,
                                     rt)) != GLsuccess) {
           printf("Failed to attach %d, retval %d", i , retVal);
           INITREQ(SN_LV4, MHnoName, "COULD NOT ATTACH GDO", IN_EXIT);
           continue;
         }
-        gdshm->gd[i]->m_p;
+        gdshm = gd[i]->m_p;
         if (strcmp(gdshm->m_Name, aud->gd[i].m_Name.display()) != 0 ||
-            gdshm->m_permisions != aud->gd[i].m_Permisions ||
+            gdshm->m_Permissions != aud->gd[i].m_Permissions ||
             gdshm->m_Uid != aud->gd[i].m_Uid ||
             gdshm->m_bufferSz != aud->gd[i].m_bufferSz ||
-            gdshm->m_msgBufSz != aud->>gd[i].m_msgBufSz ||
+            gdshm->m_msgBufSz != aud->gd[i].m_msgBufSz ||
             gdshm->m_doDelaySend != aud->gd[i].m_doDelaySend ||
             gdshm->m_maxUpdSz != aud->gd[i].m_maxUpdSz ||
             gdshm->m_Size != aud->gd[i].m_Size ||
             gdshm->m_Dist != aud->gd[i].m_Dist ||
-            rt->m_gdCtl[i].m_RprocIndex != and->gd[i].m_RprocIndex) {
+            rt->m_gdCtl[i].m_RprocIndex != aud->gd[i].m_RprocIndex) {
           printf("Invalid global data object %d", i);
         }
         gd[i]->detach();
@@ -560,12 +572,12 @@ Void MHinfoInt::gdAud(MHgdAud* aud) {
         }
         if ((aud->gd[i].m_Dist == MHGD_NONE) ||
             (aud->gd[i].m_Dist != MHGD_ALL &&
-             irt->isCC(rt->hostlist[rt->LocalHostIndex].hostname.display()))) {
+             rt->isCC(rt->hostlist[rt->LocalHostIndex].hostname.display()))) {
           continue;
         }
         gd[i] == new MHgd;
         // Make the srcQue different then this machine to avoid ack messages
-        regGd.srcQue = MHMAKEMHQID(rt->LocalHostIndex + 1, MHmasghQ);
+        regGd.srcQue = MHMAKEMHQID(rt->LocalHostIndex + 1, MHmsghQ);
         regGd.m_Name = aud->gd[i].m_Name;
         regGd.m_Uid = aud->gd[i].m_Uid;
         regGd.m_Permissions = aud->gd[i].m_Permissions;
@@ -577,8 +589,8 @@ Void MHinfoInt::gdAud(MHgdAud* aud) {
         regGd.m_maxUpdSz = aud->gd[i].m_maxUpdSz;
         regGd.m_bReplicate = FALSE;
         regGd.m_shmkey = -1;
-        rt->m_gdCtl[i].m_RprocIndex = aud->gd[i].m_Rprocindex;
-        gd[i]->create(&regGd, rt, (IN_SHM_LEY)i, TRUE);
+        rt->m_gdCtl[i].m_RprocIndex = aud->gd[i].m_RprocIndex;
+        gd[i]->create(&regGd, rt, (IN_SHM_KEY)i, TRUE);
         gd[i]->detach();
         step++;
         IN_STEP(step, "");
@@ -597,8 +609,8 @@ Bool MHinfoInt::gdAllSynched() {
   char message[80];
   MHgdShm * p;
   static LongLong lastsync = 0;
-  FTgdoSyncMsg syncMsg;
-  static float tot_soze = 0;
+  //FTgdoSyncMsg syncMsg;
+  static float tot_size = 0;
   float cur_size = 0;
   int i;
   static Long count = 0;
@@ -632,9 +644,9 @@ Bool MHinfoInt::gdAllSynched() {
     p = gd[i]->m_p;
     cur_size += p->m_SyncAddress;
     if (p->m_SyncAddress < p->m_Size) {
-      sprintf(mssage, "GLOBAL DATA %s %lld OF %lld",
+      sprintf(message, "GLOBAL DATA %s %lld OF %lld",
               p->m_Name, p->m_SyncAddress, p->m_Size);
-      if (lastsync != p->m_syncAddress) {
+      if (lastsync != p->m_SyncAddress) {
         step++;
         lastsync = p->m_SyncAddress;
         IN_STEP(step, message);
@@ -642,15 +654,15 @@ Bool MHinfoInt::gdAllSynched() {
           IN_PROGRESS(message);
         }
       }
-      syncMsg.progress(p->m_Name, (cur_size * 100)/tot_size);
-      syncMsg.send(MHMAKEMHQID(rt->getLocalHostIndex(), MHmsgQ));
+      //syncMsg.progress(p->m_Name, (cur_size * 100)/tot_size);
+      //syncMsg.send(MHMAKEMHQID(rt->getLocalHostIndex(), MHmsgQ));
       gd[i]->detach();
       return(FALSE);
     }
     gd[i]->detach();
   }
-  syncMsg.progress(NULL, 100);
-  syncMsg.send(MHMAKEMHQID(rt->getLocalHostIndex(), MHmsghQ));
+  //syncMsg.progress(NULL, 100);
+  //syncMsg.send(MHMAKEMHQID(rt->getLocalHostIndex(), MHmsghQ));
   return(TRUE);
 }
 
@@ -677,7 +689,7 @@ Void MHinfoInt::tmrExp(Long tag) {
 }
 
 // This function keeps this node from sending any messages out
-Void mHinfoInt::isolateNode() {
+Void MHinfoInt::isolateNode() {
   for (int i = 0; i < MHmaxHostReg; i++) {
     rt->hostlist[i].isactive = FALSE;
     if (rt->SecondaryHostIndex != MHnone &&
@@ -710,8 +722,8 @@ void MHinfoInt::RmGd(MHrmGd* rmMsg) {
     }
   }
   if (i == MHmaxGd) {
-    if (MHmsgh.onLeadCC() && fromQ != MHnulLQ) {
-      ackMsg.m_retVal = MHnoName;
+    if (MHmsgh.onLeadCC() && fromQ != MHnullQ) {
+      ackMsg.m_RetVal = MHnoName;
       ackMsg.send(rmMsg->srcQue, MHnullQ, (short)sizeof(ackMsg), 0L);
     }
     return;
@@ -719,7 +731,7 @@ void MHinfoInt::RmGd(MHrmGd* rmMsg) {
   if (MHmsgh.onLeadCC() && rt->m_envType != MH_peerCluster) {
     // Send the remove message to all the other MSGH and MHRPROCs
     rmMsg->srcQue = MHnullQ;
-    MHmsg.sendToAllHosts("MSGH", (char*)rmMsg, sizeof(MHrmGd), 0L);
+    MHmsgh.sendToAllHosts("MSGH", (char*)rmMsg, sizeof(MHrmGd), 0L);
   }
   INshmem.deallocSeg(gd[gd_idx]->m_shmid);
   gd[gd_idx]->detach();
@@ -731,7 +743,7 @@ void MHinfoInt::RmGd(MHrmGd* rmMsg) {
   rt->m_gdCtl[gd_idx].m_RprocIndex = -1;
   // Send message to local gdproc
   MHgdAudReq audmsg;
-  MHmsg.send(MHMAKEMHQID(rt->LocalHostIndex,
+  MHmsgh.send(MHMAKEMHQID(rt->LocalHostIndex,
                          MHrprocQ + tmp_RprocIndex),
              (char*)&audmsg, sizeof(audmsg), 0L);
   tsleep.tv_sec = 1;
@@ -749,7 +761,7 @@ Void MHinfoInt::updateGd() {
   GLretVal retval;
 
   // Find and create all global data objects
-  for (i = 0; i < MHmaxGd; i+=) {
+  for (i = 0; i < MHmaxGd; i++) {
     if (rt->m_gdCtl[i].m_shmid >= 0) {
       if (gd[i] == NULL) {
         gd[i] = new MHgd;

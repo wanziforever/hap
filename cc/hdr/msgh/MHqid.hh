@@ -3,7 +3,7 @@
 
 #include "hdr/GLtypes.h"
 #include <iosfwd>
-
+#include <string>
 
 struct MHlrgMsg;
 
@@ -43,8 +43,8 @@ private:
   
 };
 
-class String;
-extern String int_to_str(MHqid qid);
+//class String;
+extern std::string int_to_str(MHqid qid);
 
 extern int MHnullq;
 #define MHnullQ (*(MHqid*)&MHnullq)

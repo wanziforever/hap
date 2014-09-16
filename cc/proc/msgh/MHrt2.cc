@@ -31,7 +31,8 @@
 #include "cc/hdr/eh/EHhandler.hh"
 #include "cc/hdr/msgh/MHgqInit.hh"
 #include "cc/hdr/msgh/MHgq.hh"
-//#include "cc/hdr/msgh/MHnetStChg.hh"
+#include "cc/hdr/msgh/MHnodeStChg.hh"
+#include "cc/hdr/msgh/MHnetStChg.hh"
 //#include "cc/lib/msgh/MHcargo.hh"
 #include "MHinfoInt.hh"
 
@@ -61,8 +62,8 @@ Void MHrt::rtInit(Bool shmNoExist) {
     localdata[i].pid = MHempty;
     localdata[i].m_msgs = MHempty;
     localdata[i].m_msgstail = MHempty;
-    pthread_mutex_init(&localdata[i].m_qLock, USYNC_PROCESS, NULL);
-    pthread_cond_init(&localdata[i].m_cv, USYNC_PROCESS, NULL);
+    mutex_init(&localdata[i].m_qLock, USYNC_PROCESS, NULL);
+    cond_init(&localdata[i].m_cv, USYNC_PROCESS, NULL);
     gqdata[i].m_selectedQ = MHempty;
     gqdata[i].m_tmridx = -1;
     dqdata[i].m_nextQ = MHempty;
@@ -92,7 +93,7 @@ Void MHrt::rtInit(Bool shmNoExist) {
     hostlist[i].PreferredNet = MHmaxNets;
     hostlist[i].nRcv = MHmaxSeq + 1;
     hostlist[i].next = MHempty;
-    hostlist[i].windowsSz = MHdefWindowsSz;
+    hostlist[i].windowSz = MHdefWindowSz;
     hostlist[i].ping = 1; // Default to MSGH interval
     hostlist[i].isR26 = TRUE; // Always true on linux
     hostlist[i].maxMissed = ((((IN_NETWORK_TIMEOUT() * 1000) + 500)/IN_MSGH_PING()) + 1);
@@ -162,9 +163,9 @@ Void MHrt::rtInit(Bool shmNoExist) {
   m_MinCargoSz = IN_MIN_CARGOSZ();
   m_CargoTimer = IN_CARGO_TMR();
   m_Version = MH_SHM_VER;
-  pthread_mutex_init(&m_lock, USYNC_PROCESS, NULL);
-  pthread_mutex_init(&m_msgLock, USYNC_PROCESS, NULL);
-  pthread_mutex_init(&m_dqLock, USYNC_PROCESS, NULL);
+  mutex_init(&m_lock, USYNC_PROCESS, NULL);
+  mutex_init(&m_msgLock, USYNC_PROCESS, NULL);
+  mutex_init(&m_dqLock, USYNC_PROCESS, NULL);
   m_nMeasUsed256 = 0;
   m_nMeasUsed1024 = 0;
   m_nMeasUsed4096 = 0;
@@ -435,7 +436,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
       rack = MHempty;
     }
 
-    short windowsSz = MHdefWindowSz;
+    short windowSz = MHdefWindowSz;
     // Skip more white space and get window size
     startptr = strtok((Char *const)0, " \t");
     if (startptr == NULL) {
@@ -453,7 +454,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
     startptr = strtok((Char *const)0, " \t");
     if (startptr == NULL) {
       printf("MHrt::readHostFile(%s'%d): no ping interval for %d logical "
-             "name %s, skipping", msghost, lineno, logicalname);
+             "name %s, skipping", msghost, lineno, hostnum, logicalname);
     } else {
       ping = atoi(startptr)/IN_MSGH_PING();
     }
@@ -505,7 +506,7 @@ GLretVal MHrt::readHostFile(Bool resetalldata) {
     }
     int j;
     hostfound[hostnum] = TRUE;
-    hostlist[hostnum].windowsSz = windowSz;
+    hostlist[hostnum].windowSz = windowSz;
     hostlist[hostnum].ping = ping;
     if (IN_NETWORK_TIMEOUT() > 0) {
       hostlist[hostnum].maxMissed = ((((IN_NETWORK_TIMEOUT() * 1000)  \
@@ -851,7 +852,7 @@ MHqid MHrt::insertName(const Char *name, MHqid mhqid, pid_t pid, Bool glob,
           }
         }
         sendName(name, mhqid, realQ, bKeepOnLead, glob);
-        // Update KeepOnlead setting
+        // Update KeepOnLead setting
         gqdata[qid].m_bKeepOnLead = bKeepOnLead;
         // Only update the queue if there was none selected or
         // if the process that had owned it re-registered
@@ -1152,7 +1153,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
       nameMap.startqid = 0;
 
       for (i = 0; i < MHmaxQid; i++) {
-        Short procinidex = hostlist[LocalHostIndex].indexlist[i];
+        Short procindex = hostlist[LocalHostIndex].indexlist[i];
         if ((procindex != MHempty) && (rt[procindex].global != FALSE)) {
           if (oam_lead[0].display()[0] != 0) {
             // System is configured, if not cluster global, skip
@@ -1194,7 +1195,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
     gQMap.startqid = 0;
 
     if (MHISCLLEAD() &&
-        scrncmp(hostlist[hostindex].hostname.display(), "as", 2) == 0) {
+        strncmp(hostlist[hostindex].hostname.display(), "as", 2) == 0) {
       for (i = 0; i < MHclusterGlobal; i++) {
         Short procindex = hostlist[MHgQHost].indexlist[i];
         if ((procindex != MHempty)) {
@@ -1208,11 +1209,11 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
         }
         j++;
 
-        if (j >= MHgQuadEntries) {
+        if (j >= MHgQaudEntries) {
           // time to send the message
           gQMap.count = j;
           MHmsgh.send(mhqid, (Char *)&gQMap, sizeof(gQMap), 0);
-          // Do not need to support more than MHgQuadEntries
+          // Do not need to support more than MHgQaudEntries
           memset(gQMap.gqdata, 0x0, sizeof(gQMap.gqdata));
           gQMap.startqid = i + 1;
           nanosleep(&tsleep, NULL);
@@ -1234,7 +1235,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
         if ((procindex != MHempty)) {
           // Valid MSGH name, add to names array
           gQMap.gqdata[j].mhname = rt[procindex].mhname; // get a MSGH name
-          gQMap.gqdata[j].m_selectedQ = gqdata[i].m_selectgedQ;
+          gQMap.gqdata[j].m_selectedQ = gqdata[i].m_selectedQ;
           gQMap.gqdata[j].m_bKeepOnLead = gqdata[i].m_bKeepOnLead;
           for (int n = 0; n < MHmaxRealQs; n++) {
             gQMap.gqdata[j].m_realQ[n] = gqdata[i].m_realQ[n];
@@ -1242,12 +1243,12 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
         }
         j++;
         
-        if (j > MHgQuadEntries) {
+        if (j > MHgQaudEntries) {
           // time to send the message
           gQMap.count = j;
-          MHmsgh.send(mhqid, (Char *)&gQMap, sizoef(gQMap), 0);
+          MHmsgh.send(mhqid, (Char *)&gQMap, sizeof(gQMap), 0);
           // Do not need to support more then MHgQaudEntries
-          memset(gQMap.gqdata, 0x0, sizoef(gQMap.gqdata));
+          memset(gQMap.gqdata, 0x0, sizeof(gQMap.gqdata));
           gQMap.startqid = i + 1;
           j = 0;
           nanosleep(&tsleep, NULL);
@@ -1256,11 +1257,11 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
 
       if (j > 0) {
         gQMap.count = j;
-        MHmsgh.send(mhqid, (Char *)&gQMap, sizoef(gQMap), 0);
+        MHmsgh.send(mhqid, (Char *)&gQMap, sizeof(gQMap), 0);
       }
     }
 
-    if (m_oamlead == LocalHostIndex && hostlist[hostindex].nameRCS[0] != 0) {
+    if (m_oamLead == LocalHostIndex && hostlist[hostindex].nameRCS[0] != 0) {
       j = 0;
       gQMap.startqid = MHsystemGlobal;
       for (i = MHsystemGlobal; i < MHsystemGlobal + MHmaxQid; i++) {
@@ -1276,11 +1277,11 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
         }
         j++;
 
-        if (j >= MHgQuadEntries) {
+        if (j >= MHgQaudEntries) {
           // time to send to the message
           gQMap.count = j;
-          MHmsgh.send(mhqid, (Char *)&ggQMap, sizeof(gQMap), 0);
-          // Do not need to support more then MHgQuadEntries
+          MHmsgh.send(mhqid, (Char *)&gQMap, sizeof(gQMap), 0);
+          // Do not need to support more then MHgQaudEntries
           memset(gQMap.gqdata, 0x0, sizeof(gQMap.gqdata));
           gQMap.startqid = i + 1;
           j = 0;
@@ -1290,7 +1291,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
 
       if (j > 0) {
         gQMap.count = j;
-        MHmsgh.send(mhqid, (Char *) &gQMap, sizoef(gQMap), 0);
+        MHmsgh.send(mhqid, (Char *) &gQMap, sizeof(gQMap), 0);
       }
     }
 
@@ -1306,10 +1307,10 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
     j = 0;
     memset(dQMap.dqdata, 0x0, sizeof(dQMap.dqdata));
     dQMap.ptype = MHintPtyp;
-    dQMap.mtype = MHdMaptyp;
+    dQMap.mtype = MHdQMapTyp;
     dQMap.sQid = MHMAKEMHQID(LocalHostIndex, 0);
-    dQMap.msgSz = sizeof(MHgQmap);
-    dQmap.fullreset = fullreset;
+    dQMap.msgSz = sizeof(MHgQMap);
+    dQMap.fullreset = fullreset;
     dQMap.startqid = 0;
 
     for (i = 0; i < MHmaxdQid; i++) {
@@ -1321,22 +1322,22 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
         int maxMember = dqdata[i].m_maxMember - 1;
         for (int n = 0; n < MHmaxDistQs; n++) {
           dQMap.dqdata[j].m_realQ[n] = dqdata[i].m_realQ[n];
-          dQmap.dqdata[j].m_enabled[n] = dqdata[i].m_enabled[n];
+          dQMap.dqdata[j].m_enabled[n] = dqdata[i].m_enabled[n];
           if (n >= maxMember && dqdata[i].m_realQ[n] != MHnullQ) {
             maxMember = n;
           }
         }
-        qdata[i].m_maxMember = maxMember + 1;
+        dqdata[i].m_maxMember = maxMember + 1;
         dQMap.dqdata[j].m_maxMember = dqdata[i].m_maxMember;
       }
       j++;
 
-      if (j >= MHdQuadEnties) {
+      if (j >= MHgQaudEntries) {
         // time to send the message
         dQMap.count = j;
         MHmsgh.send(mhqid, (Char *)&dQMap, sizeof(dQMap), 0);
-        // Do not need to support more then MHgQuadEntries
-        memset(dQMap.dqdata, 0x0, sizeof(dQmap.dqdata));
+        // Do not need to support more then MHgQaudEntries
+        memset(dQMap.dqdata, 0x0, sizeof(dQMap.dqdata));
         dQMap.startqid = i + 1;
         j = 0;
         nanosleep(&tsleep, NULL);
@@ -1345,7 +1346,7 @@ Void MHrt::checkNetAudit(const Char *name, MHqid mhqid,
 
     if (j > 0) {
       dQMap.count = j;
-      MHmsgh.send(mhqid, (Char *)&dQMap, sizeof(dQmap), 0);
+      MHmsgh.send(mhqid, (Char *)&dQMap, sizeof(dQMap), 0);
     }
   }
 }
@@ -1367,7 +1368,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
   Short host = MHQID2HOST(mhqid);
   Short qid = MHQID2QID(mhqid);
   if (host > MHmaxHostReg || qid > MHmaxQid) {
-    printf("deleteName: invalid qid, mhqid %s", mhqid.disdplay());
+    printf("deleteName: invalid qid, mhqid %s", mhqid.display());
     return;
   }
 
@@ -1377,7 +1378,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
 
   Short elemid = hostlist[host].indexlist[qid];
   if (elemid == MHempty) {
-    printf("deleteName: nonexistent mhname %s, mhqid 5s",
+    printf("deleteName: nonexistent mhname %s, mhqid %s",
            mhname.display(), mhqid.display());
     return;
   }
@@ -1391,7 +1392,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
   rmName.msgSz = sizeof(MHrmName);
 
   // Check if the name is matched
-  if (LocalHostInde == host) {
+  if (LocalHostIndex == host) {
     if (rt[elemid].mhname != mhname) {
       printf("deleteName: Name %s not deleted not match %s qid %s",
              mhname.display(), rt[elemid].mhname.display(), mhqid.display());
@@ -1399,7 +1400,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
       // messages may have been lost
     }
   }
-  printf("deleteName: Name 5s delete qid %s",
+  printf("deleteName: Name %s delete qid %s",
          mhname.display(), mhqid.display());
 
   // First disable it for lookups using the QID already known
@@ -1431,7 +1432,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
   }
 
   // take off the hashed list of names for this host.
-  key = (Short) (mhname.foldKey() % MHnamehashtblSz);
+  key = (Short) (mhname.foldKey() % MHnameHashTblSz);
 
   previous = MHempty;
 
@@ -1459,7 +1460,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
   // There are always free entries.
   rt[elemid].nextfree = MHempty;
   rt[free_tail].nextfree = elemid;
-  free_tail = elmid;
+  free_tail = elemid;
   TotalNamesReg--; // decrement counter
 
   if (LocalHostIndex == host) {
@@ -1473,7 +1474,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
       // Deletion of a global name, must send out info to other hosts
       (host == LocalHostIndex)) {
     int i;
-    for (i = 0; i < MHmaxHostreg; i++) {
+    for (i = 0; i < MHmaxHostReg; i++) {
       if (hostlist[i].isused == TRUE) {
         if (oam_lead[0].display()[0] != 0) {
           // System is configured, if not cluster global, skip
@@ -1484,7 +1485,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
         }
         // We have a host with MSGH active.
         // Construct a MSGH rmName msg and send it
-        rmName.mhqid = MHMAKEMHQID(getActualLocalIndex(i), MHQID2QID(mhqid));
+        rmName.mhqid = MHMAKEMHQID(getActualLocalHostIndex(i), MHQID2QID(mhqid));
         MHmsgh.send(MHMAKEMHQID(i, MHmsghQ), (Char *)&rmName,
                     sizeof(MHrmName), 0);
       }
@@ -1495,7 +1496,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
     // Delete the global queue, should only happen as a result
     // of audit errors since global queues cannnot be deleted by clients
     gqdata[qid].m_selectedQ = MHempty;
-    for (int j = 0; j < MHmaxRrealQs; j++) {
+    for (int j = 0; j < MHmaxRealQs; j++) {
       gqdata[qid].m_realQ[j] = MHempty;
     }
   } else if (host == MHdQHost) {
@@ -1504,7 +1505,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
     dqdata[qid].m_nextQ = MHempty;
     for (int j = 0; j < MHmaxDistQs; j++) {
       dqdata[qid].m_realQ[j] = MHnullQ;
-      dqaata[qid].m_enabled[j] = FALSE;
+      dqdata[qid].m_enabled[j] = FALSE;
     }
   } else {
     // Real queue, check if mapped to any global or distributive
@@ -1533,7 +1534,7 @@ Void MHrt::deleteName(const MHname &mhname, const MHqid mhqid,
             dqdata[n].m_realQ[j] = MHempty;
             dqdata[n].m_enabled[j] = FALSE;
             dqdata[n].m_timestamp = time(NULL);
-            setDistQ[n];
+            setDistQ(n);
             break;
           }
         }
@@ -1583,7 +1584,7 @@ Bool MHrt::conform(Short host, MHname names[MHmaxQid], Short startqid,
              hostlist[host].hostname.display(), host, i,
              rt[procindex].mhname.display());
       // Oops, must have lost an MHrmName messages!
-      deleteName(rt[procindex].mhname, MHMAKEMHQId(host, i), -1);
+      deleteName(rt[procindex].mhname, MHMAKEMHQID(host, i), -1);
       // Re-check our data.
       ret = FALSE;
     }
@@ -1592,18 +1593,18 @@ Bool MHrt::conform(Short host, MHname names[MHmaxQid], Short startqid,
 }
 
 // make sure global queues conform to map sent in MHgQMap message
-void MHrt::gQconform(MHggQData auddata[MHmaxQid], Short startqid,
+void MHrt::gQconform(MHgQData auddata[MHmaxQid], Short startqid,
                      Short count, Bool fullreset, MHqid leadQ) {
   int i,j,k;
   int host = MHgQHost;
   Short procindex;
 
   // This message only comes from lead CC reset the lead CC
-  if (m_clusterlead != MHQID2HOST(leadQ) &&
+  if (m_clusterLead != MHQID2HOST(leadQ) &&
       (m_clusterLead == LocalHostIndex ||
-       m_clusterlead == SecondaryHostIndex)) {
+       m_clusterLead == SecondaryHostIndex)) {
     printf("gQconform: resetting lead MSGH to %d when this host was lead",
-           MHQID2HOSt(leadQ));
+           MHQID2HOST(leadQ));
   }
   // Do not reset lead when lead was never initialized
   // because this will break initialization sequencing
@@ -1611,11 +1612,11 @@ void MHrt::gQconform(MHggQData auddata[MHmaxQid], Short startqid,
     m_clusterLead = MHQID2HOST(leadQ);
   }
 
-  if ((m_envType == MH_peerCLuster || SecondaryHostIndex != MHnone) &&
+  if ((m_envType == MH_peerCluster || SecondaryHostIndex != MHnone) &&
       ((startqid + count > MHclusterGlobal) && startqid < MHsystemGlobal)) {
     printf("should not receive queues over %d in peer cluster, received"
-           "%d from host %d", MHclusteGlobal,
-           startqid + count && i < MHmaxQid; j++, i++);
+           "%d from host %d", MHclusterGlobal,
+           startqid+count, MHQID2HOST(leadQ));
     return;
   }
 
@@ -1647,7 +1648,7 @@ void MHrt::gQconform(MHggQData auddata[MHmaxQid], Short startqid,
         if ((procindex = findNameOnHost(MHgQHost, name)) != MHempty) {
           deleteName(name, rt[procindex].mhqid, -1);
         }
-        insertname(name, MHMAKEMHQID(host, i), 0, TRUE, FALSE, MHmaxNets,
+        insertName(name, MHMAKEMHQID(host, i), 0, TRUE, FALSE, MHmaxNets,
                    FALSE, -1L, TRUE, MHnullQ, auddata[j].m_bKeepOnLead);
         for (k = 0; k < MHmaxRealQs; k++) {
           gqdata[i].m_realQ[k] = auddata[j].m_realQ[k];
@@ -1660,7 +1661,7 @@ void MHrt::gQconform(MHggQData auddata[MHmaxQid], Short startqid,
           if (gqdata[i].m_realQ[k] != auddata[j].m_realQ[k]) {
             printf("gQconform realQ %d %s != %s", k,
                    gqdata[i].m_realQ[k].display(),
-                   auddata[j].m_realQ[k].display(b));
+                   auddata[j].m_realQ[k].display());
             gqdata[i].m_realQ[k] = auddata[j].m_realQ[k];
           }
         }
@@ -1670,7 +1671,7 @@ void MHrt::gQconform(MHggQData auddata[MHmaxQid], Short startqid,
                  auddata[j].m_selectedQ, gqdata[i].m_selectedQ, i);
           gqdata[i].m_selectedQ = auddata[j].m_selectedQ;
         }
-        if (gqdata[i].m_bKeepOnlead != auddata[j].m_bKeepOnLead) {
+        if (gqdata[i].m_bKeepOnLead != auddata[j].m_bKeepOnLead) {
           printf("gQconform: bKeepOnLead lead value %d != local value %d, qid %d",
                  auddata[j].m_bKeepOnLead, gqdata[i].m_bKeepOnLead, i);
           gqdata[i].m_bKeepOnLead = auddata[j].m_bKeepOnLead;
@@ -1739,12 +1740,12 @@ void MHrt::dQconform(MHdQData auddata[MHmaxQid], Short startqid,
                hostlist[host].hostname.display(),
                host, i, name, rt[procindex].mhname.display());
         // Delete the mismatched name
-        deletename(rt[procindex].mhname, MHMAKEMHQID(MHdQHost, j), -1);
+        deleteName(rt[procindex].mhname, MHMAKEMHQID(MHdQHost, j), -1);
         // If the new name alse exists, delete that one also
         if ((procindex = findNameOnHost(MHdQHost, name)) != MHempty) {
           deleteName(name, rt[procindex].mhqid, -1);
         }
-        inserttName(name, MHMAKEMHQID(host, i), 0, TRUE, FALSE, MHmaxNets,
+        insertName(name, MHMAKEMHQID(host, i), 0, TRUE, FALSE, MHmaxNets,
                     FALSE, -1L, TRUE, MHnullQ, FALSE, TRUE);
         for (k = 0; k < MHmaxDistQs; k++) {
           dqdata[i].m_realQ[k] = auddata[j].m_realQ[k];
@@ -1759,12 +1760,12 @@ void MHrt::dQconform(MHdQData auddata[MHmaxQid], Short startqid,
             printf("dQconform realQ %d %s != %s or enabled %d != %d",
                    k, dqdata[i].m_realQ[k].display(),
                    auddata[j].m_realQ[k].display(), dqdata[i].m_enabled[k],
-                   auddaata[j].m_enabled[k]);
+                   auddata[j].m_enabled[k]);
             dqdata[i].m_realQ[k] = auddata[j].m_realQ[k];
             dqdata[i].m_enabled[k] = auddata[j].m_enabled[k];
           }
         }
-        if (dqdata[i].m_next() == MHempty && auddata[j].m_nextQ != MHempty) {
+        if (dqdata[i].m_nextQ == MHempty && auddata[j].m_nextQ != MHempty) {
           // Selected Q mismatch
           printf("dQconform: nextQ lead value %d != local value %d, qid %d, "
                  "qid %d",auddata[j].m_maxMember, dqdata[i].m_maxMember, i);
@@ -1794,17 +1795,17 @@ void MHrt::dQconform(MHdQData auddata[MHmaxQid], Short startqid,
 // requires us to select another ethernet, then update SelectedNet variable
 // and an audit() to notify all the other hosts
 Void MHrt::enetState(Short nEnet, Bool bIsUsable) {
-  innt hostnum;
+  int hostnum;
   MHhostDel hostDel;
-  hostDel.ptype = MintPtyp;
+  hostDel.ptype = MHintPtyp;
   hostDel.mtype = MHhostDelTyp;
   hostDel.bReply = TRUE;
-  hostDel.clusterlead = m_clusterLead;
+  hostDel.clusterLead = m_clusterLead;
 
   if (bIsUsable == FALSE) {
     if (hostlist[LocalHostIndex].SelectedNet == nEnet) {
       // Must try the other net
-      nEnt = (nEnet + 1) % MHmaxNets;
+      nEnet = (nEnet + 1) % MHmaxNets;
       // Force all the hosts to this enet
       for (hostnum = 0; hostnum < MHmaxHostReg; hostnum++) {
         hostlist[hostnum].SelectedNet = nEnet;
@@ -1812,13 +1813,13 @@ Void MHrt::enetState(Short nEnet, Bool bIsUsable) {
     }
     for (hostnum = 0; hostnum < MHmaxHostReg; hostnum++) {
       if (hostlist[hostnum].isused == FALSE || hostnum == LocalHostIndex ||
-          hostnum == SecondaryHostINdex ||
+          hostnum == SecondaryHostIndex ||
           strncmp(hostlist[hostnum].hostname.display(), "as", 2) == 0) {
         continue;
       }
       hostDel.enet = hostlist[hostnum].SelectedNet;
       hostDel.onEnet = hostlist[hostnum].SelectedNet;
-      hostDel.sQid = MHMAKKEMHQID(getActualLocalHostIndex(hostnum), 0);
+      hostDel.sQid = MHMAKEMHQID(getActualLocalHostIndex(hostnum), 0);
       MHmsgh.send(MHMAKEMHQID(hostnum, 0), (Char*)&hostDel,
                   sizeof(MHhostDel), 0 , FALSE);
     }
@@ -1842,7 +1843,7 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
     for (j = 0; j < MHmaxNets; j++) {
       bNoMessage[i][j] = TRUE;
       hostlist[i].auditcount[j] = hostlist[i].maxMissed;
-      hostlist[i].pingTime[j] = hostlist[i].ping
+      hostlist[i].pingTime[j] = hostlist[i].ping;
     }
   }
 
@@ -1857,7 +1858,7 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
     }
 
     switchedNet = FALSE;
-    for (j = 0; j < MHmaxnets; j++) {
+    for (j = 0; j < MHmaxNets; j++) {
       hostlist[i].pingTime[j] ++;
       if (bNoMessage[i][j] == FALSE) {
         if (hostlist[i].isactive == FALSE) {
@@ -1866,7 +1867,7 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
           hostlist[i].isactive = TRUE;
           MHmsgh.broadcast(MHMAKEMHQID(LocalHostIndex, MHmsghQ),
                            (char*)&nodeStChg, sizeof(nodeStChg), 0L);
-          updateClusterlead(i);
+          updateClusterLead(i);
           if (hostlist[i].nRouteSync < MHmaxRouteSync) {
             checkNetAudit(MHmsghName, MHMAKEMHQID(i , MHmsghQ), i , FALSE);
             hostlist[i].nRouteSync ++;
@@ -1882,8 +1883,8 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
               pHD->nLastAcked - pHD->nSend <= MHmaxSQueue - pHD->windowSz))) {
           MHhostDel hostDel;
           hostDel.ptype = MHintPtyp;
-          hostdel.mtype = MHhostDeltyp;
-          hostDel.sQid = MHMAKEMHQID(getActualLocalHostINdex(i), MHmsghQ);
+          hostDel.mtype = MHhostDelTyp;
+          hostDel.sQid = MHMAKEMHQID(getActualLocalHostIndex(i), MHmsghQ);
           hostDel.toQue = MHMAKEMHQID(i, MHmsghQ);
           hostDel.msgSz = sizeof(hostDel);
           MHsetHostId(&hostDel, getActualLocalHostIndex(i));
@@ -1896,7 +1897,7 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
         }
         hostlist[i].pingTime[j] = 0;
         hostlist[i].auditcount[j] = 0;
-        hostlist[i].netup[j] = True;
+        hostlist[i].netup[j] = TRUE;
       } else {
         if (hostlist[i].pingTime[j] < hostlist[i].ping) {
           continue;
@@ -1913,12 +1914,12 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
           hostDel.msgSz = sizeof(hostDel);
           MHsetHostId(&hostDel, getActualLocalHostIndex(i));
           hostDel.HostId != MHunBufferedFlg;
-          hostDel.clusterlead = m_clusterLead;
+          hostDel.clusterLead = m_clusterLead;
           hostDel.bReply = TRUE;
           // Send hostDel message on each network
-          if (!switchedNet && j == hostlist[i].Selectednet &&
+          if (!switchedNet && j == hostlist[i].SelectedNet &&
               hostlist[i].auditcount[j] > 0) {
-            hostlist[i].SelectedNet = (hostlist[i].SelectedNet + 1) % MHmaxNetts;
+            hostlist[i].SelectedNet = (hostlist[i].SelectedNet + 1) % MHmaxNets;
             switchedNet = TRUE;
           }
           hostDel.enet = hostlist[i].SelectedNet;
@@ -1926,7 +1927,7 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
           int ret;
           // Only heartbeat every cycle if active net otherwise wait for
           // MinStdybMissed cycles
-          if ((j == hostlist[i].Selectednet) ||
+          if ((j == hostlist[i].SelectedNet) ||
               (hostlist[i].auditcount[j] > MHminStdbyMissed) ||
               switchedNet) {
             if ((ret = sendto(MHsock_id, (char*)&hostDel, sizeof(hostDel), 0,
@@ -1956,15 +1957,15 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
     }
     if (hostlist[i].isactive) {
       Bool oneup = false;
-      for (j = 0; j < MHmaxnets; j++) {
+      for (j = 0; j < MHmaxNets; j++) {
         if (hostlist[i].netup[j] == TRUE) {
           oneup = TRUE;
         }
       }
       if (oneup == FALSE) {
         printf("MHconn: NO REPLY FROM HOST");
-        printff("HOSTID=%d LNAME=%s RNAME=%s",
-                i , hostlist[i].hosttname.display(),
+        printf("HOSTID=%d LNAME=%s RNAME=%s",
+                i , hostlist[i].hostname.display(),
                 hostlist[i].realname);
         hostlist[i].isactive = FALSE;
         hostlist[i].nMeasNodeDown++;
@@ -1997,12 +1998,12 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
         }
         // Go through all the distributive queues and delete the ones
         // for unreachable host
-        intt found;
+        int found;
         int j;
         for (j = 0; j < MHmaxQid; j++) {
           if (dqdata[j].m_nextQ != MHempty) {
             found = FALSE;
-            for (int k = 0; k < MHmaxDisttQs; k++) {
+            for (int k = 0; k < MHmaxDistQs; k++) {
               if (MHQID2HOST(dqdata[j].m_realQ[k]) == i) {
                 dqdata[j].m_realQ[k] = MHempty;
                 dqdata[j].m_enabled[k] = FALSE;
@@ -2035,7 +2036,7 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
         }
         if (isFailover) {
           // Notify everyone that queue transistions started
-          MHmsgh.braodcast(MHMAKEMHQID(LocalHostIndex, MHmsghQ),
+          MHmsgh.broadcast(MHMAKEMHQID(LocalHostIndex, MHmsghQ),
                            (char*)&failover, sizeof(failover), 0L);
         }
       }
@@ -2043,7 +2044,7 @@ Void MHrt::conn(Bool bNoMessage[][MHmaxNets], short hostid) {
   }
 }
 
-Void MHrt::hostDel(MHqid sQid, Bool bReply, Short, Short onEnet,
+Void MHrt::hostDel(MHqid sQid, Bool bReply, Short enet, Short onEnet,
                    Short clusterLead) {
   MHhostDel hostDel;
   int hostid = MHQID2HOST(sQid);
@@ -2065,18 +2066,18 @@ Void MHrt::hostDel(MHqid sQid, Bool bReply, Short, Short onEnet,
       if (SecondaryHostIndex != MHnone) {
         clusterLead = SecondaryHostIndex;
       } else {
-        clusterlead = LocalHostIndex;
+        clusterLead = LocalHostIndex;
       }
     }
 
-    if (m_clusterlead == MHempty ||
+    if (m_clusterLead == MHempty ||
         (m_clusterLead != LocalHostIndex &&
          m_clusterLead != SecondaryHostIndex)) {
-      m_clusterlead = clusterlead;
+      m_clusterLead = clusterLead;
     } else if ((SecondaryHostIndex == MHnone &&
                 LocalHostIndex > clusterLead) ||
                SecondaryHostIndex > clusterLead) {
-      m_clusterLead = clusterlead;
+      m_clusterLead = clusterLead;
     }
   }
   if (onEnet >= MHmaxNets || onEnet < 0) {
@@ -2095,7 +2096,7 @@ Void MHrt::hostDel(MHqid sQid, Bool bReply, Short, Short onEnet,
   if (bReply) {
     hostDel.ptype = MHintPtyp;
     hostDel.mtype = MHhostDelTyp;
-    hostDel.sQid = MHMAKEMHQID(getActualLocalHostIndex[hostid], MHmsghQ);
+    hostDel.sQid = MHMAKEMHQID(getActualLocalHostIndex(hostid), MHmsghQ);
     hostDel.toQue = MHMAKEMHQID(hostid, MHmsghQ);;
     hostDel.msgSz = sizeof(hostDel);
     MHsetHostId(&hostDel, getActualLocalHostIndex(hostid));
@@ -2110,7 +2111,7 @@ Void MHrt::hostDel(MHqid sQid, Bool bReply, Short, Short onEnet,
         printf("Invalid enet value %d", enet);
         return;
       }
-      if (enet != hostlist[hostid].Selectednet) {
+      if (enet != hostlist[hostid].SelectedNet) {
         hostlist[hostid].nMeasLinkAlter++;
         hostlist[hostid].SelectedNet = enet;
       }
@@ -2119,9 +2120,9 @@ Void MHrt::hostDel(MHqid sQid, Bool bReply, Short, Short onEnet,
     if ((ret = sendto(MHsock_id, (char*)&hostDel, sizeof(hostDel), 0,
                       (sockaddr*)&hostlist[hostid].saddr[onEnet],
                       sizeof(sockaddr_in6))) != sizeof(hostDel)) {
-      printf("Failed net audit send errno %d", ret):
+      printf("Failed net audit send errno %d", ret);
     }
-    if (onenet == hostlist[hostid].SelectedNet) {
+    if (onEnet == hostlist[hostid].SelectedNet) {
       MHmsgh.send(sQid, (Char*)&hostDel, sizeof(MHhostDel), 0, TRUE);
     }
   }
@@ -2129,7 +2130,7 @@ Void MHrt::hostDel(MHqid sQid, Bool bReply, Short, Short onEnet,
 
 Void MHrt::ClearSndQueue(Short hostindex, Bool setMutex) {
   if (setMutex) {
-    pthread_mutext_lock(&m_lock);
+    mutex_lock(&m_lock);
     m_lockcnt++;
   }
   int len;
@@ -2150,25 +2151,25 @@ Void MHrt::ClearSndQueue(Short hostindex, Bool setMutex) {
   }
   hostlist[hostindex].nLastAcked = hostlist[hostindex].nSend;
   if (setMutex) {
-    pthread_mutex_unlock(&m_lock);
+    mutex_unlock(&m_lock);
   }
 }
 
-Void MHrt::ClearRcvQueue(Short hostindx, Bool setMutex) {
+Void MHrt::ClearRcvQueue(Short hostindex, Bool setMutex) {
   if (setMutex) {
-    pthread_mutex_lock(&m_lock);
+    mutex_lock(&m_lock);
     m_lockcnt++;
   }
 
   int len;
   // Release all buffers for messages for this host
-  for (int i = 0; i < MhmaxSQueue; i++) {
+  for (int i = 0; i < MHmaxSQueue; i++) {
     if (hostlist[hostindex].rcvQ[i].m_length != MHempty) {
       len = hostlist[hostindex].rcvQ[i].m_length;
       hostlist[hostindex].rcvQ[i].m_length = MHempty;
       for (int j = hostlist[hostindex].rcvQ[i].m_dataidx;
-           i < hostlist[hostindex].rcvQ[i].m_dataidx) +
-         MHGETNUMCHUNKS(len); j++ {
+           i < hostlist[hostindex].rcvQ[i].m_dataidx + MHGETNUMCHUNKS(len);
+           j++) {
         datafree[j] = TRUE;
         m_nMeasUsedOut --;
       }
@@ -2176,7 +2177,7 @@ Void MHrt::ClearRcvQueue(Short hostindx, Bool setMutex) {
   }
   hostlist[hostindex].nInRcvQ = 0;
   if (setMutex) {
-    pthread_mutex_unlock(&m_lock);
+    mutex_unlock(&m_lock);
   }
 }
 
@@ -2196,16 +2197,16 @@ Void MHrt::CheckReject(int i) {
   int j;
 
   pHD = &hostlist[i];
-  pthread_mutex_lock(&m_lock);
+  mutex_lock(&m_lock);
   m_lockcnt++;
 
   // Timer expired without being cleared, that meas still not in sequence,
   // send reject
-  if (pHD->nrejets > && pHD->nInRcvQ != 0) {
+  if (pHD->nRejects > 0 && pHD->nInRcvQ != 0) {
     count = 0;
     idx = pHD->nRcv;
     if (idx > MHmaxSeq) {
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
       return;
     }
     for (j = 0; j < MHmaxSQueue; j++) {
@@ -2220,15 +2221,15 @@ Void MHrt::CheckReject(int i) {
     ReSend(i, MHsendReject, count);
   }
 
-  pthread_mutex_unlock(&m_lock);
+  mutex_unlock(&m_lock);
 }
 
-Void MHrt::Checkreject() {
+Void MHrt::CheckReject() {
   MHhostdata* pHD;
   U_char count;
   U_short idx;
   int j;
-  pthread_mutex_lock(&m_lock);
+  mutex_lock(&m_lock);
   m_lockcnt++;
   // if any hosts still in reject state, keep on sending reject messages
   for (int i = 0; i < MHmaxHostReg; i++) {
@@ -2241,8 +2242,8 @@ Void MHrt::Checkreject() {
         // we are still waiting for out of order messages
         // A reject will be send in that case from a timer if
         // message do not get in order
-        if (hostlist[i].nrejects != 1) {
-          pHD->&hostlist[i];
+        if (hostlist[i].nRejects != 1) {
+          pHD = &hostlist[i];
           if (pHD->nInRcvQ != 0) {
             count = 0;
             idx = pHD->nRcv;
@@ -2269,7 +2270,7 @@ Void MHrt::Checkreject() {
       }
     }
   }
-  pthread_mutext_unlock(&m_lock);
+  mutex_unlock(&m_lock);
 }
 
 MHreject MHrejectMsg;
@@ -2287,7 +2288,7 @@ GLretVal MHrt::ReSend(Short hostid, int sndIndex, U_short count) {
   // checking it here
 
   if (pReject == NULL) {
-    pReject = (MHmsgbase*)&MHrejectMsg;
+    pReject = (MHmsgBase*)&MHrejectMsg;
     pHostDel = (MHmsgBase*)&MHhostDelMsg;
     MHrejectMsg.ptype = MHintPtyp;
     MHrejectMsg.mtype = MHrejectTyp;
@@ -2309,19 +2310,19 @@ GLretVal MHrt::ReSend(Short hostid, int sndIndex, U_short count) {
     msgp = pReject;
     msgsz = sizeof(MHrejectMsg);
     MHsetHostId(&MHrejectMsg, getActualLocalHostIndex(hostid));
-    MHrejectMsg.sQid = MHMAKEMHQID(gettActualLocalHostIndex(hostid), MHprocQ);
+    MHrejectMsg.sQid = MHMAKEMHQID(getActualLocalHostIndex(hostid), MHrprocQ);
     pReject->toQue = MHMAKEMHQID(hostid, MHrprocQ);
     pHD->nMeasRejectsSend++;
     MHrejectMsg.nMissing = count;
   } else if (sndIndex == MHsendHostDel) {
     if (((pHD->nSend < pHD->nLastAcked ||
-          pHD->nSend - pHD->nlastAcked >= pHD->windowSz) &&
+          pHD->nSend - pHD->nLastAcked >= pHD->windowSz) &&
          (pHD->nSend >= pHD->nLastAcked ||
           pHD->nLastAcked - pHD->nSend < MHmaxSQueue - pHD->windowSz))) {
       return(MHagain);
     }
 
-    sndIndex = pHd->nSend;
+    sndIndex = pHD->nSend;
     if (++pHD->nSend > MHmaxSeq) {
       pHD->nSend = 0;
     }
@@ -2333,7 +2334,7 @@ GLretVal MHrt::ReSend(Short hostid, int sndIndex, U_short count) {
       msgp = pHostDel;
       msgsz = sizeof(MHhostDelMsg);
       pHostDel->toQue = MHMAKEMHQID(hostid, MHmsghQ);
-      MHsetHostId(&MHhostDdelMsg, getActualLocalHostIndex(hostid));
+      MHsetHostId(&MHhostDelMsg, getActualLocalHostIndex(hostid));
       MHhostDelMsg.sQid = MHMAKEMHQID(getActualLocalHostIndex(hostid), MHrprocQ);
       MHhostDelMsg.onEnet = hostlist[hostid].SelectedNet;
     }
@@ -2341,20 +2342,20 @@ GLretVal MHrt::ReSend(Short hostid, int sndIndex, U_short count) {
              datafree[pHD->sendQ[sndIndex].m_dataidx] == TRUE) {
     // Unlikely, HostDel message to maintain sequence
     msgp = pHostDel;
-    msgsz = sizeof(MHhostdelMsg);
-    pHostDel->toQue = MHMAKEMHQID(hostid, MHmsgQ);
+    msgsz = sizeof(MHhostDelMsg);
+    pHostDel->toQue = MHMAKEMHQID(hostid, MHmsghQ);
     MHhostDelMsg.onEnet = hostlist[hostid].SelectedNet;
   } else {
-    msgp = (MHmsgbase *)&data[MHCHUNKADDR(pHD->sendQ[sndIndex].m_dataidx)];
+    msgp = (MHmsgBase *)&data[MHCHUNKADDR(pHD->sendQ[sndIndex].m_dataidx)];
     msgsz = msgp->msgSz;
     pHD->nMeasResends++;
   }
 
   msgp->seq = sndIndex;
-  msgp->rSeq = pHd->Rcv;
+  msgp->rSeq = pHD->nRcv;
 
   // send to the socket
-  GLretVal ret = sendTo(MHsock__id, (Char*)msgp, msgsz, 0,
+  GLretVal ret = sendto(MHsock_id, (Char*)msgp, msgsz, 0,
                         (sockaddr*)getHostAddr(hostid), sizeof(sockaddr_in6));
   if (ret != msgsz) {
     return(errno);
@@ -2363,29 +2364,29 @@ GLretVal MHrt::ReSend(Short hostid, int sndIndex, U_short count) {
   return(GLsuccess);
 }
 
-GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
+GLretVal MHrt::ValidateMsg(MHmsgBase* msgp) {
   U_short count;
   U_short idx;
   int i;
-  MHnodeStChg nodestChg;
+  MHnodeStChg nodeStChg;
 
   // if this was unbuffered message, just send it
-  if (msgp->HostId & MHnuBufferedFlg) {
+  if (msgp->HostId & MHunBufferedFlg) {
     if (!m_buffered) {
       if (hostlist[MHgetHostId(msgp)].isactive == FALSE) {
         strcpy(nodeStChg.hostname, hostlist[MHgetHostId(msgp)].hostname.display());
         nodeStChg.isActive = TRUE;
-        hostlist[MHgetHostId(msgp)].isActive = TRUE;
-        MHmsgh.broadcast(MHmAKEMHQID(LocalHostIndex, MHrprocQ), (char*)&nodeStChg, sizeof(nodeStChg), 0L);
-        updateClusterLCead(MHgetHostId(msgp), msgp);
-        if (hostlist[MHgetHostId(mhsgp)].nRouteSync < MHmaxRouteSync) {
-          checkNetAudit(MhmsgName, MHMAKEMHQID(MHgetHostId(msgp), MHmsghQ),
+        hostlist[MHgetHostId(msgp)].isactive = TRUE;
+        MHmsgh.broadcast(MHMAKEMHQID(LocalHostIndex, MHrprocQ), (char*)&nodeStChg, sizeof(nodeStChg), 0L);
+        updateClusterLead(MHgetHostId(msgp), msgp);
+        if (hostlist[MHgetHostId(msgp)].nRouteSync < MHmaxRouteSync) {
+          checkNetAudit(MHmsghName, MHMAKEMHQID(MHgetHostId(msgp), MHmsghQ),
                         MHgetHostId(msgp), FALSE);
           hostlist[MHgetHostId(msgp)].nRouteSync++;
         }
       }
     }
-    if (MHQID2QID(msgp->toQue != MHrprocQ)) {
+    if (MHQID2QID(msgp->toQue) != MHrprocQ) {
       return(msgp->send(msgp->toQue, msgp->srcQue, msgp->msgSz, 0));
     } else {
       MHprocessmsg(msgp, msgp->msgSz);
@@ -2395,7 +2396,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
 
   MHhostdata* pHD = &hostlist[MHgetHostId(msgp)];
   GLretVal retval = GLsuccess;
-  pthread_mutext_lock(&m_lock);
+  mutex_lock(&m_lock);
   m_lockcnt++;
 
   // See if this force reset of sequencing or if host was inactive assume force
@@ -2415,7 +2416,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
             delivered++;
             MHmsgBase *mp =
                (MHmsgBase*)&data[MHCHUNKADDR(pHD->rcvQ[Seq].m_dataidx)];
-            pthread_mutex_unlock(&m_lock);
+            mutex_unlock(&m_lock);
             if (MHQID2QID(mp->toQue) != MHrprocQ) {
               if (mp->send(mp->toQue, mp->srcQue, mp->msgSz, 0) != GLsuccess) {
                 m_nMeasFailedSend++;
@@ -2423,7 +2424,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
             } else {
               MHprocessmsg(mp, mp->msgSz);
             }
-            pthread_mutext_lock(&m_lock);
+            mutex_lock(&m_lock);
             m_lockcnt++;
           }
         }
@@ -2449,7 +2450,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
   if (pHD->nUnAcked++ > MHmaxNoAck) {
     ReSend(MHgetHostId(msgp), MHsendHostDel);
   }
-  it len;
+  int len;
 
   // Verify sequencing
   if (msgp->seq == pHD->nRcv || msgp->msgType == MHrejectTyp) {
@@ -2464,12 +2465,12 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
         len = pHD->sendQ[pHD->nLastAcked].m_length;
         pHD->sendQ[pHD->nLastAcked].m_length- MHempty;
         for (int j = pHD->sendQ[pHD->nLastAcked].m_dataidx;
-             MHGETNUMHUNKS(len); j++) {
+             MHGETNUMCHUNKS(len); j++) {
           datafree[j] = TRUE;
           m_nMeasUsedOut--;
         }
       }
-      pHD->nlastAcked++;
+      pHD->nLastAcked++;
       if (pHD->nLastAcked > MHmaxSeq) {
         pHD->nLastAcked = 0;
       }
@@ -2483,31 +2484,31 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
       MHmsgh.broadcast(MHMAKEMHQID(LocalHostIndex, MHrprocQ),
                        (char*)&nodeStChg, sizeof(nodeStChg), 0L);
       if (pHD->nRouteSync < MHmaxRouteSync) {
-        pthread_mutex_unlock(&m_lock);
+        mutex_unlock(&m_lock);
         checkNetAudit(MHmsghName, MHMAKEMHQID((pHD - hostlist), MHmsghQ),
                       (pHD - hostlist), FALSE);
-        pthread_mutex_lock(&m_lock);
+        mutex_lock(&m_lock);
         m_lockcnt++;
         pHD->nRouteSync++;
       }
     }
     pHD->auditcount[pHD->SelectedNet] = 0;
-    if (msgp->msgType != MHrejecttyp) {
+    if (msgp->msgType != MHrejectTyp) {
       // Send the current message to the target MSGH queue
       // Also go through all the message s that may be buffered
       // up on the receive buffer queue
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
       // if the message is addressed to MHrproc, call the
       // message processing function directly
       if (MHQID2QID(msgp->toQue) != MHrprocQ) {
         if ((retval = msgp->send(msgp->toQue, msgp->srcQue,
-                                 msgp->msgSz, 0)) != Glsuccess) {
+                                 msgp->msgSz, 0)) != GLsuccess) {
           m_nMeasFailedSend++;
         }
       } else {
         MHprocessmsg(msgp, msgp->msgSz);
       }
-      pthread_mutex_lock(&m_lock);
+      mutex_lock(&m_lock);
       m_lockcnt++;
       // Update next sequence number
       if (++(pHD->nRcv) > MHmaxSeq) {
@@ -2521,9 +2522,9 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
           MHevent.clrTmr(MHrejTimers[hostid]);
           MHrejTimers[hostid] = MHempty;
         }
-        if (datafree[pHD-rcvQ[pHD->nRcv].m_dataidx] != TRUE) {
+        if (datafree[pHD->rcvQ[pHD->nRcv].m_dataidx] != TRUE) {
           msgp = (MHmsgBase*)&data[MHCHUNKADDR(pHD->rcvQ[pHD->nRcv].m_dataidx)];
-          pthread_mutex_unlock(&m_lock);
+          mutex_unlock(&m_lock);
           if (MHQID2QID(msgp->toQue) != MHrprocQ) {
             if (msgp->send(msgp->toQue, msgp->srcQue, msgp->msgSz, 0) != GLsuccess) {
               m_nMeasFailedSend++;
@@ -2531,7 +2532,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
           } else {
             MHprocessmsg(msgp, msgp->msgSz);
           }
-          pthread_mutex_lock(&m_lock);
+          mutex_lock(&m_lock);
           m_lockcnt++;
           len = pHD->rcvQ[pHD->nRcv].m_length;
           for (int j = pHD->rcvQ[pHD->nRcv].m_dataidx;
@@ -2555,7 +2556,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
           MHrejTimers[hostid] = MHempty;
         }
       }
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
       return(retval);
     }
     pHD->nMeasRejectsRcv++;
@@ -2564,11 +2565,11 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
     while (count > 0) {
       ReSend(MHgetHostId(msgp), nResend);
       count --;
-      if (__nResend > MHmaxSeq) {
+      if (++nResend > MHmaxSeq) {
         nResend = 0;
       }
     }
-    pthread_mutex_unlock(&m_lock);
+    mutex_unlock(&m_lock);
     return(retval);
   }
 
@@ -2583,7 +2584,7 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
     int got_chunks = 0;
     // Find a contiguous free space
     for (i = 0; i < m_NumChunks && got_chunks < need_chunks;
-         i++; m_BufIndex++) {
+         i++, m_BufIndex++) {
       if (m_BufIndex >= m_NumChunks) {
         m_BufIndex = 0;
         got_chunks = 0;
@@ -2616,20 +2617,20 @@ GLretVal Mhrt::ValidateMsg(MHmasBase* msgp) {
       // send a reject message
       idx = pHD->nRcv;
       if (idx > MHmaxSeq) {
-        pthread_mutex_unlock(&m_lock);
+        mutex_unlock(&m_lock);
         return(retval);
       }
       if (pHD->nInRcvQ != 0) {
         pHD->nRejects++;
         Short hostid = pHD - hostlist;
-        MHrejTimers[hostid] = MHevent.setlRtmr(SL, MHrejTag | hostid,
+        MHrejTimers[hostid] = MHevent.setlRtmr(5L, MHrejTag | hostid,
                                                FALSE, TRUE);
       }
     }
   } else {
     pHD->nMeasMsgOutOfWindow++;
   }
-  pthread_mutex_unlock(&m_lock);
+  mutex_unlock(&m_lock);
   return(retval);
 }
 
@@ -2647,7 +2648,7 @@ Void MHrt::AuditBuffers() {
 
   memset(inuse, 0x0, sizeof(Bool) * m_NumChunks);
 
-  pthread_mutex_lock(&m_lock);
+  mutex_lock(&m_lock);
   m_lockcnt++;
 
   int i;
@@ -2655,24 +2656,24 @@ Void MHrt::AuditBuffers() {
     if (hostlist[i].isused == FALSE) {
       continue;
     }
-    for (op = hostlist[i].sendQ; qp < hostlist[i].sendQ + MHmaxSQueue; qp++) {
+    for (qp = hostlist[i].sendQ; qp < hostlist[i].sendQ + MHmaxSQueue; qp++) {
       if (qp->m_length != MHempty) {
-        for (j = op->m_dataidx;
+        for (j = qp->m_dataidx;
              j < qp->m_dataidx + MHGETNUMCHUNKS(qp->m_length); j++) {
           inuse[j] = TRUE;
         }
       }
     }
     for (qp = hostlist[j].rcvQ; qp < hostlist[i].rcvQ + MHmaxSQueue; qp++) {
-      if (op->m_length != MHempty) {
-        for (j = op->m_dataidx;
-             j < op->m_dataidx + MHGETNUMCHUNKS(qp->m_length); j++) {
+      if (qp->m_length != MHempty) {
+        for (j = qp->m_dataidx;
+             j < qp->m_dataidx + MHGETNUMCHUNKS(qp->m_length); j++) {
           inuse[j] = TRUE;
         }
       }
     }
   }
-  U_long lastBuffFreed = nBufffreed;
+  U_long lastBuffFreed = nBuffFreed;
 
   m_nMeasUsedOut = 0;
   for (j = 0; j < m_NumChunks; j++) {
@@ -2685,7 +2686,7 @@ Void MHrt::AuditBuffers() {
       }
     }
   }
-  pthread_mutex_unlock(&m_lock);
+  mutex_unlock(&m_lock);
   if (nBuffFreed > lastBuffFreed) {
     printf("AuditBuffers(): Freed %d chunks\n", nBuffFreed - lastBuffFreed);
   }
@@ -2696,7 +2697,7 @@ Void MHrt::gqInitAck(MHqid gqid, GLretVal ret) {
   // Just clear the timer if there was on pending
   int qid = MHQID2QID(gqid);
   if (gqdata[qid].m_tmridx >= 0) {
-    MHevent.clrTmr(gqdata[qid].m_tmrIdx);
+    MHevent.clrTmr(gqdata[qid].m_tmridx);
     gqdata[qid].m_tmridx = -1;
   } else {
     printf("gqInitAck: no timer set for qid %d", qid);
@@ -2709,7 +2710,7 @@ Void MHrt::gqInitAck(MHqid gqid, GLretVal ret) {
 
 #define initRespTime 3000L
 
-Void MHrt::settGlobalQ(int idx, Bool bSetMsg) {
+Void MHrt::setGlobalQ(int idx, Bool bSetMsg) {
   int n;
   GLretVal retVal;
   MHgqInit msg;
@@ -2720,14 +2721,14 @@ Void MHrt::settGlobalQ(int idx, Bool bSetMsg) {
   if ((idx >= MHclusterGlobal &&
        idx < MHsystemGlobal && m_leadcc != LocalHostIndex) ||
       (idx < MHclusterGlobal && !MHISCLLEAD()) ||
-      (idx > = MHsystemGlobal && m_oamLead != LocalHostIndex)) {
+      (idx >= MHsystemGlobal && m_oamLead != LocalHostIndex)) {
     return;
   }
   setmsg.mtype = MHgQSetTyp;
   setmsg.ptype = MHintPtyp;
   memcpy(setmsg.realQs, gqdata[idx].m_realQ, sizeof(setmsg.realQs));
   if (gqdata[idx].m_tmridx >= 0) {
-    MHevent.clrTmr(gqdata[idx].m_tmrIdx);
+    MHevent.clrTmr(gqdata[idx].m_tmridx);
   }
   gqdata[idx].m_tmridx = -1;
   msg.m_gqid = MHMAKEMHQID(MHgQHost, idx);
@@ -2756,14 +2757,14 @@ Void MHrt::settGlobalQ(int idx, Bool bSetMsg) {
     } else {
       msg.m_realQ = gqdata[idx].m_realQ[n];
       setmsg.selectedQ = n;
-      gqdata[idx].m_selectedQ = n
+      gqdata[idx].m_selectedQ = n;
     }
   } else {
     msg.m_realQ = gqdata[idx].m_realQ[gqdata[idx].m_selectedQ];
     setmsg.selectedQ = gqdata[idx].m_selectedQ;
     // Make sure real Q exists
     char name[MHmaxNameLen + 1];
-    if (MHmsg.getName(msg.m_realQ, name) != GLsuccess) {
+    if (MHmsgh.getName(msg.m_realQ, name) != GLsuccess) {
       gqdata[idx].m_selectedQ = MHempty;
       setGlobalQ(idx);
       return;
@@ -2780,7 +2781,7 @@ Void MHrt::settGlobalQ(int idx, Bool bSetMsg) {
     }
     // This must be a normal global queue in so do not distribute to peers
     if (strncmp(hostlist[i].hostname.display(), "as", 2) == 0 &&
-        idx >= MHclusterGlobal && idx < <MHsystemGlobal) {
+        idx >= MHclusterGlobal && idx < MHsystemGlobal) {
       continue;
     }
     // This must be a global global queue in Active/Active
@@ -2796,7 +2797,7 @@ Void MHrt::settGlobalQ(int idx, Bool bSetMsg) {
     if ((retVal = MHmsgh.send(MHMAKEMHQID(i, MHmsghQ), (Char*)&setmsg,
                               sizeof(setmsg), 0)) != GLsuccess) {
       printf("setGlobal: failed to send queue info retval %d, host  %d",
-             retval, i);
+             retVal, i);
     }
   }
 
@@ -2812,7 +2813,7 @@ Void MHrt::settGlobalQ(int idx, Bool bSetMsg) {
   msg.srcQue = MHMAKEMHQID(getActualLocalHostIndex(destHostId), MHmsghQ);
   // Find INIT qid on that host
   int rtidx;
-  if ((rtidx = findNameOnHost(destHostID, "INIT")) == MHempty) {
+  if ((rtidx = findNameOnHost(destHostId, "INIT")) == MHempty) {
     // Should not be possile
     printf("setGlobal:could not find INIT entry on host%d, gq %d",
            destHostId, idx);
@@ -2854,12 +2855,12 @@ Void MHrt::setDistQ(int idx) {
   setmsg.ptype = MHintPtyp;
   setmsg.sQid = MHMAKEMHQID(LocalHostIndex, MHmsghQ);
   setmsg.updatedQ - MHempty;
-  memcpy(setmsg.realQs, dqdata[idx].m_realQ, sizeof(segmsg.realQs));
+  memcpy(setmsg.realQs, dqdata[idx].m_realQ, sizeof(setmsg.realQs));
   memcpy(setmsg.enabled, dqdata[idx].m_enabled, sizeof(setmsg.enabled));
   setmsg.nextQ = nextQ; // nextQ is reset only if it MHempty otherwise it ignored
   setmsg.dqid = MHMAKEMHQID(MHdQHost, idx);
   // send new queue info to all other machines
-  if (m_envType != MHmaxHostReg; i++) {
+  if (m_envType != MH_peerCluster) {
     int i;
     for (i = 0; i < MHmaxHostReg; i++) {
       if (i == LocalHostIndex || i == SecondaryHostIndex)
@@ -2872,7 +2873,7 @@ Void MHrt::setDistQ(int idx) {
         continue;
       }
       if ((retVal = MHmsgh.send(MHMAKEMHQID(i, MHmsghQ), (Char*)&setmsg,
-                                sizeof(setmsg), 0)) != Glsuccess) {
+                                sizeof(setmsg), 0)) != GLsuccess) {
         printf("setDistQ: failed to send queue into retval %d, host %d",
                retVal, i);
       }
@@ -2880,11 +2881,11 @@ Void MHrt::setDistQ(int idx) {
   }
 }
 
-MHrt::inpDeath(INpDeath *pmsg) {
+Void MHrt::inpDeath(INpDeath *pmsg) {
   int isMatch;
   MHname mhname = pmsg->msgh_name;
   char altName[MHmaxNameLen];
-  Mhqid mhqid = pmsg->msgh_qid;
+  MHqid mhqid = pmsg->msgh_qid;
 
   // If msgh_qid is not initialized then the queue is already
   // removed in which case we should do nothing since
@@ -2966,6 +2967,383 @@ MHrt::inpDeath(INpDeath *pmsg) {
 }
 
 Void MHrt::gQSet(MHgQSet *pmsg) {
-  if (MHQID2HOSt(pmsg->gqid))
+  if(MHQID2HOST(pmsg->gqid) != MHgQHost && MHQID2HOST(pmsg->gqid) != 127){
+    //CRERROR("Invalid global qid %s", pmsg->gqid.display());
+    printf("Invalid global qid %s", pmsg->gqid.display());
+    return;
+  }
+  int idx = MHQID2QID(pmsg->gqid);
+  memcpy(gqdata[idx].m_realQ, pmsg->realQs, sizeof(pmsg->realQs));
+  gqdata[idx].m_selectedQ = pmsg->selectedQ;
+}
+
+Void
+MHrt::dQSet(MHdQSet* pmsg)
+{
+  if(MHQID2HOST(pmsg->dqid) != MHdQHost){
+    //CRERROR("Invalid distributive qid %s", pmsg->dqid.display());
+    printf("Invalid distributive qid %s\n", pmsg->dqid.display());
+    return;
+  }
+  int idx = MHQID2QID(pmsg->dqid);
+  if(pmsg->updatedQ != MHempty){
+    if(pmsg->updatedQ >= MHmaxDistQs || dqdata[idx].m_realQ[pmsg->updatedQ] !=
+       pmsg->realQs[pmsg->updatedQ]){
+      //CRERROR("invalid updateQ %d, or qid %s != %s", pmsg->updatedQ,
+      //        dqdata[idx].m_realQ[pmsg->updatedQ].display(),
+      //        pmsg->realQs[pmsg->updatedQ].display());
+      printf("invalid updateQ %d, or qid %s != %s", pmsg->updatedQ,
+              dqdata[idx].m_realQ[pmsg->updatedQ].display(),
+              pmsg->realQs[pmsg->updatedQ].display());
+    }
+    dqdata[idx].m_enabled[pmsg->updatedQ] = pmsg->enabled[pmsg->updatedQ];
+    setDistQ(idx);
+  } else {
+    memcpy(dqdata[idx].m_realQ, pmsg->realQs, sizeof(pmsg->realQs));
+    memcpy(dqdata[idx].m_enabled, pmsg->enabled, sizeof(pmsg->enabled));
+    if(pmsg->nextQ == MHempty){
+      dqdata[idx].m_nextQ = MHempty;
+    }
+  }
+}
+
+
+Void
+MHinfoExt::auditQueues()
+{
+  // Make a pass over all message headers to make sure they
+  // are on some list, either on the queue or on free list 
+
+  char   		 onQueue[MHmaxMsgs];
+	static char*	used256 = NULL;
+	static char*	used1024 = NULL;
+	static char*	used4096 = NULL;
+	static char*	used16384 = NULL;
+	int	n256 = 0;
+	int	n1024 = 0;
+	int	n4096 = 0;
+	int	n16384 = 0;
+        
+  memset(onQueue, 0x0, sizeof(onQueue));
+
+	if(used256 == NULL && (used256 = (char*)malloc(rt->m_n256)) == NULL){
+		//CRERROR("Failed to malloc 256 audit buffers");
+    printf("Failed to malloc 256 audit buffers");
+		return;
+	}
+	memset(used256, 0x0, rt->m_n256);
+
+	if(used1024 == NULL && (used1024 = (char*)malloc(rt->m_n1024)) == NULL){
+		//CRERROR("Failed to malloc 1024 audit buffers");
+    printf("Failed to malloc 1024 audit buffers");
+		return;
+	}
+	memset(used1024, 0x0, rt->m_n1024);
+
+	if(used4096 == NULL && (used4096 = (char*)malloc(rt->m_n4096)) == NULL){
+		// CRERROR("Failed to malloc 4096 audit buffers");
+    printf("Failed to malloc 4096 audit buffers");
+		return;
+	}
+	memset(used4096, 0x0, rt->m_n4096);
+
+	if(used16384 == NULL && (used16384 = (char*)malloc(rt->m_n16384)) == NULL){
+		//CRERROR("Failed to malloc 16384 audit buffers");
+    printf("Failed to malloc 16384 audit buffers");
+		return;
+	}
+	memset(used16384, 0x0, rt->m_n16384);
+
+	MHmsgHead* pMsgHead;
+
+  mutex_lock(&rt->m_msgLock);
+  rt->m_msgLockCnt++;
+        
+  int     i;
+	int	currBuff = rt->m_freeMsgHead;
+  for(i = 0; i < MHmaxMsgs && currBuff != MHempty; i++){
+		onQueue[currBuff] = TRUE;
+		currBuff = rt->msg_head[currBuff].m_next;
+  }
+  if(i == MHmaxMsgs){
+    // Have loop what to do? Reinitialize shared memory and dump all messages?
+  }
+
+	MHqData*	qData;
+	int		j;
+	int             nChunks;
+  char*           usedArray;
+  char*           freeArray;;
+  int             usedIndex;
+	// Go through all the queues
+	for(i = 0; i < MHmaxQid; i++){
+		if(rt->localdata[i].inUse == FALSE){
+			continue;
+		}
+		qData = &rt->localdata[i];
+    mutex_lock(&qData->m_qLock);
+    qData->m_qLockCnt ++;
+
+    if(qData->m_msgs >= 0){
+      pMsgHead = &rt->msg_head[qData->m_msgs];
+    } else {
+      pMsgHead = NULL;
+    }
+
+		int         nChunks;
+    char*       usedArray;
+    int         usedIndex;
+		int	    nCount;
+
+		nCount = 0;
+    while(pMsgHead != NULL && nCount < (qData->nCount << 1)){
+			nCount++;
+			onQueue[pMsgHead - rt->msg_head] = TRUE;
+      // Mark the buffers as used and header as on queue
+			if(pMsgHead->m_len < 0){
+				nChunks = 0;
+			} else if(pMsgHead->m_len < 768){
+        nChunks = (pMsgHead->m_len >> 8) + 1; 
+        usedArray = used256;
+        usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer256) >> 8;
+      } else if(pMsgHead->m_len < 3072){
+        usedArray = used1024;
+        nChunks = (pMsgHead->m_len >> 10) + 1; 
+        usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer1024) >> 10;
+			} else if(pMsgHead->m_len < 12288){
+        usedArray = used4096;
+        nChunks = (pMsgHead->m_len >> 12) + 1; 
+        usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer4096) >> 12;
+      } else {
+        nChunks = (pMsgHead->m_len >> 14) + 1; 
+        usedArray = used16384;
+        usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer16384) >> 14;
+      }
+
+      for(int count = 0; count < nChunks; count++, usedIndex++){
+        usedArray[usedIndex] = TRUE;
+      }
+			
+      if(pMsgHead->m_next >= 0){
+        pMsgHead = &rt->msg_head[pMsgHead->m_next];
+      } else {
+        pMsgHead = NULL;
+      }
+    }
+    mutex_unlock(&qData->m_qLock);
+	}
+
+	// Find any message headers that are not on queue for the second time,
+	// and free any of the message buffers that they are holding
+  for(i = 0; i < MHmaxMsgs; i++){
+		if(!onQueue[i]){
+			pMsgHead = &rt->msg_head[i];
+			if(pMsgHead->m_len != MHempty){
+        if(pMsgHead->m_len < 768){
+          nChunks = (pMsgHead->m_len >> 8) + 1; 
+          usedArray = used256;
+          freeArray = m_free256;
+          usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer256) >> 8;
+        } else if(pMsgHead->m_len < 3072){
+          usedArray = used1024;
+          nChunks = (pMsgHead->m_len >> 10) + 1; 
+          usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer1024) >> 10;
+          freeArray = m_free1024;
+				} else if(pMsgHead->m_len < 12288){
+          usedArray = used4096;
+          nChunks = (pMsgHead->m_len >> 12) + 1; 
+          usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer4096) >> 12;
+          freeArray = m_free4096;
+        } else {
+          nChunks = (pMsgHead->m_len >> 14) + 1; 
+          usedArray = used16384;
+          usedIndex = ((m_buffers + pMsgHead->m_msgBuf) - m_buffer16384) >> 14;
+          freeArray = m_free16384;
+        }
+			} else {
+				// This buffer does not own valid chunks
+				nChunks = 0;
+			}
+			if((++(rt->msg_head[i].m_inUseCnt)) > 1){
+        for(int count = 0; count < nChunks; count++, usedIndex++){
+          if(usedArray[usedIndex] == TRUE){
+						// This buffer is used by another message already on
+						// some queue, it does not matter if some stranded
+						// header point to it.
+						continue;
+					} else if(freeArray[usedIndex] == FALSE){
+						freeArray[usedIndex] = TRUE;
+						rt->m_bufferFreedCnt ++;
+					}
+        }
+				pMsgHead->m_len = MHempty;
+				pMsgHead->m_next = rt->m_freeMsgHead;
+        rt->m_freeMsgHead = pMsgHead - rt->msg_head;
+				rt->m_headerFreedCnt++;
+			} else {
+				// This buffer still validly owns chunks update used array
+        for(int count = 0; count < nChunks; count++, usedIndex++){
+          usedArray[usedIndex] = TRUE;
+				}
+			}
+		}
+  }
+	
+	// Go through all of the buffer reservations and free any unused buffers
+	int	usedCount = 0;
+	for(i = 0; i < rt->m_n256; i++){
+		if(m_free256[i] == FALSE){
+			if(used256[i] == TRUE){
+				usedCount++;
+			} else {
+				rt->m_bufferFreedCnt ++;
+				m_free256[i] = TRUE;
+			}
+		}
+	}
+	rt->m_nMeasUsed256 = usedCount;
+
+	usedCount = 0;
+	for(i = 0; i < rt->m_n1024; i++){
+		if(m_free1024[i] == FALSE){
+			if(used1024[i] == TRUE){
+				usedCount++;
+			} else {
+				rt->m_bufferFreedCnt++;
+				m_free1024[i] = TRUE;
+			}
+		}
+	}
+	rt->m_nMeasUsed1024 = usedCount;
+
+	usedCount = 0;
+	for(i = 0; i < rt->m_n4096; i++){
+		if(m_free4096[i] == FALSE){
+			if(used4096[i] == TRUE){
+				usedCount++;
+			} else {
+				rt->m_bufferFreedCnt++;
+				m_free4096[i] = TRUE;
+			}
+		}
+	}
+	rt->m_nMeasUsed4096 = usedCount;
+
+	usedCount = 0;
+	for(i = 0; i < rt->m_n16384; i++){
+		if(m_free16384[i] == FALSE){
+			if(used16384[i] == TRUE){
+				usedCount++;
+			} else {
+				rt->m_bufferFreedCnt++;
+				m_free16384[i] = TRUE;
+			}
+		}
+	}
+	rt->m_nMeasUsed16384 = usedCount;
+
+  mutex_unlock(&rt->m_msgLock);
+}
+
+void
+MHrt::updateClusterLead(Short hostid, MHmsgBase* msgp)
+{
+	// A node changed state, figure out if it affects the 
+	// current setting of the clusterLead
+	// Also, find out if we are connected to any other node
+	// and if we are completely isolated, and there are more
+	// then 3 nodes and then reboot.
+	// If there are only two nodes, reboot if we are not a cluster Lead.
+
+	if(m_envType != MH_peerCluster && SecondaryHostIndex == MHnone){
+		return;
+	}
+
+	int myLocalIndex;
+
+	if(SecondaryHostIndex != MHnone){
+		myLocalIndex = SecondaryHostIndex;
+	} else {
+		myLocalIndex = LocalHostIndex;
+	}
+
+	static time_t	lastHaveThree = 0;
+	
+	int	i;
+	int	nActive = 0;
+	int	nHosts = 0;
+	for(i = 0; i < MHmaxHostReg; i++){
+		if(!hostlist[i].isused || strncmp(hostlist[i].hostname.display(), "as", 2) != 0){
+			// Only count configured peer cluster members
+			continue;
+		}
+		if(hostlist[i].isactive){
+			nActive++;
+		}
+		nHosts++;
+	}
+
+	if(hostid == myLocalIndex){
+		// If there is only one host in the cluster
+		// make it cluster lead
+		// If this local node, if there is only two hosts
+		// configured and this is the only one active
+		// make it cluster lead
+		if((nHosts == 1) || (nHosts == 2 && nActive == 1)){
+			m_clusterLead = myLocalIndex;
+		}
+		return;
+	}
+
+	if(m_lastActive >= 3){
+		lastHaveThree = time(NULL);
+	}
+
+	int	sndMsg = FALSE;
+
+	if(nActive == 1 && m_lastActive > 1){
+		m_clusterLead = myLocalIndex;
+		if(nHosts == 2){
+      //CRmsg om(CL_AUDL);
+      //om.spool("MHupdateClusterLead: Node Isolated from Cluster");
+      printf("MHupdateClusterLead: Node Isolated from Cluster\n");
+		} else if((time(NULL) - lastHaveThree) < 4){
+			INITREQ(SN_LV5, MHnoHost, "NODE ISOLATED FROM CLUSTER", IN_EXIT);
+		}
+	} else if(nActive > 1){
+		if(m_clusterLead == MHempty){
+			if(msgp != NULL && msgp->msgType == MHhostDelTyp && ((MHhostDel*)msgp)->clusterLead != MHempty) {
+				m_clusterLead = ((MHhostDel*)msgp)->clusterLead;
+			} else if(hostlist[hostid].isactive && hostid > myLocalIndex){
+				m_clusterLead = myLocalIndex;
+				sndMsg = TRUE;
+			} 
+		} else if(m_clusterLead == hostid && hostlist[hostid].isactive == FALSE){
+			// Just become lead yourself
+			m_clusterLead = myLocalIndex;
+			sndMsg = TRUE;
+		}
+	}
+
+	m_lastActive = nActive;
+	if(sndMsg == TRUE){
+ 		MHhostDel       hostDel;
+ 		hostDel.ptype = MHintPtyp;
+ 		hostDel.mtype = MHhostDelTyp;
+ 		hostDel.sQid = MHMAKEMHQID(myLocalIndex,MHmsghQ);
+		hostDel.toQue = MHMAKEMHQID(i, MHmsghQ);
+		hostDel.msgSz = sizeof(hostDel);
+		hostDel.clusterLead = m_clusterLead;
+		hostDel.onEnet = MHempty;
+    hostDel.bReply = FALSE;
+		MHsetHostId(&hostDel, myLocalIndex);
+		hostDel.HostId |= MHunBufferedFlg;
+		for(i = 0; i < MHmaxHostReg; i++){
+			if(!hostlist[i].isused || strncmp(hostlist[i].hostname.display(), "as", 2) != 0){
+				continue;
+			}
+      MHmsgh.send(MHMAKEMHQID(i,MHmsghQ),(Char *)&hostDel, sizeof(MHhostDel) ,0, FALSE);
+		}
+	}
 }
 

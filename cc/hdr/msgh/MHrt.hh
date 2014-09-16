@@ -7,7 +7,7 @@
 
 #undef  _REENTRANT
 #define _REENTRANT
-#include <pthread.h>
+#include <thread.h>
 //#include <synch.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -65,11 +65,8 @@ const Short MHmaxNamesReg = MHtotNameSlotsSz - 500;
 // Number of buffers for sending
 const Short MHmaxSQueue = 1024;
 
-// Number of buffers for sending
-const Short MHdefwindowSz = 1024;
-
 // Default widnow size
-const Short MHdefWindowsSz = 128;
+const Short MHdefWindowSz = 128;
 
 // Number of global data objects
 #define MHmaxGd IN_GD_MAX
@@ -134,7 +131,7 @@ struct MHhostdata {
   sockaddr_in6 alias[MHmaxNets][MHmaxAlias]; // Alias socket address for host
   Short next; // Pointer for next element in host hash
   Short delay; // Delay in trying to connect hosts
-  Short windowsSz; // Protocol window size for this host
+  Short windowSz; // Protocol window size for this host
   Short nDelMsgs;
   U_long nMeasSeqReset; //Number of sequencing resets
   Bool isR26;
@@ -174,8 +171,8 @@ struct MHhostdata {
 };
 
 struct MHqData {
-  pthread_mutex_t m_qLock; // mutex variable associated with cv
-  pthread_cond_t m_cv;
+  mutex_t m_qLock; // mutex variable associated with cv
+  cond_t m_cv;
   pid_t pid; // local process ids
   Long nBytes; // Number of  bytes in queue
   Long nBytesHigh; // high water mark for number of bytes
@@ -347,10 +344,10 @@ private:
   Short RCStoHostId[MHmaxRack][MHmaxChassis][MHmaxSlot];
   MHname oam_lead[MHmaxPilotNodes];
 
-  pthread_mutex_t m_lock; // mutex variable for ciritcal region processing
+  mutex_t m_lock; // mutex variable for ciritcal region processing
 
   U_long m_lockcnt; // this variable is incremented every time lock is set
-  pthread_mutex_t m_msgLock;
+  mutex_t m_msgLock;
   U_long m_msgLockCnt;
   int m_lastActive;
   int m_bufferFreedCnt; // Number of mesasge buffers freed by audit
@@ -399,7 +396,7 @@ public:
   int m_n16384; // Number of 16384 byte buffers
   int m_nextQid; // Next qid to start searching from
   int m_NumChunks; // Number of outping buffer chunks
-  pthread_mutex_t m_dqLock; //Distributive queue mutex
+  mutex_t m_dqLock; //Distributive queue mutex
   U_long m_dqcnt; //Distributive queue mutex audit
   Long m_spare[8183]; // spare for future/su use
   Short fillshort;

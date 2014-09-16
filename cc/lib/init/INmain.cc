@@ -28,7 +28,7 @@
 //#include "cc/hdr/cr/CRprocname.hh"
 
 #include "cc/hdr/init/INsbt.hh"
-#include "cc/hdr/init/INlibinit.hh"
+#include "INlibinit.hh"
 
 extern U_long* TMtimes;
 //

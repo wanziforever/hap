@@ -21,11 +21,11 @@
 // must be included by all processes under INIT's control
 class INsharedMem {
 public:
-  static int allocSeq(key_t memkey, unsigned longsize, int shmflg,
+  static int allocSeg(key_t memkey, unsigned long longsize, int shmflg,
                       Bool &new_flg, Bool rel_flg = FALSE,
                       IN_SHM_KEY private_key = IN_PRIVATE);
   static int deallocSeg(int shmid);
-  static int getSqg(Bool first_flg = FALSE,
+  static int getSeg(Bool first_flg = FALSE,
                     IN_SHM_KEY private_key = IN_PRIVATE);
   static Void deallocAllSegs();
 private:

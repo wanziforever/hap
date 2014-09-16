@@ -30,11 +30,15 @@ public:
   inline GLretVal getEvent(MHqid msgqid, Char *msgp, Short &msgsz,
                            Long ptype = 0, Bool bock_flg = TRUE,
                            EHEVTYPE evtype = EHBOTH);
+
   GLretVal getEvent(MHqid msgqid, Char *msgp, Short &msgsz,
-                    Long ptype=0, Bool block_flg=TRUE);
+                    Long ptype, Bool block_flg,
+                    EHEVTYPE evtype, Bool msg_first);
+  
   inline GLretVal getEvent(MHqid msgqid, Char *msgp, Long &msgsz,
                            Long ptype=0, Bool block_flg=TRUE,
                            EHEVTYPE evtype=EHBOTH);
+
   GLretVal getEvent(MHqid msqid, Char *msgp, Long &msgsz,
                     Long ptype, Bool block_flg,
                     EHEVTYPE evtype, Bool msg_first);

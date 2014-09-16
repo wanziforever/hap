@@ -18,7 +18,7 @@ Void MHrt::SetSockId(int sock_id) {
   MHsock_id = sock_id;
 }
 
-Bool MHnoErrr = TRUE;
+Bool MHnoErr = TRUE;
 
 MHqid MHmakeqid(int hostid, int qid) {
   int tmp = (((hostid) << MHhostShift) | qid);
@@ -234,7 +234,7 @@ MHqid MHrt::allocateMHqid(const char* name) {
   MHqid mhqid;
   Short procindex = MHempty;
 
-  pthread_mutex_lock(&m_msgLock);
+  mutex_lock(&m_msgLock);
   m_msgLockCnt ++;
   if ((procindex = findNameOnHost(LocalHostIndex, name)) == MHempty) {
     // Not found, search for name through free area
@@ -252,17 +252,17 @@ MHqid MHrt::allocateMHqid(const char* name) {
       }
     }
     if (i == MHmaxPermProc) {
-      pthread_mutex_unlock(&m_msgLock);
+      mutex_unlock(&m_msgLock);
       printf("AllocateMHqid: No free slots avaliable for name %s", name);
       return(MHnullQ);
     } else {
       m_nextQid--;
-      pthread_mutex_unlock(&m_msgLock);
+      mutex_unlock(&m_msgLock);
       printf("AllocateMhqid: Found free slot available for name %s(%s)",
              name, mhqid.display());
     }
   } else {
-    pthread_mutex_unlock(&m_msgLock);
+    mutex_unlock(&m_msgLock);
     mhqid = rt[procindex].mhqid;
     if (localdata[MHQID2QID(mhqid)].pid != MHempty &&
         kill(localdata[MHQID2QID(mhqid)].pid, 0) >= 0) {
@@ -408,7 +408,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
   GLretVal ret;
 
   if (doLock) {
-    pthread_mutex_lock(&m_lock);
+    mutex_lock(&m_lock);
     m_lockcnt++;
   }
 
@@ -441,7 +441,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
     if (cnt > MHmaxSeq) {
       pHD->nSend = pHD->nLastAcked;
       if (doLock) {
-        pthread_mutex_unlock(&m_lock);
+        mutex_unlock(&m_lock);
       }
       return(MHagain);
     }
@@ -465,7 +465,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
       }
     }
     if (doLock) {
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
     }
     return(MHagain);
   }
@@ -508,7 +508,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
     if (i == m_NumChunks) {
       m_nMeasTotSendBufFull++;
       if (doLock) {
-        pthread_mutex_unlock(&m_lock);
+        mutex_unlock(&m_lock);
       }
       return (MHagain);
     }
@@ -533,7 +533,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
   } else if (pHD->sendQ[pHD->nSend].m_length == MHempty && msgsz == 0) {
     // Flush called with no data in cargo
     if (doLock) {
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
     }
     return(GLsuccess);
   }
@@ -562,7 +562,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
             pCargo->m_count < m_nMaxCargo
             && pCargo->msgSz < m_MinCargoSz) {
           if (doLock) {
-            pthread_mutex_unlock(&m_lock);
+            mutex_unlock(&m_lock);
           }
           return(GLsuccess);
         }
@@ -576,7 +576,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
       // Call the send with the new message size
       ret = Send(hostid, msgp, msgsz, resetSeq, buffered, FALSE);
       if (doLock) {
-        pthread_mutex_unlock(&m_lock);
+        mutex_unlock(&m_lock);
       }
       return(ret);
     }
@@ -584,7 +584,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
 
   if (msgp == NULL) {
     if (doLock) {
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
     }
     return(MHnoMsg);
   }
@@ -622,7 +622,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
     }
     pHD->nMeasSockDropped++;
     if (doLock) {
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
     }
     return(errno);
   }
@@ -630,7 +630,7 @@ GLretVal MHrt::Send(Short hostid, Char *msgp, Long msgsz,
   pHD->nUnAcked = 0;
   pHD->nMeasMsgSend ++;
   if (doLock) {
-    pthread_mutex_unlock(&m_lock);
+    mutex_unlock(&m_lock);
   }
   return(GLsuccess);
 }

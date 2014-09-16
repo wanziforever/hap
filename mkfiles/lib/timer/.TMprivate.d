@@ -1,5 +1,6 @@
-TMprivate.o: ../../../src/lib/timer/TMprivate.cc \
-  ../../../src/hdr/GLtypes.hh ../../../src/hdr/GLreturns.hh \
-  ../../../src/hdr/GLtypes.hh ../../../src/hdr/GLmsgs.hh \
-  ../../../src/hdr/timer/TMtimers.hh ../../../src/hdr/timer/TMreturns.hh \
-  ../../../src/lib/timer/TMlocal.hh
+TMprivate.o: ../../../cc/lib/tim/TMprivate.cc ../../../hdr/GLtypes.h \
+ ../../../hdr/GLreturns.h ../../../hdr/GLmsgs.h \
+ ../../../cc/hdr/tim/TMtimers.hh ../../../cc/hdr/linux/synch.h \
+ ../../../cc/hdr/linux/futex/usersem.h \
+ ../../../cc/hdr/linux/futex/x86_64.h ../../../cc/hdr/tim/TMreturns.hh \
+ ../../../cc/lib/tim/TMlocal.hh

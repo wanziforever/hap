@@ -33,6 +33,7 @@
 
 // self defined string class and utils
 #include "String.h"
+#include <iostream>
 
 // defined in time.h, used to convert the result of clock() to seconds
 static int MHLCLK_TCK = CLOCKS_PER_SEC;
@@ -41,13 +42,13 @@ static int MHLCLK_TCK = CLOCKS_PER_SEC;
 MHinfoExt MHmsgh;
 
 int MHnullq = -1;
-ostream& operator<<(ostream& output, const MHqid& qid) {
+std::ostream& operator<<(std::ostream& output, const MHqid& qid) {
   output << (qid << 0);
   return(output);
 }
 
 
-String int_to_str(MHqid qid) {
+std::string int_to_str(MHqid qid) {
   return int_to_str(qid << 0);
 }
 
@@ -83,7 +84,7 @@ U_short MHinfoExt::nameCount = 0;
 int MHinfoExt::sock_id = -1;
 U_short MHinfoExt::lmsgid = 0;
 int *MHinfoExt::pSigFlg = NULL;
-pthread_mutex_t MHinfoExt::m_lock;
+mutex_t MHinfoExt::m_lock;
 char* MHinfoExt::m_buffers;   // Address of buffer shared memory
 char* MHinfoExt::m_free256;   // Free status of 256 byte buffers
 char* MHinfoExt::m_free1024;  // Free status of 1024 byte buffers
@@ -222,7 +223,7 @@ GLretVal MHinfoExt::attach(Char *attach_address) {
   pid = getpid();  // get process id
   isAttach = TRUE; // update flag
   nameCount = 0; //reset counter
-  memset(&m_lock, 0x0, sizeof(pthread_mutex_t));
+  memset(&m_lock, 0x0, sizeof(mutex_t));
   MHmaxCargoSz = rt->m_MinCargoSz + MHmsgSz;
 
   if (rt->percentLoadOnActive > 50) {
@@ -602,12 +603,12 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
     host = MHQID2HOST(mhqid);
     qid = MHQID2QID(mhqid);
   } else if (host == MHdQHost) { // Distributive queue
-    pthread_mutex_lock(&rt->m_dqLock);
+    mutex_lock(&rt->m_dqLock);
     rt->m_dqcnt++;
     distRetry:
     sndcount++;
     if (rt->dqdata[qid].m_nextQ == MHempty) {
-      pthread_mutex_unlock(&rt->m_dqLock);
+      mutex_unlock(&rt->m_dqLock);
       return (MHnoQAssigned);
     }
     int i;
@@ -627,7 +628,7 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
       }
     }
     if (i == rt->dqdata[qid].m_maxMember) {
-      pthread_mutex_unlock(&rt->m_dqLock);
+      mutex_unlock(&rt->m_dqLock);
       return (MHnoQAssigned);
     }
     // If unbalanced load is need see if the queue needs to be  recalculated
@@ -643,7 +644,7 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
       }
     }
     qid = MHQID2QID(mhqid);
-    pthread_mutex_unlock(&rt->m_dqLock);
+    mutex_unlock(&rt->m_dqLock);
   }
 
   if (host >= MHmaxHostReg || host < 0) {
@@ -719,10 +720,10 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
 
       lmsg->m_size = msgsz;
       lmsg->m_pid = pid;
-      pthread_mutex_lock(&m_lock);
+      mutex_lock(&m_lock);
       lmsg->m_id = lmsgid;
       lmsgid++;
-      pthread_mutex_unlock(&m_lock);
+      mutex_unlock(&m_lock);
       char *pdata = msgp;
       long data_left;
       int wait_count = 0;
@@ -860,7 +861,7 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
   int i;
   int startIndex;
 
-  pthread_mutex_lock(&rt->m_msgLock);
+  mutex_lock(&rt->m_msgLock);
   rt->m_msgLockCnt++;
 
   for (i = 0; i < nBuffers && got_chunks < nChunks;
@@ -877,7 +878,7 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
   }
 
   if (rt->m_freeMsgHead < 0 || i == nBuffers) {
-    pthread_mutex_unlock(&rt->m_msgLock);;
+    mutex_unlock(&rt->m_msgLock);;
     return (MHagain);
   }
 
@@ -900,7 +901,7 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
   int msgHead = rt->m_freeMsgHead;
   rt->m_freeMsgHead = rt->msg_head[rt->m_freeMsgHead].m_next;
   rt->msg_head[msgHead].m_next = MHempty;
-  pthread_mutex_unlock(&rt->m_msgLock);
+  mutex_unlock(&rt->m_msgLock);
   // copy the message
   memcpy(to, msgp, msgsz);
 
@@ -908,14 +909,14 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
   // queue. Obtain the mutex for queue and insert the message
   // Wake up the receiver as well, should it be done every time
   // or is there a way to optimize that?
-  pthread_mutex_lock(&qData->m_qLock);
+  mutex_lock(&qData->m_qLock);
   qData->m_qLockCnt++;
   qData->m_qLockPid = pid;
 
   if (qData->pid == (pid_t)(-1)) {
     // This check is here to prevent adding messages after queue
     // has been emptied. Let the audit clean up any buffers that were stranded
-    pthread_mutex_unlock(&qData->m_qLock);
+    mutex_unlock(&qData->m_qLock);
     return (MHbadQid); // bad mhqid
   }
 
@@ -939,8 +940,8 @@ GLretVal MHinfoExt::send(MHqid mhqid, Char *msgp, Long msgsz,
     qData->nCountHigh = qData->nCount;
   }
 
-  pthread_cond_signal(&qData->m_cv);
-  pthread_mutex_unlock(&qData->m_qLock);
+  cond_signal(&qData->m_cv);
+  mutex_unlock(&qData->m_qLock);
 
   return (GLsuccess);
 }
@@ -953,7 +954,7 @@ Short MHinfoExt::Qid2Qid(MHqid mhqid) {
   return (MHQID2QID(mhqid));
 }
 
-GLretVal MHinfoExt::hostid2Name(Short hostid, char* name) {
+GLretVal MHinfoExt::hostId2Name(Short hostid, char* name) {
   name[0] = 0;
   if (isAttach == FALSE) {
     return (MHnoAth);
@@ -1112,7 +1113,7 @@ GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Long &msgsz,
 
   MHmsgHead* pMsgHead;
   MHmsgHead* prevMsg;
-  pthread_mutex_lock(&qData->m_qLock);
+  mutex_lock(&qData->m_qLock);
   getMessage:
   qData->m_qLockCnt ++;
   qData->m_qLockPid = pid;
@@ -1162,7 +1163,7 @@ GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Long &msgsz,
     qData->nBytesRcvd += pMsgHead->m_len;
     qData->nCountRcvd++;
 
-    pthread_mutex_unlock(&qData->m_qLock);
+    mutex_unlock(&qData->m_qLock);
 
     if (((unsigned int)(pMsgHead->m_len)) <= (unsigned int)msgsz) {
       memcpy(msgp, (char*)mp, pMsgHead->m_len);
@@ -1175,7 +1176,7 @@ GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Long &msgsz,
       //CRDEBUG_PRINT(0x01, ("Invalid message len %d, freed counts %d",
       //                     pMsgHead->m_len, rt->m_bufferFreedCnt,
       //                     rt->m_headerFreedCnt));
-      pthread_mutex_lock(&qData->m_qLock);
+      mutex_lock(&qData->m_qLock);
       goto getMessage;
     }
 
@@ -1206,12 +1207,12 @@ GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Long &msgsz,
       freeArray[freeIndex] = TRUE;
     }
     // Put the message header on the free list
-    pthread_mutex_lock(&rt->m_msgLock);
+    mutex_lock(&rt->m_msgLock);
     rt->m_msgLockCnt++;
     *pnMeasUsed -= nChunks;
     pMsgHead->m_next = rt->m_freeMsgHead;
     rt->m_freeMsgHead = pMsgHead - rt->msg_head;
-    pthread_mutex_unlock(&rt->m_msgLock);
+    mutex_unlock(&rt->m_msgLock);
     //CRDEBUG(CRmsgh+8, ("to %s from %s size %d type 0x%x prio %d",
     //                   mhqid.display(),
     //                   ((MHmsgBase*)msgp)->srcQue.display(), msgsz,
@@ -1245,31 +1246,31 @@ GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Long &msgsz,
         twait.tv_sec--;
       }
       if (twait.tv_sec < 0) {
-        pthread_mutex_unlock(&qData->m_qLock);
+        mutex_unlock(&qData->m_qLock);
         return(MHtimeOut);
       }
     }
 
     if (pSigFlg != NULL && *pSigFlg != 0) {
-      pthread_mutex_unlock(&qData->m_qLock);
+      mutex_unlock(&qData->m_qLock);
       return(MHintr);
     }
     TMisInBlockingReceive = TRUE;
 
-    if ((ret = pthread_cond_timedwait(&qData->m_cv,
+    if ((ret = cond_timedwait(&qData->m_cv,
                                       &qData->m_qLock,
                                       &twait)) != 0) {
       TMisInBlockingReceive = FALSE;
       if (ret == ETIME) {
-        pthread_mutex_unlock(&qData->m_qLock);
+        mutex_unlock(&qData->m_qLock);
         return(MHtimeOut);
       } if (ret == EINTR) {
-        pthread_mutex_unlock(&qData->m_qLock);
+        mutex_unlock(&qData->m_qLock);
         return(MHintr);
       } else if (ret == EWOULDBLOCK) {
         // IGNORE this and treat as a retry (Linux only case)
       } else {
-        pthread_mutex_unlock(&qData->m_qLock);
+        mutex_unlock(&qData->m_qLock);
         //CRDEBUG(CRmsgh+14, ("Unexpected return from cond_reltimedwait,"
         //                    "errno %d", ret));
         return(MHother);
@@ -1278,18 +1279,18 @@ GLretVal MHinfoExt::receive(MHqid mhqid, Char *msgp, Long &msgsz,
     TMisInBlockingReceive = FALSE;
     goto getMessage;
   } else if (time == 0) {
-    pthread_mutex_unlock(&qData->m_qLock);
+    mutex_unlock(&qData->m_qLock);
     return(MHnoMsg);
   } else {
     // Block forever for a message
     TMisInBlockingReceive = TRUE;
-    if ((ret = pthread_cond_wait(&qData->m_cv, &qData->m_qLock)) != 0) {
+    if ((ret = cond_wait(&qData->m_cv, &qData->m_qLock)) != 0) {
       TMisInBlockingReceive = TRUE;
       if (ret == EINTR) {
-        pthread_mutex_unlock(&qData->m_qLock);
+        mutex_unlock(&qData->m_qLock);
         return(MHintr);
       } else {
-        pthread_mutex_unlock(&qData->m_qLock);
+        mutex_unlock(&qData->m_qLock);
         return(MHother);
       }
     }
@@ -1314,7 +1315,7 @@ GLretVal MHinfoExt::emptyQueue(MHqid mhqid) {
   MHmsgHead* pMsgHead;
   MHmsgHead* ptmpMsgHead;
 
-  pthread_mutex_lock(&qData->m_qLock);
+  mutex_lock(&qData->m_qLock);
   qData->m_qLockCnt++;
   if (qData->m_msgs >= 0) {
     pMsgHead = &rt->msg_head[qData->m_msgs];
@@ -1371,8 +1372,8 @@ GLretVal MHinfoExt::emptyQueue(MHqid mhqid) {
   qData->nBytes = 0;
   qData->nBytesRcvd = 0;
   qData->nCountRcvd = 0;
-  pthread_mutex_unlock(&qData->m_qLock);
-  pthread_mutex_unlock(&rt->m_msgLock);
+  mutex_unlock(&qData->m_qLock);
+  mutex_unlock(&rt->m_msgLock);
   return(GLsuccess);
 }
 

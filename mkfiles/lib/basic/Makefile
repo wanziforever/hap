@@ -15,7 +15,8 @@ LIB_PATH := $(BASIC_LIB)
 BIN_PATH := $(BASIC_BIN)
 
 SRC = \
-	atoi.c
+	atoi.c \
+	String.c
 
 src_dirs := $(sort $(dir $(addprefix $(SRC_PATH)/, $(SRC))))
 VPATH := $(subst " ", ":", $(src_dirs))
@@ -26,13 +27,13 @@ OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 all: info Prepare $(TARGET)
 
 $(OBJS):%.o:%.c
-	@$(C) -MM $(CFLAGS) $(INC) -o .$*.d $<
+	@$(CC) -MM $(CFLAGS) $(INC) -o .$*.d $<
 	@mv -f .$*.d .$*.d.tmp
 	@sed -e 's|.*:|$@:|' < .$*.d.tmp > .$*.d
 #	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -1 | \
 #	  sed -e 's/^ *//' -e 's/$$/:/' >> .$*.d
 	@rm -f .$*.d.tmp
-	$(C) $(CFLAGS) $(INC) -c $< -o $@
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@ -fPIC
 
 sinclude $(SRC:%.c=.%.d)
 

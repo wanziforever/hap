@@ -16,7 +16,17 @@ BIN_PATH := $(INMAIN_BIN)
 
 SRC := \
 	INmain.cc \
-	INsync.cc
+	INsync.cc \
+	INreq.cc \
+	INapi.cc \
+	INargchk.cc \
+	INcommon.cc \
+	INdata.cc \
+	INdist.cc \
+	INgetindx.cc \
+	INsbt.cc \
+	INsanipeg.cc \
+	INsharedMem.cc
 
 LIBS := $(LIBS) -lom
 

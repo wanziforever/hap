@@ -233,7 +233,7 @@ typedef struct {
   int brevity_low; // Low threadshold of brevity control
   int brevity_high; // High threshold of brevity control
   int brevity_interval; // Brevity control interval
-  IN_SYNCSTEP sysncstep; // Maxmum step that the process
+  IN_SYNCSTEP syncstep; // Maxmum step that the process
                          // should be synchronized to
   Long time_missedsan;  // Time (sec) since sanity pegged
   IN_SYNCSTEP gqsync; // Synchronization step for global queue
@@ -269,7 +269,7 @@ typedef struct {
 #endif
   Bool bkucl; // True if backout should be unconditional
   unsigned char vmemalvl; // Vmem alarm level
-  Long avaismem; // Available virtual memory in K bytes
+  Long availsmsn; // Available virtual memory in K bytes
   char initlist[IN_PATHNMMX]; // initlist path name
   MHqid bqid; // Queue id of the SU backout CEP
   MHqid aqid; // Queue id of the SU apply CEP

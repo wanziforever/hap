@@ -32,7 +32,7 @@
 
 // Maximum number of timers that can be used by MSGH
 #define MHnTIMERS MHmaxQid + 10
-static pthread_mutex_t regGdLock;
+static mutex_t regGdLock;
 MHinfoInt MHcore; // MSGH core control object
 Long MHtmrIndx;
 static const Char *msghName = "MSGH";
@@ -91,12 +91,12 @@ void* MHgdChange(void* msg) {
   memcpy(lmsg, msg, sizeof(MHgdAud));
 
   pid_t creatpid;
-  pthread_mutex_lock(&regGdLock);
+  mutex_lock(&regGdLock);
 
   if (((MHmsgBase*)&lmsg)->msgType == MHregGdTyp &&
       MHcore.findGd(((MHregGd*)&lmsg)->m_Name.display()) != MHmaxGd) {
     MHcore.RegGd((MHregGd*)&lmsg);
-    pthread_mutex_unlock(&regGdLock);
+    mutex_unlock(&regGdLock);
     return(NULL);
   }
   if ((creatpid = fork()) == 0) {
@@ -139,7 +139,7 @@ void* MHgdChange(void* msg) {
       ((MHgdAud*)&lmsg)->m_bSystemStart == TRUE) {
     bFinishedGdoCreate = TRUE;
   }
-  pthread_mutex_unlock(&regGdLock);
+  mutex_unlock(&regGdLock);
   return(NULL);
 }
 
@@ -175,7 +175,7 @@ Long MHprocessmsg(MHqid &myQid) {
      {
        MHregName* regName;
        regName = (MHregName*) msgBufPtr;
-       MHrt* rt = MHmsgh.getRt();
+       MHrt* rt = MHmsgh.getRT();
        if (regName->fill == MHR26) {
          rt->hostlist[MHmsgh.Qid2Host(regName->mhqid)].isR26 = TRUE;
        }
@@ -302,7 +302,7 @@ Long MHprocessmsg(MHqid &myQid) {
     }
     break;
 
-  case MHgdAudreqTyp:
+  case MHgdAudReqTyp:
     MHcore.gdAudReq((MHgdAudReq*)&msg);
     break;
 
@@ -418,6 +418,12 @@ Long MHprocessmsg(MHqid &myQid) {
   return(msg.msgType);
 }
 
+// Called during system initialization
+Short sysinit(int, Char *[], SN_LVL, U_char) {
+  //CRERRINIT(msghName); // input subsystem name
+  return ((MHcore.sysinit() < 0) ? GLfail : GLsuccess);
+}
+
 // Called during process initialization, Currently, MSGH needs to
 // read messages from its queue for other processes' registration.
 // The future INIT implementation will not require this.
@@ -430,7 +436,7 @@ Short procinit(int, Char *[], SN_LVL sn_lvl, U_char) {
   MHrt *rt;
   Short ConnectTries = 0;
 
-  pthread_mutex_init(&regGdLock, USYNC_THREAD, 0);
+  mutex_init(&regGdLock, USYNC_THREAD, 0);
 
   // update MHshmid, MHmsqid, MHmsgh.pid and
   // map shared memory segment into process's address space
@@ -495,7 +501,7 @@ Short procinit(int, Char *[], SN_LVL sn_lvl, U_char) {
     }
   }
 
-  rt = MHmsgh.getRt();
+  rt = MHmsgh.getRT();
   rt->updateClusterLead(rt->getLocalHostIndex());
   // If not going active or lead, just return procinit
   if (IN_GETNODESTATE(MHevent.getLocalHostIndex()) != S_ACT &&

@@ -39,13 +39,15 @@ public:
   Bool m_bSystemStart;
 };
 
-class MHgdSyncReg : public MHmsgBase {
+class MHgdSyncReq : public MHmsgBase {
 public:
-  MHgdSyncReg() {
+  MHgdSyncReq() {
     priType = MHintPtyp;
     msgType = MHgdSyncReqTyp;
   };
-  Bool m_bSystemStart;
+  LongLong m_SyncAddress; // Address the object is synced up to
+  int m_GdId;
+  int m_fill;
 };
 
 class MHgdSyncData : public MHmsgBase {

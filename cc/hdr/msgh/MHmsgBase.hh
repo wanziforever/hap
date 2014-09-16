@@ -13,7 +13,7 @@
 class MHmsgBase {
 public:
   MHmsgBase() : priType(0), msgType(0) {}
-  Void printname();
+  Void printName();
   Void display();
   GLretVal send(MHqid toQid, MHqid fromQid, Long len,
                 Long time, Bool buffered=TRUE);

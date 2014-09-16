@@ -63,7 +63,7 @@ typedef struct {
 
 typedef struct {
   Long fftheap; // First free timer heap slot
-  Long* threap; // Timer heap
+  Long* theap; // Timer heap
 } TMHEAP;
 
 // This class supports relative one-shot and cyclic timers and
@@ -104,12 +104,12 @@ public:
       return(TMNOTSHORT);
     }
   }
-  Long setlAtmr(long time, U_long tag, U_char days_per_cycle = 0);
+  Long setlAtmr(Long time, U_long tag, U_char days_per_cycle = 0);
   GLretVal tmrExp(U_long *tag, Long *time);
   GLretVal tmrExp(U_short *gag, Long *time); // Original version
   GLretVal clrTmr(Long timer);
   GLretVal stopTime();
-  GLretVal starTime();
+  GLretVal startTime();
   inline Long nTimers() { return(nTCBs); };
   Void updoffset();
 protected:
@@ -120,14 +120,14 @@ protected:
 private:
   static Long nTCBs; // Number of TCBs configured
   // mutex to allow timer setting from multiple threads
-  static pthread_mutex_t tmrLock;
+  static mutex_t tmrLock;
   GLretVal tsched(Long t, TMHEAP* heap_p);
   GLretVal tunsched(Long t, TMHEAP *heap_p);
   Long gettcb();
   GLretVal freetcb(Long t);
   GLretVal updtime(Bool);
   Void sectohz(Long time, TMITIME *interval);
-  Void initime();
+  Void inittime();
 
   TMTCB* TMbtcb; // Timer control blocks
   TMHEAP TMrtheap; // Relative timer heap
@@ -139,7 +139,8 @@ private:
 
   Long TMidletcb; // TCBs on the free list
   TMITIME TMnow;  // "Current" time in clock ticks
-  U_long TMlastupd; // last time TMoffset was updated
+  U_long TMthen; // Last ret value from times()
+  TMITIME TMlastupd; // last time TMoffset was updated
   pid_t mypid; // pid to send SIGALRM to when setting timer
 };
 

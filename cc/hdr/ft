@@ -1,0 +1,8 @@
+#ifndef _FTGDOSYNCMSG_H
+#define _FTGDOSYNCMSG_H
+
+#include "hdr/GLtypes.h"
+#include "cc/hdr/msgh/MHmsgBase.hh"
+#include "cc/hdr/msgh/MHnames.hh"
+#include "cc/hdr/ft/FTmsgs.hh"
+#include "cc/ft/ha/hdr/FTprocNames.hh"

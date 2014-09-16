@@ -73,7 +73,7 @@ public:
   Void updateGd();
   int findGd(const char *name);
   static Long step;
-  Short hostIdl; // Hostid of the node going down
+  Short hostId; // Hostid of the node going down
 
 private:
   MHrt *rt; // point to routing table

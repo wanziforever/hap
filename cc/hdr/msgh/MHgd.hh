@@ -30,7 +30,7 @@ enum MHgdDist {
 enum MHgdOpType {
   MHGD_EMPTY,  // Empty operation record, should always be 0
   MHGD_INVALIDATE, // Invalidate operation
-  MHGD_MEMOVE, // Memmove operation
+  MHGD_MEMMOVE, // Memmove operation
   MHGD_INVCMP, // Invalidate compare
   MHGD_INVOP   // Invalid operation
 };
@@ -107,8 +107,8 @@ struct MHgdMsg {
 struct MHgdShm {
   LongLong m_LastSync;  // Sync address as checked last time
   LongLong m_SyncAddress; // Address object synched up to
-  LongLong m_size;  // Size of the data space
-  pthread_mutex_t m_lock; // mutex for this GDO
+  LongLong m_Size;  // Size of the data space
+  mutex_t m_lock; // mutex for this GDO
   int m_lockcnt;
   int m_lastlockcnt;
   char m_Name[MHmaxNameLen+1]; // name of the GDO
@@ -122,7 +122,7 @@ struct MHgdShm {
   int m_GdId; // Id of this GDO
   int m_nLastSent; // Last op buffered
   int m_nNextOp; // Next operation to be inserted
-  int m_Nextmsg; // Next dalayed message to be inserted
+  int m_NextMsg; // Next dalayed message to be inserted
   int m_NextSent; // Next delayed message to be sent
   int m_StartToUpdate; // Start index to update
   MHgdHost m_Hosts[MHmaxHostReg]; // Per host info
@@ -178,8 +178,10 @@ public:
                   Long maxUpdSz = MHdefUpdSz,
                   Long msgBufSz = 0,
                   Bool delaySend = TRUE);
-  void invalidateCmp(const void* pStartAddress, Long length);
-  inline void invalidateCmp(const void *pStartAddress, Long length, int cmpOffset, MHqid notifyQid) {
+
+  void invalidate(const void* pStartAddress, Long length);
+  inline void invalidateCmp(const void *pStartAddress, Long length,
+                            int cmpOffset, MHqid notifyQid) {
     invalidateCmpInt(pStartAddress, length, cmpOffset, notifyQid);
   }
   inline void invalidateSeq(const void *pStartAddress, Long length) {
@@ -200,12 +202,15 @@ public:
   pthread_t m_audthread; // Audit thread
 
 private:
-  void invalidateCmpInt(const void * pStartAddress, Long length , int cmoOffset, MHqid notifyQid);
+  void invalidateCmpInt(const void * pStartAddress, Long length ,
+                        int cmoOffset, MHqid notifyQid);
   void invalidateSeqInt(const void* pStartAddress, Long length, Bool bLocked);
-  void invalidateSeqCmpInt(const void* pStartAddress, Long length, int comOffs, int notifyQid, Bool bLocked);
+  void invalidateSeqCmpInt(const void* pStartAddress, Long length, int comOffs,
+                           int notifyQid, Bool bLocked);
   void memMoveSeqInt(const void* to, const void* from, Long length, Bool bLocked);
   void getUpdBuf(MHgdUpd*& msgp, Bool bWait=TRUE);
-  void invCmpCheck(MHqid notifyQid, const void* remote, void* local, Long length, int offset);
+  void invCmpCheck(MHqid notifyQid, const void* remote, void* local,
+                   Long length, int offset);
   MHrt* m_prt; // Pointer to MSGH shared memory
   int m_shmid; // shared memory id used by this GDO
   MHgdShm * m_p; // Pointer to the object shared memory
@@ -221,7 +226,7 @@ public: // The following mehtods are implemented in MSGH and MHRPROC
       return (NULL);
     }
   }
-  Void syncReg(MHgdSyncReq* syncReg, MHqid myqid);
+  Void syncReq(MHgdSyncReq* syncReg, MHqid myqid);
   Void syncData(MHgdSyncData* syncData, MHqid myQid);
   Void doUpdate(Bool &bSync, MHqid mhQid, int hostid=MHmaxHostReg);
   Void handleUpdate(MHgdUpd* updmsg, MHqid myQid);

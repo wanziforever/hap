@@ -42,7 +42,7 @@ extern "C" Void _in_brev_params(int*, int*, int*);
 extern "C" Void _in_sanpeg(); // Sanity pegging function
 extern "C" Short _in_msgh_qid(); // Value of MSGH qid
 extern "C" Long _in_q_size_limit(); // Queue size limit
-extern "C" Long _in_dfault_q_size_limt(); // Default queue size limit
+extern "C" Long _in_default_q_size_limit(); // Default queue size limit
 extern "C" Short _in_msg_limit(); // Process msg limit
 extern "C" Short _in_default_msg_limit(); // process default msg limit
 // Process initialization complete

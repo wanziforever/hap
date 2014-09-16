@@ -1,9 +1,9 @@
 TOP = ../..
 include $(TOP)/top.mk
 ROOT = $(TOP)/$(TOP_ROOT)
-TIMER_PATH = $(TOP_SRC)/lib/timer
+TIMER_PATH = $(TOP_SRC)/lib/tim
 TIMER_SRC = $(TIMER_PATH)
-TIMER_HEADER = $(TOP_INC)/timer
+TIMER_HEADER = $(TOP_INC)/tim
 TIMER_LIB = $(TOP_LIB)
 TIMER_BIN = $(TOP_BIN)
 
@@ -28,6 +28,8 @@ VPATH := $(subst " ", ":", $(src_dirs))
 
 OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 .PHONY : clean info Prepare
+LINUX_HDR = ${TOP_SRC}/hdr/linux
+INC := ${INC} -I${LINUX_HDR}
 
 all: info Prepare $(TARGET)
 

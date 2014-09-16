@@ -17,8 +17,8 @@
 
 #include <sys/types.h>
 #include <netinet/in.h>
-#include "pthread.h"
-//#include "synch.h"
+#include "cc/hdr/linux/thread.h"
+#include "cc/hdr/linux/synch.h"
 #include "hdr/GLtypes.h"
 #include "cc/hdr/msgh/MHresult.hh"
 #include "cc/hdr/msgh/MHnames.hh"
@@ -119,7 +119,7 @@ public:
   // get logical name of my host i.e cc0
   GLretVal getMyHostName(char* name);
   // return logical name for a specific hostid
-  GLretVal hostid2Name(Short hostid, char* name);
+  GLretVal hostId2Name(Short hostid, char* name);
   // get hostid from logical name
   GLretVal name2HostId(Short& hostid, const char* name);
   // returns host id of the lead CC
@@ -176,7 +176,7 @@ public:
   // Extract qid component from the queue it
   Short Qid2Qid(MHqid mhqid);
   // only used by MHrproc, not public usage
-  MHrt* getRt();
+  MHrt* getRT();
   // obtains socket for intermachine communication, only
   static GLretVal GetSocket();
   // Only INIT process calls this method
@@ -209,6 +209,7 @@ private:
                     Bool bKeepOnLead, Bool ClusterGlobal, Bool isGlobal);
   // Map the UNIX error to an MSGH error
   static GLretVal MHmapError(int, short, MHqid qid=MHnullQ);
+  Void auditQueues();
   static Bool isAttach; // =TRUE if attached to MSGH
   static MHrt *rt; // point to routing tables
   static MHqid msghMhqid; // MSGH process's mhqid
@@ -217,7 +218,7 @@ private:
   static int sock_id; // Socket number for UDP comm
   static U_short lmsgid; // long message id
   static int *pSigFlg; // Flag to check prior to calling msgrcv
-  static pthread_mutex_t m_lock; // Used to make send thread safe
+  static mutex_t m_lock; // Used to make send thread safe
   static char* m_buffers; // Address of buffer shared memory
 
   static char *m_free256;
