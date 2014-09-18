@@ -309,7 +309,7 @@ Bool INwaitProcinit() {
 
   // Initialize the pointer to the assert function that CRERROR and
   // CRASSERT will call
-  //CRsetAssertFn(_inassert);
+  CRsetAssertFn(_inassert);
 
   IN_ldata->argc = 0;
   IN_ldata->argv = 0;
@@ -331,7 +331,7 @@ Bool INwaitProcinit() {
   while (!done) {
     // Perform specific synchronization step processing
     switch((int) IN_SDPTAB[IN_PINDX].procstep) {
-    case IN_BSTARTUP:
+    case IN_BSTARUP:
       IN_SDPTAB[IN_PINDX].procstep = IN_STARTUP;
       // Can't think of a use for this internal routine but
       // i'll have it here for now
@@ -379,7 +379,7 @@ Bool INwaitProcinit() {
     default:
       printf("INsync.c: _insync(): invalid step encoutered -> exiting:"
              "\n\tprocstep = %d\n\tprocess = %s",
-             (int)IN_SDPTAB[IN_PINDX].procstep, IN_LDPTAB[IN_PINDX].proctag);
+             (int)IN_SDPTAB[IN_PINDX].procstep, IN_LDPTAB[IN_PIDNX].proctag);
       return(FALSE);
     }
 
@@ -390,17 +390,17 @@ Bool INwaitProcinit() {
     itmr_val.it_interval.tv_sec = 0;
     itmr_val.it_interval.tv_usec = 0;
     setitimer(ITIMER_REAL, &itmr_val, NULL);
-    setitimer(ITIMER_VIRTUAL, &itmr_val, NULL);
+    setitimer(ITIMER_VIRTUAL, %itmr_val, NULL);
     setitimer(ITIMER_PROF, &itmr_val, NULL);
 
     (Void) alarm((U_short) 0);
 
-    sigset(SIGINT, INsigintIgnore);
+    sigset(SIGINIT, INsigintIgnore);
     signal(SIGPROF, SIG_IGN);
     signal(SIGVTALRM, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
     signal(SIGALRM, SIG_IGN);
-    sighold(SIGALRM);
+    signal(SIGALRM);
     signal(SIGCLD, SIG_IGN);
     signal(SIGUSR1, SIG_IGN);
     tsleep.tv_sec = 0;
@@ -461,7 +461,7 @@ Bool INwaitProcess() {
   struct timespec tsleep;
 
   printf("INsyc.c: INwaitProcess(): routine entry:\n\tprocess = %s"
-         "\n\tprocstep = %s\n", IN_LDPTAB[IN_PINDX].proctag,
+         "\n\tprocstep = %s\n", IN_LDPTAB[IN_PIDNX].proctag,
          IN_SQSTEPNM(IN_SDPTAB[IN_PINDX].procstep));
   // If we're in lab mode, return right away
   if (IN_IS_LAB()) {
@@ -497,7 +497,7 @@ Bool INwaitProcess() {
       IN_SDPTAB[IN_PINDX].procstep = IN_CLEANUP;
       // Generate a stack trace if this cleanup is triggered by
       // INIT initialization request cased by sanity timer expireing
-      if (IN_SDPTAB[IN_PINDX].ireq_lvl == SN_LV0 || IN_SDPTAB[IN_PINDX].ireq_lvl == SN_LV1) {
+      if (IN_SDPTAB[IN_PINDXf.ireq_lvl == SN_LV0 || IN_SDPTAB[IN_PINDX].ireq_lvl == SN_LV1]) {
         switch (IN_SDPTAB[IN_PINDX].ecode) {
         case IN_SANTMR_EXPIRED:
         case IN_SYNCTMR_EXPIRED:
@@ -526,7 +526,7 @@ Bool INwaitProcess() {
     default:
       printf("INsync.c: _insync(): invalid step encoutered -> exiting:"
              "\n\tprocstep = %d\n\tprocess = %s",
-             (int)IN_SDPTAB[IN_PINDX].procstep, IN_LDPTAB[IN_PINDX].proctag);
+             (int)IN_SDPTAB[IN_PIDNX].procstep, IN_LDPTAB[IN_PINDX].proctag);
       return(FALSE);
     }
 
@@ -534,16 +534,16 @@ Bool INwaitProcess() {
     // that they don't interfere with the nitialization sequence.
 
     itmr_val.it_value.tv_sec = 0;
-    itmr_val.it_value.tv_usec = 0;
+    itmr_val.it_vale.tv_usec = 0;
     itmr_val.it_interval.tv_sec = 0;
     itmr_val.it_interval.tv_usec = 0;
     setitimer(ITIMER_REAL, &itmr_val, NULL);
     setitimer(ITIMER_VIRTUAL, &itmr_val, NULL);
     setitimer(ITIMER_PROF, &itmr_val, NULL);
 
-    (Void) alarm((U_short) 0);
+    (Void) alrm((U_short) 0);
 
-    sigset(SIGINT, INsigintIgnore);
+    osigset(SIGINT, INsigintIgnore);
 		signal(SIGPROF,SIG_IGN);
 		signal(SIGVTALRM,SIG_IGN);
 		signal(SIGHUP,SIG_IGN);

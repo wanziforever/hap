@@ -64,21 +64,21 @@
 
 //#include "cc/hdr/su/SUmtype.hh"
 #include "cc/init/proc/INmsgs.hh"
-#include "cc/hdr/init?INproctab.hh"
+#include "cc/hdr/init/INproctab.hh"
 #include "cc/init/proc/INtimers.hh"
 #include "cc/init/proc/INlocal.hh"
 #include "cc/hdr/init/INinitialize.hh"
-#include "cc/hdr/ft/FTwatchdog.hh"
-#include "cc/hdr/ft/FTdr.hh"
-#include "cc/hdr/ft/FTreturns.hh"
+//#include "cc/hdr/ft/FTwatchdog.hh"
+//#include "cc/hdr/ft/FTdr.hh"
+//#include "cc/hdr/ft/FTreturns.hh"
 #include "cc/hdr/init/INdr.hh"
-#include "cc/hdr/ft/FTbladeMsg.hh"
+//#include "cc/hdr/ft/FTbladeMsg.hh"
 #include "cc/hdr/msgh/MHlrgMsgExt.hh"
 
 const char *INhaltFile = "/opt/config/data/.psp-init.halt";
 
 Long INmain_error = 0; // Keep track of errors found in INmain_init
-pthread_thread_t INbase_thread;
+thread_t INbase_thread;
 
 #define INnTIMERS 3 * IN_SNPRCMX
 
@@ -95,7 +95,7 @@ void INsetConfig();
 void INcheckSU();
 #endif
 extern char CRprocname[];
-extern "C" void* INthridParty(void*);
+extern "C" void* INthirdParty(void*);
 extern int INrunSetup();
 extern Bool MHisCC(Bool& isSimplex, Short& hostId);
 
@@ -124,10 +124,10 @@ int main(Short argc, char *argv[]) {
   int pd_shmid = (-1);
   int ld_shmid = (-1); // shared memory IDs
   const Char *initlist;
-  GlretVal ret;
+  GLretVal ret;
   U_short tag; // Tmr tag returned from tmrExp()
   Bool create_flg;
-  IN_SHOTCHK sys_softchk;
+  IN_SOFTCHK sys_softchk;
   Bool dump_flg = FALSE;
   Bool kill_flg = FALSE;
   // used for graceful shutdown
@@ -138,13 +138,13 @@ int main(Short argc, char *argv[]) {
   Bool offline = FALSE;
   struct stat stbuf;
   struct shmid_ds membuf;
-  FTdr dr(FTdrSS_INIT);
+  //FTdr dr(FTdrSS_INIT);
   INdr inDR;
   Short hostId = -1;
 
 
-  strcpy(CRprocname, "INIT");
-  INbase_thead = thr_self();
+  //strcpy(CRprocname, "INIT");
+  INbase_thread = thr_self();
 
   if (getuid() == 0 || getuid() == 0) {
     INroot = TRUE;
@@ -205,7 +205,7 @@ int main(Short argc, char *argv[]) {
   if (INcmd == FALSE) {
     printf("REPT INIT INIT PROGRESS 0 CREATED\n");
     // Report on any errors in environment variables
-    if (iNnoenv_vars & IN_NO_TZ) {
+    if (INnoenv_vars & IN_NO_TZ) {
       printf("REPT INIT ERROR TZ ENVIRONMENT VARIABLE NOT SET\n");
     }
 
@@ -225,12 +225,12 @@ int main(Short argc, char *argv[]) {
   }
 
   if (argc > 1 && INcmd == TRUE) {
-    if (strcmp(argv[i], "kill") == 0) {
+    if (strcmp(argv[1], "kill") == 0) {
       kill_flg = TRUE;
       // graceful shutdown
     } else if (strcmp(argv[1], "shutdown") == 0) {
       kill_flg = TRUE;
-      gracefull_kill = TRUE;
+      graceful_kill = TRUE;
     } else {
       dump_flg = TRUE;
     }
@@ -244,38 +244,38 @@ int main(Short argc, char *argv[]) {
     printf("INIT: INIT can only be started by /etc/init without arguments"
            "/n/tmust provide \"kill\" or \"dump\" option");
     exit(0)
-  }
+       }
 #endif
 
-  GLretVal fdRet;
+  //GLretVal fdRet;
   char bStarted = -1;
-  if (hostId > 0) {
-    if ((fdRet = dr.Open(O_RDIBKT)) == GLsuccess) {
-      if (dr.Read(&inDR, (off_t)0, sizeof(inDR)) == sizeof(inDR)) {
-        if (inDR.m_ccState[hostId&0x1] != S_OFFLINE) {
-          if (stat(IN_OFFLINE_FILE, &stdbuf) == 0 &&
-              unlink(IN_OFFLINE_FILE) == -1) {
-            printf("REPT INIT ERROR FAILED TO DELETE OFFLINE FILE"
-                   "ERRNO %d", errno);
-          }
-        } else {
-          int fd;
-          if ((fd = open(IN_OFFLINE_FILE, O_RDWR ! O_CREAT, 0644)) < 0) {
-            printf("REPT INIT ERROR FAILED TO CREATE OFFLINE FILE "
-                   "ERRNO %d", errno);
-          }
-          close(fd);
-        }
-        bStarted = inDR.m_bStarted;
-        dr.Close();
-      } else {
-        printf("rept init error failed to read repository error %d",
-               dr.ReturnCode());
-      }
-    } else if (fdRet != FTdrNotExist) {
-      printf("REPT INIT ERROR FAILED TO OPEN REPOSITORY ERROR %d", fdRet);
-    }
-  }
+  //if (hostId > 0) {
+  //  if ((fdRet = dr.Open(O_RDIBKT)) == GLsuccess) {
+  //    if (dr.Read(&inDR, (off_t)0, sizeof(inDR)) == sizeof(inDR)) {
+  //      if (inDR.m_ccState[hostId&0x1] != S_OFFLINE) {
+  //        if (stat(IN_OFFLINE_FILE, &stdbuf) == 0 &&
+  //            unlink(IN_OFFLINE_FILE) == -1) {
+  //          printf("REPT INIT ERROR FAILED TO DELETE OFFLINE FILE"
+  //                 "ERRNO %d", errno);
+  //        }
+  //      } else {
+  //        int fd;
+  //        if ((fd = open(IN_OFFLINE_FILE, O_RDWR ! O_CREAT, 0644)) < 0) {
+  //          printf("REPT INIT ERROR FAILED TO CREATE OFFLINE FILE "
+  //                 "ERRNO %d", errno);
+  //        }
+  //        close(fd);
+  //      }
+  //      bStarted = inDR.m_bStarted;
+  //      dr.Close();
+  //    } else {
+  //      printf("rept init error failed to read repository error %d",
+  //             dr.ReturnCode());
+  //    }
+  //  } else if (fdRet != FTdrNotExist) {
+  //    printf("REPT INIT ERROR FAILED TO OPEN REPOSITORY ERROR %d", fdRet);
+  //  }
+  //}
 
   if (stat(IN_OFFLINE_FILE, &stbuf) >= 0) {
     offline = TRUE;
@@ -295,11 +295,11 @@ int main(Short argc, char *argv[]) {
   int i;
   // Initialize global timer variables
   for (i = 0; i < IN_SNPRCMX; i++) {
-    iNproctmr[i].sync_tmr.tindx = -1;
+    INproctmr[i].sync_tmr.tindx = -1;
     INproctmr[i].rstrt_tmr.tindx = -1;
     INproctmr[i].gq_tmr.tindx = -1;
   }
-  	INinittmr.tindx = -1;
+  INinittmr.tindx = -1;
 	INpolltmr.tindx = -1;
 	INarutmr.tindx = -1;
 	INaudtmr.tindx = -1;
@@ -318,7 +318,7 @@ int main(Short argc, char *argv[]) {
   // Check to see if we should use the data in the shared memory
   // segments -- if they exist;
   if (((pd_shmid = shmget((key_t)INPDATA, sizeof(IN_PROCDATA), 0)) >= 0) &&
-      ((ld_shmid = shmget((key_t)INMSGBASE, sizeof(iN_SDATA), 0)) >= 0)) {
+      ((ld_shmid = shmget((key_t)INMSGBASE, sizeof(IN_SDATA), 0)) >= 0)) {
     // Shared memory segments already existed, clear
     // create flag
     create_flg = FALSE;
@@ -358,7 +358,7 @@ int main(Short argc, char *argv[]) {
       exit(0);
     }
     if ((ld_shmid = shmget((key_t)INMSGBASE, sizeof(IN_SDATA),
-                           (0766 | PIC_CREAT))) < 0) {
+                           (0766 | IPC_CREAT))) < 0) {
       // Something's wrong, can't go on without shared memory
       // so try to boot if possible
       printf("INmain(): shmget() error for IN_SDATA, errno = %d", errno);
@@ -380,9 +380,9 @@ int main(Short argc, char *argv[]) {
   if (dump_flg == TRUE) {
     // For the "dump" case we only need to access memory
     // so set mode to read only.
-    shmflg = SHM_RDONLY;
+    shmflag = SHM_RDONLY;
   } else {
-    shmflg = SHM_LOCK;
+    shmflag = SHM_LOCK;
   }
   // Now attach to the shared memory segmens
   if ((IN_procdata = (IN_PROCDATA*)shmat(pd_shmid, (Char*)0,
@@ -452,7 +452,7 @@ int main(Short argc, char *argv[]) {
 
     memset((char*)IN_sdata, 0xff, sizeof(IN_SDATA));
     memset((char*)IN_procdata, 0xff, sizeof(IN_PROCDATA));
-    INint();
+    INinit();
     init_flg = TRUE;
   }
   if (kill_flg == TRUE) {
@@ -490,23 +490,23 @@ int main(Short argc, char *argv[]) {
         }
         sprintf(INvhostMateName, "%s:INIT", IN_procdata->vhost[INvhostMate]);
       }
-      FTbladeStChgMsg msg(S_OFFLINE, INV_INIT, IN_LDSTATE.softchk);
-      if (INvhostMate >= 0) {
-        msg.setVhostmate(IN_procdata->vhost[INvhostMate]);
-        msg.setVhostState(INstandby);
-      }
+      //FTbladeStChgMsg msg(S_OFFLINE, INV_INIT, IN_LDSTATE.softchk);
+      //if (INvhostMate >= 0) {
+      //  msg.setVhostmate(IN_procdata->vhost[INvhostMate]);
+      //  msg.setVhostState(INstandby);
+      //}
       INswitchVhost();
       // stopp processes by runlevel, only runlevel 20 and
       // above will be shutdown 1st
 
       int MAXRUNLVL = 100;
-      int MINERUNLVL = 15;
+      int MINRUNLVL = 15;
       IN_LDSTATE.systep = IN_CLEANUP;
 
       printf("Attempting a graceful stop of all processes\n");
-      for (int runLevelndx=MAXRUNLVL; runLevelIndx >= MINRUNLVL;
-           runLevelIndx--) {
-        for (int i = 0; i < IN_SHPRCMX; i++) {
+      for (int runLevelndx=MAXRUNLVL; runLevelndx >= MINRUNLVL;
+           runLevelndx--) {
+        for (int i = 0; i < IN_SNPRCMX; i++) {
           if (IN_LDPTAB[i].run_lvl == runLevelndx) {
             // time to try graceful kill, inhibit restart, make non-critical
             IN_LDPTAB[i].startstate = IN_INHRESTART;
@@ -546,7 +546,8 @@ int main(Short argc, char *argv[]) {
     IN_procdata->pid = getpid();
     INsanset(600000L);
   }
-  memset(indx = 0; indx < IN_SNPRCMX; indx++); {
+  memset(INqInUse, 0x0, sizeof(INqInUse));
+  for(indx = 0; indx < IN_SNPRCMX; indx++) {
     if (IN_INVPROC(indx)) {
       continue;
     }
@@ -562,12 +563,12 @@ int main(Short argc, char *argv[]) {
   IN_LDSTATE.softchk = sys_softchk;
 
   if (sys_softchk == sys_softchk) {
-    INSETTMR(Insoftchktmr, INSOFTCHKTMR, INSOFTCHKTAG, TRUE);
+    INSETTMR(INsoftchktmr, INSOFTCHKTMR, INSOFTCHKTAG, TRUE);
   } else {
     INCLRTMR(INsoftchktmr);
     if (IN_LDALMSOFTCHK != POA_INF) {
-      printf("REPT INIT SYSTEM SOFTWARE CHECKS INHIBITED\n")
-         IN_LDALMSOFTCHK = POA_INF
+      printf("REPT INIT SYSTEM SOFTWARE CHECKS INHIBITED\n");
+      IN_LDALMSOFTCHK = POA_INF;
     }
   }
 
@@ -600,7 +601,7 @@ int main(Short argc, char *argv[]) {
   ret = INgetpath(IN_LDILIST, FALSE);
 
   // Decide if all information in initlist should be updated
-  if (IN_LDSTATE.inistate != IN_NOINIT && IN_LDSTATE.initstate != IN_CUINTVL) {
+  if (IN_LDSTATE.initstate != IN_NOINIT && IN_LDSTATE.initstate != IN_CUINTVL) {
     init_flg = TRUE;
   }
   // Read the initlist, read in audit mode if intentional exit
@@ -646,7 +647,8 @@ int main(Short argc, char *argv[]) {
   case S_LEADACT:
     break;
   default:
-    INIT_ERROR("Invalid state %c", IN_LDCURSTATE);
+    //INIT_ERROR("Invalid state %c", IN_LDCURSTATE);
+    printf("Invalid state %c\n", IN_LDCURSTATE);
     INescalate(SN_LV4, INBADSTATE, IN_SOFT, INIT_INDEX);
     IN_LDCURSTATE = S_ACT;
   }
@@ -711,12 +713,12 @@ int main(Short argc, char *argv[]) {
       }
       INdidFailover = TRUE;
       INlv4_count(FALSE);
-      IN_LDSTATE.systep = IN_SYSINT;
+      IN_LDSTATE.systep = IN_SYSINIT;
       IN_LDSTATE.sync_run_lvl = 0;
       for (indx = 0; indx < IN_SNPRCMX; indx++) {
         if (IN_VALIDPROC(indx)) {
           IN_LDPTAB[indx].sn_lvl = IN_LDSTATE.sn_lvl;
-          if (IN_LDPTAB[indx].procstate == IN_NOEXIST) {
+          if (IN_SDPTAB[indx].procstate == IN_NOEXIST) {
             IN_LDPTAB[indx].syncstep = IN_SYSINIT;
           }
         }
@@ -778,7 +780,7 @@ int main(Short argc, char *argv[]) {
   // Set up timers
   if (IN_LDSTATE.initstate == IN_CUINTVL) {
     // Setup post init timer
-    INSETTMR(INinitmr, IN_procdata->safe_interval, (INITTAG|INSEQTAG), FALSE);
+    INSETTMR(INinittmr, IN_procdata->safe_interval, (INITTAG|INSEQTAG), FALSE);
   }
 
   for (indx = 0; indx < IN_SNPRCMX; indx++) {
@@ -786,12 +788,13 @@ int main(Short argc, char *argv[]) {
       continue;
     }
 
-    if (IN_LDPTAB[indx].thrid_party == TRUE && IN_SDPTAB[indx].procstep >= IN_EHALT) {
+    if (IN_LDPTAB[indx].third_party == TRUE && IN_SDPTAB[indx].procstep >= IN_EHALT) {
       // Create new thread
       thread_t newthread;
       if (thr_create(NULL, thr_min_stack()+64000, INthirdParty,
                      (void*)indx, THR_DETACHED, &newthread) != 0) {
-        INIT_ERROR("Failed to create third party thread, errno %d", errno);
+        //INIT_ERROR("Failed to create third party thread, errno %d", errno);
+        printf("Failed to create third party thread, errno %d", errno);
         INescalate(SN_LV1, INFORKFAIL, IN_SOFT, INIT_INDEX);
       }
       IN_LDPTAB[indx].tid = newthread;
@@ -815,17 +818,17 @@ int main(Short argc, char *argv[]) {
         IN_SDPTAB[indx].procstep == IN_STEADY &&
         IN_LDPTAB[indx].rstrt_intvl > 0) {
       INSETTMR(INproctmr[indx].rstrt_tmr, IN_LDPTAB[indx].rstrt_intvl,
-               (INPROCTAG|INRSTARTAG|indx), FALSE);
+               (INPROCTAG|INRSTRTAG|indx), FALSE);
     }
     // Recreate any timers we should be keeping
     if (IN_SDPTAB[indx].procstep < IN_ESYSINIT) {
-      INSETTMR(INproctmr[indx].sync_tmr, INPRCREATETMR,
+      INSETTMR(INproctmr[indx].sync_tmr, INPCREATETMR,
                (INPROCTAG|INSYNCTAG|indx), FALSE);
     } else if (IN_SDPTAB[indx].procstep < IN_EPROCINIT) {
       INSETTMR(INproctmr[indx].sync_tmr, IN_LDPTAB[indx].procinit_timer,
                (INPROCTAG|INSYNCTAG|indx), FALSE);
     } else if (IN_SDPTAB[indx].procstep == IN_STEADY) {
-      IN_LDPTAB[indx].send_missedsan = FALSE;
+      IN_LDPTAB[indx].sent_missedsan = FALSE;
     } else if (IN_SDPTAB[indx].procstep < IN_ECLEANUP) {
       INSETTMR(INproctmr[indx].sync_tmr, INPCLEANUPTMR,
                (INPROCTAG|INSYNCTAG|indx), FALSE);
@@ -873,7 +876,7 @@ int main(Short argc, char *argv[]) {
   // with a type casted structure
   union {
     double align;
-    chra msgbfr[MHlrgMsgBlkSize];
+    char msgbfr[MHlrgMsgBlkSize];
   };
 
   align = 0; // Eliminate compiler warning
@@ -887,7 +890,7 @@ int main(Short argc, char *argv[]) {
     // Now process the next "event"
     int msgSz;
     msgSz = MHlrgMsgBlkSize;
-    memset(msgbfr, -xff, 600);
+    memset(msgbfr, 0xff, 600);
 
     // Always read any pending messages first
     ret = INevent.getEvent(INmsgqid, msgbfr, msgSz, 0, TRUE, INetype, TRUE);
@@ -902,7 +905,7 @@ int main(Short argc, char *argv[]) {
         // which requires some real processing:
         tag = (U_short)((class TMtmrExp *)msgbfr)->tmrTag;
 
-        if (tag != (INITAG | INPOLLTAG)) {
+        if (tag != (INITTAG | INPOLLTAG)) {
           // This timer requires some
           // processing -- invoke timer
           // processing routine:
@@ -944,19 +947,19 @@ int main(Short argc, char *argv[]) {
     } else {
       // Check for any dead processes since probably
       // signal was received
-      Ingrimreaper();
+      INgrimreaper();
     }
   }
 
   if (INsnstop) {
     // Transition the node to offline, but first beartbeat INIT
     if (IN_LDCURSTATE != S_INIT && IN_LDCURSTATE != S_OFFLINE) {
-      FTbladeStChgMsg msg(S_OFFLINE, INV_INIT, IN_LDSTATE.softchk);
-      if (INvhostmate >= 0) {
-        msg.setVhostmate(IN_procdata->vhost[INvhostMate]);
-        msg.setVhostState(INstandby);
-      }
-      msg.send();
+      //FTbladeStChgMsg msg(S_OFFLINE, INV_INIT, IN_LDSTATE.softchk);
+      //if (INvhostmate >= 0) {
+      //  msg.setVhostmate(IN_procdata->vhost[INvhostMate]);
+      //  msg.setVhostState(INstandby);
+      //}
+      //msg.send();
       IN_LDCURSTATE = S_INIT;
     }
     INrm_check_state(S_OFFLINE);
@@ -1003,7 +1006,7 @@ void INcheckSU() {
 void INsetSignals() {
   class sigaction act;
   act.sa_flags = 0;
-  sigemptyset(act.sa_mask);
+  sigemptyset(&act.sa_mask);
   act.sa_flags = 0;
 
   act.sa_handler = SIG_IGN;
@@ -1012,7 +1015,7 @@ void INsetSignals() {
   (void)sigaction(SIGHUP, &act, NULL);
   (void)sigaction(SIGALRM, &act, NULL);
   act.sa_sigaction = INsigsnstop;
-  act.sa_flgas = SA_SIGINFO;
+  act.sa_flags = SA_SIGINFO;
   (void)sigaction(SIGUSR1, &act, NULL);
 
   act.sa_handler = INsigint;
@@ -1043,7 +1046,8 @@ void INsetConfig() {
     params.sched_priority = INmaxPrioRT;
 
     if (sched_setscheduler((pid_t)0, SCHED_FIFO, &params) != 0) {
-      INIT_ERROR(("Failed to set priority, errno %d"));
+      //INIT_ERROR(("Failed to set priority, errno %d"));
+      printf("Failed to set priority, errno %d", errno);
     }
 
     // make sure that the dump directory exists so it can be
@@ -1068,7 +1072,7 @@ void INsetConfig() {
     }
     // Set INIT up so that any core files it generates will
     // be saved in the appropriate place:
-    Char edit[IN_NAMEMX + IN_PATHNMMX];
+    Char edir[IN_NAMEMX + IN_PATHNMMX];
     strcpy(edir, INexecdir);
     strcat(edir, "/INIT");
 
@@ -1205,7 +1209,7 @@ Void INinit() {
 }
   
 Void INfreeres(Bool release_init) {
-  int pd_shmid, id_shmid; // Shared memory IDs
+  int pd_shmid, ld_shmid; // Shared memory IDs
   struct shmid_ds membuf;
 
   // Deallocate shared memory segments & semaphores
@@ -1228,8 +1232,9 @@ Void INfreeres(Bool release_init) {
       printf("INfreeres():\n\tshmctl() error while freeing up "
              "IN_SDATA segment, error=%d", errno);
     } else {
-    // Successfully freed up the shared memory segment
-    INIT_DEBUG("INfreeres: INfreeres(): the IN_SDATA segment was deallocated");
+      // Successfully freed up the shared memory segment
+      //INIT_DEBUG("INfreeres: INfreeres(): the IN_SDATA segment was deallocated");
+      printf("INfreeres: INfreeres(): the IN_SDATA segment was deallocated");
     }
   } else {
     // IN_PROCDATA segment was not allocated:
@@ -1243,9 +1248,11 @@ Void INfreeres(Bool release_init) {
       printf("INfreeres():\n\tshmctl() error while freeing up "
              "IN_PROCDATA segment, errno = %d", errno);
     } else {
-      INIT_DEBUG((IN_DEBUG|IN_RSTRTR),
-                 (POA_INF, "INfreeres: INfreeres(): the IN_PROCDATA"
-                  "segment was deallocated"));
+      //INIT_DEBUG((IN_DEBUG|IN_RSTRTR),
+      //           (POA_INF, "INfreeres: INfreeres(): the IN_PROCDATA"
+      //            "segment was deallocated"));
+      printf("INfreeres: INfreeres(): the IN_PROCDATA"
+             "segment was deallocated");
     }
   } else {
     printf("INfreeres: the IN_PROCDATA segment did not exists");
@@ -1436,7 +1443,8 @@ INdef_parm_init(IN_PROC_PARMS * parm_ptr,IN_SYS_PARMS *sys_parms)
 Void
 INsigcld(int sig)
 {
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsigcld(): death of child signal %d caught", sig));
+	//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsigcld(): death of child signal %d caught", sig));
+  printf("INsigcld(): death of child signal %d caught\n", sig);
 	if(INcmd){
 		int	pstatus;	
 		waitpid(INW_ANY_PID,&pstatus, WNOHANG);
@@ -1474,7 +1482,8 @@ INcheck_zombie()
 	int	pstatus;	/* Status of process */
 
 	if ((dead_pid = waitpid(INW_ANY_PID,&pstatus, WNOHANG)) > 0) {
-		INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INcheck_zombie(): death of child proc PID %d", dead_pid));
+		//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INcheck_zombie(): death of child proc PID %d", dead_pid));
+    printf("INcheck_zombie(): death of child proc PID %d\n", dead_pid);
 		// Find this process pid in the process table
 		eldp = &IN_LDPTAB[IN_SNPRCMX];
 		for(ldp = IN_LDPTAB; ldp < eldp; ldp++){
@@ -1491,46 +1500,60 @@ INcheck_zombie()
 		 */
 		if (WIFSTOPPED(pstatus)) {
 			if(indx != IN_SNPRCMX){
-				CR_PRM(POA_INF,"REPT INIT %s STOPPED BY SIGNAL %d", IN_LDPTAB[indx].proctag, WSTOPSIG(pstatus));
+				//CR_PRM(POA_INF,"REPT INIT %s STOPPED BY SIGNAL %d", IN_LDPTAB[indx].proctag, WSTOPSIG(pstatus));
+        printf("REPT INIT %s STOPPED BY SIGNAL %d\n",
+               IN_LDPTAB[indx].proctag, WSTOPSIG(pstatus));
 			}
-			INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess was stopped by signal %d", WSTOPSIG(pstatus)));
+			//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess was stopped by signal %d", WSTOPSIG(pstatus)));
+      printf("\tprocess was stopped by signal %d\n", WSTOPSIG(pstatus));
 		}
 		else if (WIFEXITED(pstatus)) {
 			if(indx != IN_SNPRCMX){
 				if(!IN_LDPTAB[indx].third_party){
-					CR_PRM(POA_INF,"REPT INIT %s EXIT CODE %d", IN_LDPTAB[indx].proctag, WEXITSTATUS(pstatus));
+					//CR_PRM(POA_INF,"REPT INIT %s EXIT CODE %d", IN_LDPTAB[indx].proctag, WEXITSTATUS(pstatus));
+          printf("REPT INIT %s EXIT CODE %d\n",
+                 IN_LDPTAB[indx].proctag, WEXITSTATUS(pstatus));
 				} else {
 					IN_SDPTAB[indx].ret = WEXITSTATUS(pstatus);
 					return(dead_pid);
 				}
 			}
-			INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess exited, exit code %d",WEXITSTATUS(pstatus)));
+			//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess exited, exit code %d",WEXITSTATUS(pstatus)));
+      printf("\tprocess exited, exit code %d",WEXITSTATUS(pstatus));
 			if(WEXITSTATUS(pstatus) == (int)IN_SHM_ERR){
 				bad_shm = TRUE;
 			}
 		}
 		else if (WIFSIGNALED(pstatus)) {
 			if(indx != IN_SNPRCMX && IN_LDPTAB[indx].print_progress){
-				CR_PRM(POA_INF,"REPT INIT %s RECEIVED SIGNAL %d", IN_LDPTAB[indx].proctag, WTERMSIG(pstatus));
+				//CR_PRM(POA_INF,"REPT INIT %s RECEIVED SIGNAL %d", IN_LDPTAB[indx].proctag, WTERMSIG(pstatus));
+        printf("REPT INIT %s RECEIVED SIGNAL %d\n",
+               IN_LDPTAB[indx].proctag, WTERMSIG(pstatus));
 			}
 			if (WCOREDUMP(pstatus)) {
-				INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess terminated due to signal %d, core file was created",WTERMSIG(pstatus)));
+				//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess terminated due to signal %d, core file was created",WTERMSIG(pstatus)));
+        printf("\tprocess terminated due to signal %d, core file was created",
+               WTERMSIG(pstatus));
 			}
 			else {
-				INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess terminated due to signal %d",WTERMSIG(pstatus)));
-        ;			}
+				//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"\tprocess terminated due to signal %d",WTERMSIG(pstatus)));
+        printf("\tprocess terminated due to signal %d\n",
+               WTERMSIG(pstatus));
+      }
 			if(indx != IN_SNPRCMX && IN_LDPTAB[indx].third_party){
 				IN_SDPTAB[indx].ret = GLfail;
 				return(dead_pid);
 			}
 		}
 		else {
-			INIT_ERROR(("Error process status 0x%x",pstatus));
+			//INIT_ERROR(("Error process status 0x%x",pstatus));
+      printf("Error process status 0x%x\n",pstatus);
 		}
 	}
 			
 	else {
-		INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INcheck_zombie(): no PID returned from waitpid()"));
+		//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INcheck_zombie(): no PID returned from waitpid()"));
+    printf("INcheck_zombie(): no PID returned from waitpid()\n");
 	}
 
 	/* If process died because of bad shared memory,
@@ -1584,11 +1607,14 @@ INsigterm(int, siginfo_t* info, void *)
       printf("REPT INIT SIGTERM RECEIVED FROM PID %d - IGNORED", info->si_pid);
       return;
     } else {
-			CR_PRM(INadjustAlarm(POA_CRIT), "REPT INIT SIGTERM RECEIVED FROM PID %d - INIT EXITING", info->si_pid);
+			//CR_PRM(INadjustAlarm(POA_CRIT), "REPT INIT SIGTERM RECEIVED FROM PID %d - INIT EXITING", info->si_pid);
+      printf("REPT INIT SIGTERM RECEIVED FROM PID %d - INIT EXITING\n",
+             info->si_pid);
 		}
 	} else {
-		CR_X733PRM(POA_TMN, "SIGTERM NO INFO", processingErrorAlarm, softwareError,
-               NULL, ";210", "REPT INIT SIGTERM RECEIVED NO SENDER INFO - IGNORED");
+		//CR_X733PRM(POA_TMN, "SIGTERM NO INFO", processingErrorAlarm, softwareError,
+    //           NULL, ";210", "REPT INIT SIGTERM RECEIVED NO SENDER INFO - IGNORED");
+    printf("REPT INIT SIGTERM RECEIVED NO SENDER INFO - IGNORED\n");
 		return;
 	}
 	/* IN_procdata could be uninitialized when SIGTERM received */
@@ -1622,7 +1648,8 @@ Void
 INsigint(int)
 {
 	if(!INcmd){
-		CR_PRM(INadjustAlarm(POA_MAJ),"REPT INIT SIGINT RECEIVED");
+		//CR_PRM(INadjustAlarm(POA_MAJ),"REPT INIT SIGINT RECEIVED");
+    printf("REPT INIT SIGINT RECEIVED\n");
 		IN_LDEXIT = TRUE;
 	}
 }
@@ -1650,7 +1677,8 @@ INsigint(int)
 Void
 INsigalrm()
 {
-	CR_PRM(INadjustAlarm(POA_MAJ),"REPT INIT SIGALRM RECEIVED");
+	//CR_PRM(INadjustAlarm(POA_MAJ),"REPT INIT SIGALRM RECEIVED");
+  printf("REPT INIT SIGALRM RECEIVED\n");
 }
 
 /*
@@ -1710,7 +1738,8 @@ INsigsnstop(int, siginfo_t* info, void *)
 	}
 	IN_LDEXIT = TRUE;
 	INsnstop = TRUE;
-	CR_PRM(POA_INF,"REPT INIT GOING OFFLINE, REQUESTING PID %d", info->si_pid);
+	//CR_PRM(POA_INF,"REPT INIT GOING OFFLINE, REQUESTING PID %d", info->si_pid);
+  printf("REPT INIT GOING OFFLINE, REQUESTING PID %d\n", info->si_pid);
 }
 
 MHenvType	INenv;
@@ -1758,10 +1787,13 @@ INprocinit()
 	GLretVal	ret;
 	static int	tries = 0;
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR | IN_PROCITR),(POA_INF,"INprocinit() entered..."));
+	//INIT_DEBUG((IN_DEBUG | IN_RSTRTR | IN_PROCITR),(POA_INF,"INprocinit() entered..."));
+  printf("INprocinit() entered...\n");
 
 	if((IN_LDMSGHINDX < 0) || (IN_SDPTAB[IN_LDMSGHINDX].procstep < IN_PROCINIT)){
-		INIT_DEBUG((IN_DEBUG | IN_RSTRTR | IN_PROCITR),(POA_INF,"INprocinit() returned without registering queue name \"%s\"...",IN_MSGHQNM));
+		//INIT_DEBUG((IN_DEBUG | IN_RSTRTR | IN_PROCITR),(POA_INF,"INprocinit() returned without registering queue name \"%s\"...",IN_MSGHQNM));
+    printf("INprocinit() returned without registering queue name \"%s\"...\n",
+           IN_MSGHQNM);
 		return;
 	}
 
@@ -1777,7 +1809,9 @@ INprocinit()
 	MHqid msghqid;
 	if((ret = INevent.getMhqid("MSGH", msghqid)) != GLsuccess){
 		if(tries > INmaxMSGHtries){
-			CRERROR("INprocinit() returned without registering queue name, MSGH still not there \"%s\"...",IN_MSGHQNM);
+			//CRERROR("INprocinit() returned without registering queue name, MSGH still not there \"%s\"...",IN_MSGHQNM);
+      printf("INprocinit() returned without registering queue name, MSGH still not there \"%s\"...\n",
+             IN_MSGHQNM);
 			INescalate(SN_LV4,ret,IN_SOFT,INIT_INDEX);
 		}
 		return;
@@ -1787,14 +1821,18 @@ INprocinit()
 	if(INevent.Qid2Host(msghqid) != INevent.getLocalHostIndex()){
 		if(tries > INmaxMSGHtries){
 			// Found MSGH on another machine, 
-			CRERROR("INprocinit() returned without registering queue name, MSGH on another machine msghqid %s", msghqid.display());
+			//CRERROR("INprocinit() returned without registering queue name, MSGH on another machine msghqid %s", msghqid.display());
+      printf("INprocinit() returned without registering queue name, MSGH on another machine msghqid %s\n",
+             msghqid.display());
 			INescalate(SN_LV4,ret,IN_SOFT,INIT_INDEX);
 		}
 		return;
 	}
 
 	if(tries > 2){
-		CR_PRM(POA_INF,"REPT INIT MSGH REGISTRATION TRIED %d TIMES", tries);
+		//CR_PRM(POA_INF,"REPT INIT MSGH REGISTRATION TRIED %d TIMES", tries);
+    printf("REPT INIT MSGH REGISTRATION TRIED %d TIMES\n",
+           tries);
 	}
 
 	// Check if I can be oam Lead and set my host id (adjusted for mixed cluster)
@@ -1819,8 +1857,10 @@ INprocinit()
 		
 	}
 
-	INIT_DEBUG((IN_DEBUG | IN_PROCITR),(POA_INF,"peerHostName %s, peerHostId %d, canBeOamLead %d",
-		INmyPeerHostName, INmyPeerHostId, INcanBeOamLead));
+	//INIT_DEBUG((IN_DEBUG | IN_PROCITR),(POA_INF,"peerHostName %s, peerHostId %d, canBeOamLead %d",
+  //                                    INmyPeerHostName, INmyPeerHostId, INcanBeOamLead));
+  printf("peerHostName %s, peerHostId %d, canBeOamLead %d\n",
+         INmyPeerHostName, INmyPeerHostId, INcanBeOamLead);
 
 	MHregisterTyp	regType;
 
@@ -1851,19 +1891,20 @@ INprocinit()
 		sprintf(INvhostMateName, "%s:INIT", IN_procdata->vhost[INvhostMate]);
 	}
 	if(IN_LDCURSTATE != S_OFFLINE && IN_LDCURSTATE != S_UNAV &&
-		IN_LDSTATE.initstate == INITING){
-		FTbladeStChgMsg msg(S_INIT, INITING, IN_LDSTATE.softchk);
-		if(INvhostMate >= 0){
-			msg.setVhostMate(IN_procdata->vhost[INvhostMate]);
-			msg.setVhostState(INstandby);
-		}
-		msg.send();
+     IN_LDSTATE.initstate == INITING){
+		//FTbladeStChgMsg msg(S_INIT, INITING, IN_LDSTATE.softchk);
+		//if(INvhostMate >= 0){
+		//	msg.setVhostMate(IN_procdata->vhost[INvhostMate]);
+		//	msg.setVhostState(INstandby);
+		//}
+		//msg.send();
 //		FTbladeStQryMsg query;
 //		query.send(INmsgqid);
 	}
   // Create mutex audit thread
   if(thr_create(NULL,thr_min_stack()+IN_MIN_STACK, INmhMutexCheck,NULL,THR_BOUND,NULL) != 0){
-    INIT_ERROR(("can't create mutex audit thread, errno %d",errno));
+    //INIT_ERROR(("can't create mutex audit thread, errno %d",errno));
+    printf("can't create mutex audit thread, errno %d\n",errno);
 		INescalate(SN_LV4,errno,IN_SOFT,INIT_INDEX);
   }       
 
@@ -1910,7 +1951,9 @@ INprocinit()
 		INSETTMR(INsetActiveVhostTmr, IN_procdata->vhostfailover_time, INSETACTIVEVHOSTTAG, TRUE);
 	}
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR | IN_PROCITR),(POA_INF,"INprocinit() returned successfully after registering queue name \"%s\"...",IN_MSGHQNM));
+	//INIT_DEBUG((IN_DEBUG | IN_RSTRTR | IN_PROCITR),(POA_INF,"INprocinit() returned successfully after registering queue name \"%s\"...",IN_MSGHQNM));
+  printf("INprocinit() returned successfully after registering queue name \"%s\"...\n",
+         IN_MSGHQNM);
 
 }
 
@@ -1988,30 +2031,30 @@ INprintHistory(Void)
 		time_t end_time = (time_t)IN_LDINFO.init_data[indx].end_time;
 
 		printf("START: %.24s\tFINISH: %.24s\t\n%s, runlvl %2d, Last init level %s requested by %s, err_code %d\n",
-			asctime(localtime(&str_time)),
-			asctime(localtime(&end_time)),
-			IN_SNLVLNM(IN_LDINFO.init_data[indx].psn_lvl),
-			IN_LDINFO.init_data[indx].prun_lvl,
-			IN_SNSRCNM(IN_LDINFO.init_data[indx].source),
-			IN_LDINFO.init_data[indx].msgh_name,
-			IN_LDINFO.init_data[indx].ecode);
+           asctime(localtime(&str_time)),
+           asctime(localtime(&end_time)),
+           IN_SNLVLNM(IN_LDINFO.init_data[indx].psn_lvl),
+           IN_LDINFO.init_data[indx].prun_lvl,
+           IN_SNSRCNM(IN_LDINFO.init_data[indx].source),
+           IN_LDINFO.init_data[indx].msgh_name,
+           IN_LDINFO.init_data[indx].ecode);
 	}
 
-	        printf("procs %d,  deaths %d, softchk %s, crerror_inh %d \n",
-                	INcountprocs(),IN_LDSTATE.init_deaths,
-               		((IN_LDSTATE.softchk == IN_INHSOFTCHK)?"IN_INHSOFTCHK":
-                		((IN_LDSTATE.softchk == IN_ALWSOFTCHK)?"IN_ALWSOFTCHK":
-                 		"Invalid softchk state")), IN_LDSTATE.crerror_inh);
+  printf("procs %d,  deaths %d, softchk %s, crerror_inh %d \n",
+         INcountprocs(),IN_LDSTATE.init_deaths,
+         ((IN_LDSTATE.softchk == IN_INHSOFTCHK)?"IN_INHSOFTCHK":
+          ((IN_LDSTATE.softchk == IN_ALWSOFTCHK)?"IN_ALWSOFTCHK":
+           "Invalid softchk state")), IN_LDSTATE.crerror_inh);
 
-	        printf("isactive = %d, newstate = %c, wdstate %c, final_runlvl = %d, issimplex = %d\n",
-			IN_LDSTATE.isactive, IN_LDCURSTATE, IN_LDWDSTATE, IN_LDSTATE.final_runlvl, IN_LDSTATE.issimplex);
+  printf("isactive = %d, newstate = %c, wdstate %c, final_runlvl = %d, issimplex = %d\n",
+         IN_LDSTATE.isactive, IN_LDCURSTATE, IN_LDWDSTATE, IN_LDSTATE.final_runlvl, IN_LDSTATE.issimplex);
 
-		printf("INIT: state %s, step %s, run_lvl %d, sync_run_lvl %d, sn_lvl %s\n",
-			IN_STATENM(IN_LDSTATE.initstate), IN_SQSTEPNM(IN_LDSTATE.systep),
-				IN_LDSTATE.run_lvl,IN_LDSTATE.sync_run_lvl,IN_SNLVLNM(IN_LDSTATE.sn_lvl));
+  printf("INIT: state %s, step %s, run_lvl %d, sync_run_lvl %d, sn_lvl %s\n",
+         IN_STATENM(IN_LDSTATE.initstate), IN_SQSTEPNM(IN_LDSTATE.systep),
+         IN_LDSTATE.run_lvl,IN_LDSTATE.sync_run_lvl,IN_SNLVLNM(IN_LDSTATE.sn_lvl));
 
-		printf("INIT: sys_err_cnt %d, pid %d version 0x%lx q_size %ld\n\n",
-			IN_SDERR_COUNT,IN_procdata->pid,IN_LDSHM_VER, IN_procdata->default_q_size);
+  printf("INIT: sys_err_cnt %d, pid %d version 0x%lx q_size %ld\n\n",
+         IN_SDERR_COUNT,IN_procdata->pid,IN_LDSHM_VER, IN_procdata->default_q_size);
 }
 		
 
@@ -2053,85 +2096,85 @@ INprtDetailProcInfo(Char* msgh_name)
 
 
 	printf("INIT: shm_ver %ld, bkucl %d, bkpid %d, availsman %ld\n",
-		IN_LDSHM_VER,
-		IN_LDBKUCL,
-		IN_LDBKPID,
-		IN_LDVMEM);
+         IN_LDSHM_VER,
+         IN_LDBKUCL,
+         IN_LDBKPID,
+         IN_LDVMEM);
  
 	printf("INIT: initlist=%s, aru_intvl=%d, msgh_indx=%d\n",
-		msgh_name,
-		IN_LDILIST,
-		IN_LDARUINT,
-		IN_LDMSGHINDX);
+         msgh_name,
+         IN_LDILIST,
+         IN_LDARUINT,
+         IN_LDMSGHINDX);
  
 	printf("INIT: bqid %s, aqid %s, subkout %d, int_exit %d\n",
-		IN_LDBQID.display(),
-		IN_LDAQID.display(),
-		IN_LDBKOUT,
-		IN_LDEXIT); 
+         IN_LDBQID.display(),
+         IN_LDAQID.display(),
+         IN_LDBKOUT,
+         IN_LDEXIT); 
 
 	sprintf(buf[0], "index=%i", i);
-        sprintf(buf[1], "updstate=%i", IN_LDPTAB[i].updstate);
-        sprintf(buf[2], "pathname=%.35s", IN_LDPTAB[i].pathname); 
-        sprintf(buf[3], "peg_intvl=%i", IN_LDPTAB[i].peg_intvl); 
-        sprintf(buf[4], "error_count=%i", IN_SDPTAB[i].error_count); 
-        sprintf(buf[5], "proc_ctgr=%.35s", IN_PROCCATNM(IN_LDPTAB[i].proc_category)); 
-        sprintf(buf[6], "rstrt_cnt=%i", IN_LDPTAB[i].rstrt_cnt); 
-        sprintf(buf[7], "crerr_inh=%.35s", (IN_LDPTAB[i].crerror_inh == TRUE ? "YES":"NO")); 
-        sprintf(buf[8], "strtstate=%.35s", ((IN_LDPTAB[i].startstate == IN_INHRESTART)
-						? "IN_INHRESTART"
-						: ((IN_LDPTAB[i].startstate == IN_ALWRESTART)
-							? "IN_ALWRESTART"
-							: "Invalid restart state"
-						)
-					));
+  sprintf(buf[1], "updstate=%i", IN_LDPTAB[i].updstate);
+  sprintf(buf[2], "pathname=%.35s", IN_LDPTAB[i].pathname); 
+  sprintf(buf[3], "peg_intvl=%i", IN_LDPTAB[i].peg_intvl); 
+  sprintf(buf[4], "error_count=%i", IN_SDPTAB[i].error_count); 
+  sprintf(buf[5], "proc_ctgr=%.35s", IN_PROCCATNM(IN_LDPTAB[i].proc_category)); 
+  sprintf(buf[6], "rstrt_cnt=%i", IN_LDPTAB[i].rstrt_cnt); 
+  sprintf(buf[7], "crerr_inh=%.35s", (IN_LDPTAB[i].crerror_inh == TRUE ? "YES":"NO")); 
+  sprintf(buf[8], "strtstate=%.35s", ((IN_LDPTAB[i].startstate == IN_INHRESTART)
+                                      ? "IN_INHRESTART"
+                                      : ((IN_LDPTAB[i].startstate == IN_ALWRESTART)
+                                         ? "IN_ALWRESTART"
+                                         : "Invalid restart state"
+                                        )
+            ));
 
-        sprintf(buf[9], "tot_rstrt=%i", IN_LDPTAB[i].tot_rstrt);
-        sprintf(buf[10], "failed_init=%i", (int)IN_LDPTAB[i].failed_init);        
-        sprintf(buf[11], "softchk=%.35s", ((IN_LDPTAB[i].softchk == IN_INHSOFTCHK)
-                                       		? "IN_INHSOFTCHK"
-						: ((IN_LDPTAB[i].softchk == IN_ALWSOFTCHK)
-							? "IN_ALWSOFTCHK"
-							: "Invalid softchk state"
-						)
-					));
+  sprintf(buf[9], "tot_rstrt=%i", IN_LDPTAB[i].tot_rstrt);
+  sprintf(buf[10], "failed_init=%i", (int)IN_LDPTAB[i].failed_init);        
+  sprintf(buf[11], "softchk=%.35s", ((IN_LDPTAB[i].softchk == IN_INHSOFTCHK)
+                                     ? "IN_INHSOFTCHK"
+                                     : ((IN_LDPTAB[i].softchk == IN_ALWSOFTCHK)
+                                        ? "IN_ALWSOFTCHK"
+                                        : "Invalid softchk state"
+                                       )
+            ));
 
-        sprintf(buf[12], "next_rstrt=%i", (int)IN_LDPTAB[i].next_rstrt);        
-        sprintf(buf[13], "rstrt_max=%i", IN_LDPTAB[i].rstrt_max);        
-        sprintf(buf[14], "permstate=%.35s", IN_PSTATENM(IN_LDPTAB[i].permstate));        
-        sprintf(buf[15], "count=%i", IN_SDPTAB[i].count);        
-        sprintf(buf[16], "creat_tmr=%i", IN_LDPTAB[i].create_timer);        
-        sprintf(buf[17], "err_threshold=%i", IN_LDPTAB[i].error_threshold);        
-        sprintf(buf[18], "startime=%li", IN_LDPTAB[i].startime);        
-        sprintf(buf[19], "sn_lvl=%.35s", IN_SNLVLNM(IN_LDPTAB[i].sn_lvl));        
-        sprintf(buf[20], "init_complete_tmr=%i", IN_LDPTAB[i].init_complete_timer);        
+  sprintf(buf[12], "next_rstrt=%i", (int)IN_LDPTAB[i].next_rstrt);        
+  sprintf(buf[13], "rstrt_max=%i", IN_LDPTAB[i].rstrt_max);        
+  sprintf(buf[14], "permstate=%.35s", IN_PSTATENM(IN_LDPTAB[i].permstate));        
+  sprintf(buf[15], "count=%i", IN_SDPTAB[i].count);        
+  sprintf(buf[16], "creat_tmr=%i", IN_LDPTAB[i].create_timer);        
+  sprintf(buf[17], "err_threshold=%i", IN_LDPTAB[i].error_threshold);        
+  sprintf(buf[18], "startime=%li", IN_LDPTAB[i].startime);        
+  sprintf(buf[19], "sn_lvl=%.35s", IN_SNLVLNM(IN_LDPTAB[i].sn_lvl));        
+  sprintf(buf[20], "init_complete_tmr=%i", IN_LDPTAB[i].init_complete_timer);        
 	sprintf(buf[21], "priority=%i", IN_LDPTAB[i].priority);
-        sprintf(buf[22], "syncstep=%.35s", IN_SQSTEPNM(IN_LDPTAB[i].syncstep));
-        sprintf(buf[23], "sent_missedsan=%i", IN_LDPTAB[i].sent_missedsan);
-        sprintf(buf[24], "msgh_qid=%i", IN_LDPTAB[i].msgh_qid);
-        sprintf(buf[25], "time_missedsan=%li", IN_LDPTAB[i].time_missedsan);
-        sprintf(buf[26], "procstate=%.35s", IN_PROCSTNM(IN_SDPTAB[i].procstate));
-        sprintf(buf[27], "sigtype=%i", IN_LDPTAB[i].sigtype);
-        sprintf(buf[28], "last_count=%i", IN_LDPTAB[i].last_count);
-        sprintf(buf[29], "procstep=%.35s", IN_SQSTEPNM(IN_SDPTAB[i].procstep));
+  sprintf(buf[22], "syncstep=%.35s", IN_SQSTEPNM(IN_LDPTAB[i].syncstep));
+  sprintf(buf[23], "sent_missedsan=%i", IN_LDPTAB[i].sent_missedsan);
+  sprintf(buf[24], "msgh_qid=%i", IN_LDPTAB[i].msgh_qid);
+  sprintf(buf[25], "time_missedsan=%li", IN_LDPTAB[i].time_missedsan);
+  sprintf(buf[26], "procstate=%.35s", IN_PROCSTNM(IN_SDPTAB[i].procstate));
+  sprintf(buf[27], "sigtype=%i", IN_LDPTAB[i].sigtype);
+  sprintf(buf[28], "last_count=%i", IN_LDPTAB[i].last_count);
+  sprintf(buf[29], "procstep=%.35s", IN_SQSTEPNM(IN_SDPTAB[i].procstep));
 	sprintf(buf[30], "pid=%i", IN_LDPTAB[i].pid);
-        sprintf(buf[31], "progress_check=%i", IN_SDPTAB[i].progress_check);
-        sprintf(buf[32], "rstrt_intvl=%i", IN_LDPTAB[i].rstrt_intvl);
+  sprintf(buf[31], "progress_check=%i", IN_SDPTAB[i].progress_check);
+  sprintf(buf[32], "rstrt_intvl=%i", IN_LDPTAB[i].rstrt_intvl);
 	sprintf(buf[33], "uid=%i", IN_LDPTAB[i].uid);
-        sprintf(buf[34], "prt_prog=%i", IN_LDPTAB[i].print_progress);
-        sprintf(buf[35], "ireq_lvl=%.35s", IN_SNLVLNM(IN_SDPTAB[i].ireq_lvl));
+  sprintf(buf[34], "prt_prog=%i", IN_LDPTAB[i].print_progress);
+  sprintf(buf[35], "ireq_lvl=%.35s", IN_SNLVLNM(IN_SDPTAB[i].ireq_lvl));
 
-        sprintf(buf[36], "run_lvl=%i", IN_LDPTAB[i].run_lvl);
-        sprintf(buf[37], "proctag=%.35s", IN_LDPTAB[i].proctag);
-        sprintf(buf[38], "error_dec_rate=%i", IN_LDPTAB[i].error_dec_rate);
-        sprintf(buf[39], "progress_mark=%li", IN_SDPTAB[i].progress_mark);
-        sprintf(buf[40], "procinit_timer=%i", IN_LDPTAB[i].procinit_timer);
+  sprintf(buf[36], "run_lvl=%i", IN_LDPTAB[i].run_lvl);
+  sprintf(buf[37], "proctag=%.35s", IN_LDPTAB[i].proctag);
+  sprintf(buf[38], "error_dec_rate=%i", IN_LDPTAB[i].error_dec_rate);
+  sprintf(buf[39], "progress_mark=%li", IN_SDPTAB[i].progress_mark);
+  sprintf(buf[40], "procinit_timer=%i", IN_LDPTAB[i].procinit_timer);
 	sprintf(buf[41], "ofcPthNm=%.35s", IN_LDPTAB[i].ofc_pathname);
 	sprintf(buf[42], "source=%.35s", IN_SNSRCNM(IN_LDPTAB[i].source));
 	sprintf(buf[43], "onActive=%.35s", IN_LDPTAB[i].on_active ? "YES" : "NO");
 	sprintf(buf[44], "lv3_timer=%i", (int)IN_LDPTAB[i].lv3_timer);
-        sprintf(buf[45], "globQtimer=%i", (int)IN_LDPTAB[i].global_queue_timer);
-        sprintf(buf[46], "gqCnt=%d", IN_LDPTAB[i].gqCnt);
+  sprintf(buf[45], "globQtimer=%i", (int)IN_LDPTAB[i].global_queue_timer);
+  sprintf(buf[46], "gqCnt=%d", IN_LDPTAB[i].gqCnt);
 	sprintf(buf[47], "realQ=%s", IN_LDPTAB[i].realQ.display());
 	sprintf(buf[48], "brevity_low=%d", IN_LDPTAB[i].brevity_low);
 	sprintf(buf[49], "brevity_high=%d", IN_LDPTAB[i].brevity_high);
@@ -2166,9 +2209,9 @@ INprtDetailProcInfo(Char* msgh_name)
 			continue;
 		}
 		printf("%3i) %-11i %-10s %-11i\n", j, 
-			IN_SDSHMDATA[j].m_shmid,
-			(IN_SDSHMDATA[j].m_rel ? "True" : "False"), 
-			IN_SDSHMDATA[j].m_pkey);
+           IN_SDSHMDATA[j].m_shmid,
+           (IN_SDSHMDATA[j].m_rel ? "True" : "False"), 
+           IN_SDSHMDATA[j].m_pkey);
 	}
 
 }
@@ -2203,20 +2246,20 @@ INprtGeneralProcInfos(Void)
 	INprintHistory();
 	
 	printf(	"A) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
-		"B) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
-		"C) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
-		"D) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
-		"E) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
-		"F) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
-		"G) %-10.10s %-10.10s %-14.14s %-14.14s %s\n",
+          "B) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
+          "C) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
+          "D) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
+          "E) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
+          "F) %-10.10s %-10.10s %-14.14s %-14.14s %s\n"
+          "G) %-10.10s %-10.10s %-14.14s %-14.14s %s\n",
 
-		"MSGH name",	"runlvl",	"PID",		"procstate",	"path name",
-		"rstrt-intvl",	"rstrt-cnt","rstrt-tot",	"permstate",	"startstate",
-		"crerror_inh",	"sanity-intvl",	"procstep",	"syncstep",	"proc_cat",
-		"nxt_rstrt",	"rstrt_max",	"qsize",	"softchk",	"e_(thr:drate:cnt)",
-		"faild_init",	"sn_lvl",	"ireq_lvl",	"icmptmr",	"onact",
-		"progs_mrk","progs_chk","san_count",   "prio",		"ptmr",
-		"brev_low", "brev_high","brev_intvl","msg_limit", "ext_name");
+          "MSGH name",	"runlvl",	"PID",		"procstate",	"path name",
+          "rstrt-intvl",	"rstrt-cnt","rstrt-tot",	"permstate",	"startstate",
+          "crerror_inh",	"sanity-intvl",	"procstep",	"syncstep",	"proc_cat",
+          "nxt_rstrt",	"rstrt_max",	"qsize",	"softchk",	"e_(thr:drate:cnt)",
+          "faild_init",	"sn_lvl",	"ireq_lvl",	"icmptmr",	"onact",
+          "progs_mrk","progs_chk","san_count",   "prio",		"ptmr",
+          "brev_low", "brev_high","brev_intvl","msg_limit", "ext_name");
 
 
 	for (i=0; i < IN_SNPRCMX; i++) {
@@ -2226,64 +2269,64 @@ INprtGeneralProcInfos(Void)
 		printf("Proc indx %i\n", i);
 
 		printf( "A) %-10s %-10i %-14i %-14s %s\n"
-			"B) %-10i %-10i %-14i %-14s %s\n"
-			"C) %-10s %-10i %-14s %-14s %s\n"
-			"D) %-10i %-10i %-14i %-14s %i:%i:%i\n"
-			"E) %-10i %-10s %-14s %-14i %i\n"
-			"F) %-10i %-10i %-14i %-14i %i\n"
-			"G) %-10i %-10i %-14i %-14i %s\n",
+            "B) %-10i %-10i %-14i %-14s %s\n"
+            "C) %-10s %-10i %-14s %-14s %s\n"
+            "D) %-10i %-10i %-14i %-14s %i:%i:%i\n"
+            "E) %-10i %-10s %-14s %-14i %i\n"
+            "F) %-10i %-10i %-14i %-14i %i\n"
+            "G) %-10i %-10i %-14i %-14i %s\n",
 
-			IN_LDPTAB[i].proctag, 
-			IN_LDPTAB[i].run_lvl, 
-			IN_LDPTAB[i].pid, 
-			IN_PROCSTNM(IN_SDPTAB[i].procstate), 
-			IN_LDPTAB[i].pathname,
+            IN_LDPTAB[i].proctag, 
+            IN_LDPTAB[i].run_lvl, 
+            IN_LDPTAB[i].pid, 
+            IN_PROCSTNM(IN_SDPTAB[i].procstate), 
+            IN_LDPTAB[i].pathname,
 
-			IN_LDPTAB[i].rstrt_intvl, 
-			IN_LDPTAB[i].rstrt_cnt, 
-			IN_LDPTAB[i].tot_rstrt,  
-			IN_PSTATENM(IN_LDPTAB[i].permstate),
-			((IN_LDPTAB[i].startstate == IN_INHRESTART)
-				? "IN_INHRESTART" 
-				: ((IN_LDPTAB[i].startstate == IN_ALWRESTART)
-					? "IN_ALWRESTART"
-					: "Invalid restart state")),
+            IN_LDPTAB[i].rstrt_intvl, 
+            IN_LDPTAB[i].rstrt_cnt, 
+            IN_LDPTAB[i].tot_rstrt,  
+            IN_PSTATENM(IN_LDPTAB[i].permstate),
+            ((IN_LDPTAB[i].startstate == IN_INHRESTART)
+             ? "IN_INHRESTART" 
+             : ((IN_LDPTAB[i].startstate == IN_ALWRESTART)
+                ? "IN_ALWRESTART"
+                : "Invalid restart state")),
 
-			(IN_LDPTAB[i].crerror_inh == TRUE ? "YES":"NO"), 
-			IN_LDPTAB[i].peg_intvl, 
-			IN_SQSTEPNM(IN_SDPTAB[i].procstep), 
-			IN_SQSTEPNM(IN_LDPTAB[i].syncstep), 
-			IN_PROCCATNM(IN_LDPTAB[i].proc_category),
+            (IN_LDPTAB[i].crerror_inh == TRUE ? "YES":"NO"), 
+            IN_LDPTAB[i].peg_intvl, 
+            IN_SQSTEPNM(IN_SDPTAB[i].procstep), 
+            IN_SQSTEPNM(IN_LDPTAB[i].syncstep), 
+            IN_PROCCATNM(IN_LDPTAB[i].proc_category),
 
-			IN_LDPTAB[i].next_rstrt, 
-			IN_LDPTAB[i].rstrt_max, 
-			IN_LDPTAB[i].q_size,
-			((IN_LDPTAB[i].softchk == IN_INHSOFTCHK) 
-				? "IN_INHSOFTCHK"
-				: ((IN_LDPTAB[i].softchk == IN_ALWSOFTCHK) 
-					? "IN_ALWSOFTCHK"
-					: "Invalid softchk state")),
-			IN_LDPTAB[i].error_threshold, 
-			IN_LDPTAB[i].error_dec_rate, 
-			IN_SDPTAB[i].error_count, 
+            IN_LDPTAB[i].next_rstrt, 
+            IN_LDPTAB[i].rstrt_max, 
+            IN_LDPTAB[i].q_size,
+            ((IN_LDPTAB[i].softchk == IN_INHSOFTCHK) 
+             ? "IN_INHSOFTCHK"
+             : ((IN_LDPTAB[i].softchk == IN_ALWSOFTCHK) 
+                ? "IN_ALWSOFTCHK"
+                : "Invalid softchk state")),
+            IN_LDPTAB[i].error_threshold, 
+            IN_LDPTAB[i].error_dec_rate, 
+            IN_SDPTAB[i].error_count, 
 
-			(int)IN_LDPTAB[i].failed_init, 
-			IN_SNLVLNM(IN_LDPTAB[i].sn_lvl), 
-			IN_SNLVLNM(IN_SDPTAB[i].ireq_lvl), 
-			IN_LDPTAB[i].init_complete_timer, 
-			IN_LDPTAB[i].on_active,
+            (int)IN_LDPTAB[i].failed_init, 
+            IN_SNLVLNM(IN_LDPTAB[i].sn_lvl), 
+            IN_SNLVLNM(IN_SDPTAB[i].ireq_lvl), 
+            IN_LDPTAB[i].init_complete_timer, 
+            IN_LDPTAB[i].on_active,
 
-			IN_SDPTAB[i].progress_mark, 
-			IN_SDPTAB[i].progress_check, 
-			IN_SDPTAB[i].count, 
-			IN_LDPTAB[i].priority, 
-			IN_LDPTAB[i].procinit_timer,
-			IN_LDPTAB[i].brevity_low,
-			IN_LDPTAB[i].brevity_high,
-			IN_LDPTAB[i].brevity_interval,
-			IN_LDPTAB[i].msg_limit,
-			IN_LDPTAB[i].ext_pathname
-		);
+            IN_SDPTAB[i].progress_mark, 
+            IN_SDPTAB[i].progress_check, 
+            IN_SDPTAB[i].count, 
+            IN_LDPTAB[i].priority, 
+            IN_LDPTAB[i].procinit_timer,
+            IN_LDPTAB[i].brevity_low,
+            IN_LDPTAB[i].brevity_high,
+            IN_LDPTAB[i].brevity_interval,
+            IN_LDPTAB[i].msg_limit,
+            IN_LDPTAB[i].ext_pathname
+      );
 	}
 
 }
@@ -2449,22 +2492,26 @@ INlv4_count(Bool clear_count, Bool update)
 	if(clear_count == TRUE){
 		Long cur_cnt = INlv4_count(FALSE, FALSE);
 		if(unlink(INinitcount) < 0 && errno != ENOENT){
-			CRERROR("Failed to unlink %s, errno %d",INinitcount,errno);
+			//CRERROR("Failed to unlink %s, errno %d",INinitcount,errno);
+      printf("Failed to unlink %s, errno %d\n",INinitcount,errno);
 		}
 		if(INmax_boots > 0 && cur_cnt >= (INsys_init_threshold + INmax_boots)){
-			CR_X733PRM(POA_CLEAR, "INIT escalation", processingErrorAlarm,   
-                                         applicationSubsystemFailure, "The threshold for maximum number of boots has been reached",  ";235",
-                                        "REPT INIT MAXIMUM BOOT THRESHOLD CLEARED");
+			//CR_X733PRM(POA_CLEAR, "INIT escalation", processingErrorAlarm,   
+      //           applicationSubsystemFailure, "The threshold for maximum number of boots has been reached",  ";235",
+      //           "REPT INIT MAXIMUM BOOT THRESHOLD CLEARED");
+      printf("REPT INIT MAXIMUM BOOT THRESHOLD CLEARED\n");
 		}
 
 		return(0);
 	}
 	if((fd = open(INinitcount,O_CREAT | O_RDWR,0644)) < 0){
-		CRERROR("Failed to open %s, errno %d",INinitcount,errno);
+		//CRERROR("Failed to open %s, errno %d",INinitcount,errno);
+    printf("Failed to open %s, errno %d\n",INinitcount,errno);
 		return(0);
 	}
 	if((numread = read(fd,(void *)&init_count,sizeof(long))) < 0){
-		CRERROR("Failed to read %s, errno %d",INinitcount,errno);
+		//CRERROR("Failed to read %s, errno %d",INinitcount,errno);
+    printf("Failed to read %s, errno %d\n",INinitcount,errno);
 	} else if(numread == 0){
 		/* File did not exist */
 		init_count = 1;
@@ -2474,19 +2521,23 @@ INlv4_count(Bool clear_count, Bool update)
 			init_count++;
 		}
 	} else {
-		CRERROR("Invalid size of  %s, size = %d",INinitcount,numread);
+		//CRERROR("Invalid size of  %s, size = %d",INinitcount,numread);
+    printf("Invalid size of  %s, size = %d\n",INinitcount,numread);
 		if(unlink(INinitcount) < 0){
-			CRERROR("Failed to unlink %s, errno %d",INinitcount,errno);
+			//CRERROR("Failed to unlink %s, errno %d",INinitcount,errno);
+      printf("Failed to unlink %s, errno %d\n",INinitcount,errno);
 		}
 		return(0);
 	}
 
 	if(lseek(fd,0L,SEEK_SET) < 0){
-		CRERROR("Failed to lseek %s, errno %d",INinitcount,errno);
+		//CRERROR("Failed to lseek %s, errno %d",INinitcount,errno);
+    printf("Failed to lseek %s, errno %d\n",INinitcount,errno);
 	}
 
 	if(write(fd,(char *)&init_count,sizeof(long)) != sizeof(long)){
-		CRERROR("Failed to write %s, errno %d",INinitcount,errno);
+		//CRERROR("Failed to write %s, errno %d",INinitcount,errno);
+    printf("Failed to write %s, errno %d\n",INinitcount,errno);
 	}
 	
 	close(fd);
@@ -2544,7 +2595,8 @@ GLretVal INkernel_map() {
 Void
 INsanset(Long duration)
 {
-	INIT_DEBUG((IN_DEBUG|IN_SANITR),(POA_INF, "INsanset entered, duration %ld", duration));
+	//INIT_DEBUG((IN_DEBUG|IN_SANITR),(POA_INF, "INsanset entered, duration %ld", duration));
+  printf("INsanset entered, duration %ld\n", duration);
 }
 
 /*
@@ -2562,7 +2614,8 @@ INsanset(Long duration)
 Void
 INsanstrobe()
 {
-	INIT_DEBUG((IN_DEBUG|IN_SANITR),(POA_INF, "INsanstrobe entered"));
+	//INIT_DEBUG((IN_DEBUG|IN_SANITR),(POA_INF, "INsanstrobe entered"));
+  printf("INsanstrobe entered\n");
 }
 
 // This thread also checks the main thread sanity
@@ -2573,10 +2626,10 @@ int		INinitmissed = 0;
 Void *
 INmhMutexCheck(void*)
 {
-        sigset_t new_mask;
-        /* Disable all signals */
-        (void)sigfillset(&new_mask);
-        (void)thr_sigsetmask(SIG_BLOCK,&new_mask,NULL);
+  sigset_t new_mask;
+  /* Disable all signals */
+  (void)sigfillset(&new_mask);
+  (void)thr_sigsetmask(SIG_BLOCK,&new_mask,NULL);
 
 	Bool 		ret;
 	int 		shmlastcount = 0;
@@ -2587,12 +2640,12 @@ INmhMutexCheck(void*)
 
 	static	int entcnt = 0;
 
-        // Check the MH mutex every second
-        // Check shared memory allocator mutex every 4 seconds
-        while(1){
+  // Check the MH mutex every second
+  // Check shared memory allocator mutex every 4 seconds
+  while(1){
 		entcnt++;
-                ret = INevent.audMutex();
-                if(!INmhmutex_cleared){
+    ret = INevent.audMutex();
+    if(!INmhmutex_cleared){
 			INmhmutex_cleared = ret;
 		}
 		
@@ -2604,7 +2657,8 @@ INmhMutexCheck(void*)
 				mutex_unlock(&IN_SDSHMLOCK);
 			} else {
 				mutex_unlock(&IN_SDSHMLOCK);
-				CR_PRM(POA_INF, "REPT INIT UNLOCKED SHARED MEMORY MUTEX");
+				//CR_PRM(POA_INF, "REPT INIT UNLOCKED SHARED MEMORY MUTEX");
+        printf("REPT INIT UNLOCKED SHARED MEMORY MUTEX");
 			}
 			if(INevent.getOAMLead() == INmyPeerHostId){
 				INoamLead       oamLeadMsg;
@@ -2623,7 +2677,8 @@ INmhMutexCheck(void*)
 
 		/* INsanityPeg value disables sanity checking during shut down */
 		if(INinitmissed > INsanityTimeout && INsanityPeg != 0xffffffff){
-			CR_PRM(POA_INF, "REPT INIT ERROR FAILED SANITY PEG - EXITING");
+			//CR_PRM(POA_INF, "REPT INIT ERROR FAILED SANITY PEG - EXITING");
+      printf("REPT INIT ERROR FAILED SANITY PEG - EXITING\n");
 			abort();
 		} else if(INinitmissed > INsanityWarnTimeout){
 			INwarnMissed = INinitmissed;
@@ -2642,14 +2697,14 @@ INmhMutexCheck(void*)
 		if((curtime > lasttime) && (curtime - lasttime > (HZ * 2))){
 			INticksMissed = curtime - lasttime;
 		} 
-        }
+  }
 	return(NULL);
 }
 
 
 /*
 **
- NAME:
+NAME:
 **	INcheckDirSize()
 **
 ** DESCRIPTION:
@@ -2675,42 +2730,54 @@ Long INcheckDirSize(Void)
 	Long ret = 1;
 	if (statvfs(INexecdir, &vfsInfo)) {
 		ret = 0;
-		CR_PRM(POA_INF, "REPT INIT ERROR unable to open %s", INexecdir);	
+		//CR_PRM(POA_INF, "REPT INIT ERROR unable to open %s", INexecdir);
+    printf("REPT INIT ERROR unable to open %s\n", INexecdir);
 
 	} else if (vfsInfo.f_blocks == 0) {
 		ret = 0;
-		CR_X733PRM(INadjustAlarm(POA_MAJ)+7, "0 BLOCKS", qualityOfServiceAlarm, resourceAtOrNearingCapacity, NULL, ";217", 
-		"REPT INIT ERROR 0 BLOCKS IN CORE DIRECTORY %s", INexecdir);
+		//CR_X733PRM(INadjustAlarm(POA_MAJ)+7, "0 BLOCKS", qualityOfServiceAlarm, resourceAtOrNearingCapacity, NULL, ";217", 
+    //           "REPT INIT ERROR 0 BLOCKS IN CORE DIRECTORY %s", INexecdir);
+    printf("REPT INIT ERROR 0 BLOCKS IN CORE DIRECTORY %s\n", INexecdir);
 
 	} else if (vfsInfo.f_bavail/(vfsInfo.f_blocks/100) < 100 - IN_procdata->core_full_major) {
 		ret = -2;
-		CR_X733PRM(INadjustAlarm(POA_MAJ),
-		"CORE FULL", qualityOfServiceAlarm, 
-		resourceAtOrNearingCapacity, NULL, ";203", 
-               "REPT INIT ERROR %s is %i%% full", 
-               INexecdir,
-               (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+		//CR_X733PRM(INadjustAlarm(POA_MAJ),
+    //           "CORE FULL", qualityOfServiceAlarm, 
+    //           resourceAtOrNearingCapacity, NULL, ";203", 
+    //           "REPT INIT ERROR %s is %i%% full", 
+    //           INexecdir,
+    //           (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+    printf("REPT INIT ERROR %s is %i%% full\n", 
+           INexecdir,
+           (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
 		IN_LDALMCOREFULL = POA_MAJ;
 
 	} else if (vfsInfo.f_bavail/(vfsInfo.f_blocks/100) <  \
              100 - IN_procdata->core_full_minor) {
 		ret = -1;
-		CR_X733PRM(POA_MIN,"CORE FULL", qualityOfServiceAlarm, 
-		resourceAtOrNearingCapacity, NULL, ";203", 
-               "REPT INIT ERROR %s is %i%% full", 
-               INexecdir,
-               (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+		//CR_X733PRM(POA_MIN,"CORE FULL", qualityOfServiceAlarm, 
+    //           resourceAtOrNearingCapacity, NULL, ";203", 
+    //           "REPT INIT ERROR %s is %i%% full", 
+    //           INexecdir,
+    //           (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+    printf("REPT INIT ERROR %s is %i%% full\n", 
+           INexecdir,
+           (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
 
 		IN_LDALMCOREFULL = POA_MIN;
 	} else if(IN_LDALMCOREFULL != POA_INF){
 		IN_LDALMCOREFULL = POA_INF;
-		CR_X733PRM(POA_CLEAR,"CORE FULL", qualityOfServiceAlarm, 
-		resourceAtOrNearingCapacity, NULL, ";203", 
-		"REPT INIT ERROR %s is %i%% full", 
-		INexecdir, (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+		//CR_X733PRM(POA_CLEAR,"CORE FULL", qualityOfServiceAlarm, 
+    //           resourceAtOrNearingCapacity, NULL, ";203", 
+    //           "REPT INIT ERROR %s is %i%% full", 
+    //           INexecdir, (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+    printf("REPT INIT ERROR %s is %i%% full\n", 
+           INexecdir, (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
 
-		CR_PRM(POA_INF, "REPT INIT ERROR %s is %i%% full", 
-		   INexecdir, (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+		//CR_PRM(POA_INF, "REPT INIT ERROR %s is %i%% full", 
+    //       INexecdir, (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
+    printf("REPT INIT ERROR %s is %i%% full\n", 
+           INexecdir, (vfsInfo.f_blocks - vfsInfo.f_bavail) / (vfsInfo.f_blocks/100));
 	}
 
 	return ret;
@@ -2732,7 +2799,8 @@ INrunSetup()
 	char	command[200];
 
 	if(access(INstartupScript, F_OK) != 0){
-		CR_PRM(POA_INF, "REPT INIT INSTALL SCRIPT %s NOT PRESENT", INstartupScript);
+		//CR_PRM(POA_INF, "REPT INIT INSTALL SCRIPT %s NOT PRESENT", INstartupScript);
+    printf("REPT INIT INSTALL SCRIPT %s NOT PRESENT\n", INstartupScript);
 		IN_SLEEP(300);
 		return(GLfail);
 	}
@@ -2742,7 +2810,8 @@ INrunSetup()
 		if((scriptPid = fork()) == 0){
 			int	ret2 = -1;
 			(Void)setpgrp();
-               		CR_PRM(POA_INF, "REPT INIT CALLING %s", command);
+      //CR_PRM(POA_INF, "REPT INIT CALLING %s", command);
+      printf("REPT INIT CALLING %s", command);
 			ret2 = system(command);
 			if(WIFEXITED(ret2)){
 				exit(WEXITSTATUS(ret2));
@@ -2750,7 +2819,8 @@ INrunSetup()
 				exit(INmaxStartupError-1);
 			}
 		} else if(scriptPid == IN_FREEPID){
-               		CR_PRM(POA_MAJ, "Failed to fork %s,errno %d", command, errno);
+      //CR_PRM(POA_MAJ, "Failed to fork %s,errno %d", command, errno);
+      printf("Failed to fork %s,errno %d\n", command, errno);
 			IN_SLEEP(180);
 			return(GLfail);
 		}
@@ -2768,12 +2838,14 @@ INrunSetup()
 			if(WIFEXITED(pstatus)){
 				ret = WEXITSTATUS(pstatus);
 			} else {
-				CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT TERMINATED ABNORMALLY");
+				//CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT TERMINATED ABNORMALLY");
+        printf("REPT INIT INSTALL SCRIPT TERMINATED ABNORMALLY\n");
 				IN_SLEEP(180);
 				return(GLfail);
 			}
 		} else {
-			CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT TIMED OUT");
+			//CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT TIMED OUT");
+      printf("REPT INIT INSTALL SCRIPT TIMED OUT\n");
 			kill(-scriptPid, SIGKILL);
 			IN_SLEEP(180);
 			return(GLfail);
@@ -2782,14 +2854,16 @@ INrunSetup()
 		if(ret == 0){
 			return(count);
 		} else if(ret < INmaxStartupError){
-			CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT FAILED ret %d", ret);
+			//CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT FAILED ret %d", ret);
+      printf("REPT INIT INSTALL SCRIPT FAILED ret %d\n", ret);
 			IN_SLEEP(180);
 			return(GLfail);
 		}
 		count++;
 	}
 	
-	CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT EXECUTED TOO MANY TIMES");
+	//CR_PRM(POA_MAJ, "REPT INIT INSTALL SCRIPT EXECUTED TOO MANY TIMES");
+  printf("REPT INIT INSTALL SCRIPT EXECUTED TOO MANY TIMES");
 	IN_SLEEP(180);
 	return(GLfail);
 }
@@ -2806,7 +2880,8 @@ int INrunScript(char* name, const char* arg ) {
 	char	command[200];
 
 	if(access(name, F_OK) != 0){
-		CR_PRM(POA_INF, "REPT INIT %s SCRIPT %s NOT PRESENT", arg, name);
+		//CR_PRM(POA_INF, "REPT INIT %s SCRIPT %s NOT PRESENT", arg, name);
+    printf("REPT INIT %s SCRIPT %s NOT PRESENT\n", arg, name);
 		return(GLfail);
 	}
 	
@@ -2814,9 +2889,10 @@ int INrunScript(char* name, const char* arg ) {
 	if((scriptPid = fork()) == 0){
 
 		(Void)setpgrp();
-		mutex_unlock(&CRlockVarible);
+		//mutex_unlock(&CRlockVarible);
 		int	ret2 = -1;
-               	CR_PRM(POA_INF, "REPT INIT SCRIPT %s INSTANTIATED", command);
+    //CR_PRM(POA_INF, "REPT INIT SCRIPT %s INSTANTIATED", command);
+    printf("REPT INIT SCRIPT %s INSTANTIATED\n", command);
 		ret2 = system(command);
 		if(WIFEXITED(ret2)){
 			exit(WEXITSTATUS(ret2));
@@ -2824,7 +2900,8 @@ int INrunScript(char* name, const char* arg ) {
 			exit(INmaxStartupError-1);
 		}
 	} else if(scriptPid == IN_FREEPID){
-        	CR_PRM(POA_MAJ, "Failed to fork %s,errno %d", command, errno);
+    //CR_PRM(POA_MAJ, "Failed to fork %s,errno %d", command, errno);
+    printf("Failed to fork %s,errno %d\n", command, errno);
 		return(GLfail);
 	}
 
@@ -2839,17 +2916,20 @@ int INrunScript(char* name, const char* arg ) {
 		if(WIFEXITED(pstatus)){
 			ret = WEXITSTATUS(pstatus);
 		} else {
-			CR_PRM(POA_MAJ, "REPT INIT SCRIPT %s TERMINATED ABNORMALLY", command);
+			//CR_PRM(POA_MAJ, "REPT INIT SCRIPT %s TERMINATED ABNORMALLY", command);
+      printf("REPT INIT SCRIPT %s TERMINATED ABNORMALLY\n", command);
 			return(GLfail);
 		}
 	} else {
-		CR_PRM(POA_MAJ, "REPT INIT SCRIPT %s TIMED OUT", command);
+		//CR_PRM(POA_MAJ, "REPT INIT SCRIPT %s TIMED OUT", command);
+    printf("REPT INIT SCRIPT %s TIMED OUT\n", command);
 		kill(-scriptPid, SIGKILL);
 		return(GLfail);
 	}
 
 	if(ret != 0){
-		CR_PRM(POA_INF, "REPT INIT SCRIPT %s FAILED ret %d", command, ret);
+		//CR_PRM(POA_INF, "REPT INIT SCRIPT %s FAILED ret %d", command, ret);
+    printf("REPT INIT SCRIPT %s FAILED ret %d\n", command, ret);
 		return(GLfail);
 	}
 
@@ -2859,11 +2939,11 @@ int INrunScript(char* name, const char* arg ) {
 void*
 INrunScriptList(void* type)
 {
-        sigset_t 	new_mask;
+  sigset_t 	new_mask;
 
 /* Disable all signals */
-(void)sigfillset(&new_mask);
-(void)thr_sigsetmask(SIG_BLOCK,&new_mask,NULL);
+  (void)sigfillset(&new_mask);
+  (void)thr_sigsetmask(SIG_BLOCK,&new_mask,NULL);
 
 	char		scriptList[300];
 	FILE*		fs;
@@ -2889,7 +2969,8 @@ INrunScriptList(void* type)
 
 	fs = fopen(scriptList, "r");
 	if(fs == NULL){
-		CR_PRM(POA_INF, "REPT INIT SCRIPT FAILED TO OPEN %s", scriptList);
+		//CR_PRM(POA_INF, "REPT INIT SCRIPT FAILED TO OPEN %s", scriptList);
+    printf("REPT INIT SCRIPT FAILED TO OPEN %s\n", scriptList);
 		IN_LDSCRIPTSTATE = INscriptsFailed;
 		return(NULL);
 	}

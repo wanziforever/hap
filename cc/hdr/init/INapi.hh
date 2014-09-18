@@ -5,7 +5,7 @@
 #include <cc/hdr/init/INsetRstrt.hh>
 #include <cc/hdr/init/INsetSoftChk.hh>
 #include <cc/hdr/init/INswcc.hh>
-#include <cc/hdr/init/INprocUpd.hh>
+#include <cc/hdr/init/INprcUpd.hh>
 #include <cc/hdr/init/INinitData.hh>
 
 GLretVal INkillProcess(INkillProc*, char* machine = NULL);

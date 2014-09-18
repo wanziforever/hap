@@ -7,7 +7,7 @@ INMAIN_HEADER = $(TOP_INC)
 INMAIN_BIN = $(TOP_BIN)
 INMAIN_LIB = $(TOP_LIB)
 
-TARGET := $(INMAIN_LIB)/libinit.so
+TARGET := ${INMAIN_LIB}/INmain.a
 
 SRC_PATH := $(INMAIN_SRC)
 HEADER_PATH := $(INMAIN_HEADER)
@@ -26,10 +26,9 @@ SRC := \
 	INsanipeg.cc \
 	INsharedMem.cc \
 	INmain.cc \
-	INsync.cc \
-	INsbt_help2.cc
+	INsync.cc
 
-LIBS := $(LIBS) -lmsgh -lbasic -llinux -ltimer
+LIBS := $(LIBS) -lmsgh -lbasic -llinux
 
 src_dirs := $(sort $(dir $(addprefix $(SRC_PATH)/, $(SRC))))
 VPATH := $(subst " ", ":", $(src_dirs))
@@ -43,13 +42,13 @@ INC := ${INC} -I${LINUX_HDR}
 all: info Prepare $(TARGET)
 
 $(OBJS):%.o:%.cc
-	@$(CC) -MM -D NOMAIN $(CFLAGS) $(INC) -o .$*.d $<
+	@$(CC) -MM $(CFLAGS) $(INC) -o .$*.d $<
 	@mv -f .$*.d .$*.d.tmp
 	@sed -e 's|.*:|$@:|' < .$*.d.tmp > .$*.d
 #	@sed -e 's/.*://' -e 's/\\$$//' < $*.d.tmp | fmt -1 | \
 #	  sed -e 's/^ *//' -e 's/$$/:/' >> .$*.d
 	@rm -f .$*.d.tmp
-	$(CC) $(CFLAGS) -D NOMAIN $(INC) -c $< -o $@ -fPIC
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
 sinclude $(SRC:%.cc=.%.d)
 
@@ -69,7 +68,7 @@ Prepare:
 ##########################
 
 $(TARGET): $(OBJS)
-	$(LINK) -shared  $^ -o $@
+	$(AR) rcs $@ $^
 
 clean:
 	rm -rf $(TARGET); rm -rf *.o; rm -rf .*.d

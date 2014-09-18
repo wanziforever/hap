@@ -20,7 +20,7 @@
 #include "hdr/GLtypes.h"
 #include "hdr/GLreturns.h"
 #include "cc/hdr/init/INshmkey.hh"
-//#include "cc/hdr/cr/CRciMem.hh"
+#include "cc/hdr/cr/CRciMem.hh"
 
 #define IN_SNPRCMX 1024 // Max Permanent Processes
 #define IN_NUMSEMIDS 2 // Max number of semaphores allocatable
@@ -138,7 +138,7 @@ typedef enum {
   IN_CREATING,  // Process Being Created, Awaiting Ack from PMGR
   IN_HALTED,    // Process is suspended from doing any work
   IN_RUNNING,   // Process is executing
-  I_DEAD,       // Process has died
+  IN_DEAD,       // Process has died
   IN_MAXSTATE,  // Used for range checking...new states should
   // be inserted BEFORE this one.
   IN_PROCSTATE_BOGUS_SUNPRO
@@ -163,7 +163,7 @@ typedef enum {
   IN_BGQ,       // Begin handling of global queue transition
   IN_GQ,        // Handling global queue transition
   IN_EGQ,       // Finished handling global queue transition
-  IN_BUS,       // Process is begining software update
+  IN_BSU,       // Process is begining software update
   IN_SU,        // Process is in teh middle of software update
   IN_ESU,       // Process is ending software update
   IN_READY,     // Process Started, Rready to Receive signals
@@ -231,7 +231,7 @@ typedef struct {
   Short  error_count; // Number of system accumulated errors
   Short  fill; // 64 bit alignemnt fill
   int shm_lock_cnt;
-  //struct CRciMem ci_data; // SYSTAT critical indicator data
+  struct CRciMem ci_data; // SYSTAT critical indicator data
   mutex_t shm_lock;
   struct INshmemInfo shmem[INmaxSegs];
   IN_PTAB in_ptab[IN_SNPRCMX];

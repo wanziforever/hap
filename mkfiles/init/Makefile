@@ -15,17 +15,21 @@ LIB_PATH := $(INIT_LIB)
 BIN_PATH := $(INIT_BIN)
 
 SRC := \
-	init.cc \
-	inlocal.cc \
-	initlist.cc \
-	insync.cc \
-	increate.cc \
-	intimerprc.cc \
-	inrcvmsg.cc  \
-	inrestart.cc
+	INcreate.cc \
+	INdata.cc \
+	INmain.cc \
+	INrdinls.cc \
+	INrestart.cc \
+	INrm_thread.cc \
+	INsync.cc \
+	INtimerprc.cc \
+	INaudit.cc \
+	INrcvmsg.cc \
+	INmsgs.cc \
+	INmachdep.cc
 
 
-LIBS := $(LIBS) -lmsgh -lom -ltimer -lutils -lactivemq-cpp  -laprutil-1 -lehhandler -lactivemq-cpp -lapr-1 -lssl
+LIBS := $(LIBS) -lmsgh -ltimer -lehhandler -lssl -lbasic -llinux -linit
 
 src_dirs := $(sort $(dir $(addprefix $(SRC_PATH)/, $(SRC))))
 VPATH := $(subst " ", ":", $(src_dirs))
@@ -34,6 +38,8 @@ VPATH := $(subst " ", ":", $(src_dirs))
 ###########################
 OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 .PHONY : clean info Prepare
+LINUX_HDR = ${TOP_SRC}/hdr/linux
+INC := ${INC} -I${LINUX_HDR}
 
 all: info Prepare $(TARGET)
 

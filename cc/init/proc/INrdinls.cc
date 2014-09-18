@@ -31,15 +31,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <pwd.h>
-#ifdef __linux
 #include <sched.h>
-#endif
-
-#ifdef EES
-#include <strings.h>
-#else
-#include <string.h>
-#endif
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -49,8 +41,8 @@
 
 #include "hdr/GLtypes.h"
 #include "hdr/GLreturns.h"
-#include "cc/hdr/init/INproctab.h"
-#include "cc/init/proc/INlocal.H"
+#include "cc/hdr/init/INproctab.hh"
+#include "cc/init/proc/INlocal.hh"
 
 #define	NULLPTR		(char *) 0	/* Pointer to a NULL character.	*/
 #define	DIR_DIVIDE	'/'		/* Directory divide character.	*/
@@ -82,7 +74,8 @@ INgetNodeList(char nodes[][INmaxNodeName+1], char* token, int line, int maxNodes
 
 	while(TRUE){
 		if(num_nodes >= maxNodes){
-			CR_PRM(POA_INF, "%s%d TOO MANY NODES, SKIPPED %s", lerr_msg, line, p);
+			//CR_PRM(POA_INF, "%s%d TOO MANY NODES, SKIPPED %s", lerr_msg, line, p);
+      printf("%s%d TOO MANY NODES, SKIPPED %s", lerr_msg, line, p);
 			return(GLsuccess);
 		}
 		count = 0;
@@ -91,7 +84,8 @@ INgetNodeList(char nodes[][INmaxNodeName+1], char* token, int line, int maxNodes
 				nodes[num_nodes][count] = *p;
 				count++;
 			} else {
-				CR_PRM(POA_INF, "%s%d NODE NAME TOO LONG", lerr_msg, line);
+				//CR_PRM(POA_INF, "%s%d NODE NAME TOO LONG", lerr_msg, line);
+        printf("%s%d NODE NAME TOO LONG", lerr_msg, line);
 				return(GLfail);
 			}
 			p++;
@@ -113,7 +107,8 @@ INgetResourceList(char* resources, char* token, int line)
 
 	while(TRUE){
 		if(num_resources >= INmaxResourceGroups){
-			CR_PRM(POA_INF, "%s%d TOO MANY NODES, SKIPPED %s", lerr_msg, line, p);
+			//CR_PRM(POA_INF, "%s%d TOO MANY NODES, SKIPPED %s", lerr_msg, line, p);
+      printf("%s%d TOO MANY NODES, SKIPPED %s", lerr_msg, line, p);
 			return(GLsuccess);
 		}
 		while(*p != ',' && *p != 0){
@@ -200,7 +195,8 @@ INrdinls(Bool initflg, Bool audflg)
 	int		j,k;
 						   
 
-	INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): entered initflg %d, audflg %d",(int)initflg,(int)audflg));
+	//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): entered initflg %d, audflg %d",(int)initflg,(int)audflg));
+  printf("INrdinls(): entered initflg %d, audflg %d",(int)initflg,(int)audflg);
 	Short proc_cnt = 0;
 	CRALARMLVL a_lvl;
 
@@ -217,16 +213,18 @@ INrdinls(Bool initflg, Bool audflg)
 
 	if ((stat(IN_LDILIST, &stbuf) < 0) || (stbuf.st_size == 0)) {
 		//CR_PRM(a_lvl,"%sMISSING OR EMPTY INITLIST %s",err_msg,IN_LDILIST);
-		CR_PRM(POA_INF,"%sMISSING OR EMPTY INITLIST %s",err_msg,IN_LDILIST);
-    		return(GLfail);
+		//CR_PRM(POA_INF,"%sMISSING OR EMPTY INITLIST %s",err_msg,IN_LDILIST);
+    printf("%sMISSING OR EMPTY INITLIST %s\n",err_msg,IN_LDILIST);
+    return(GLfail);
 	}
 
 	int fd = open(IN_LDILIST,O_RDONLY);
 
 	if (fd < 0) {
 		//CR_PRM(a_lvl,"%sCANNOT OPEN INITLIST %s",err_msg,IN_LDILIST);
-		CR_PRM(POA_INF,"%sCANNOT OPEN INITLIST %s",err_msg,IN_LDILIST);
-	    	return(GLfail);
+		//CR_PRM(POA_INF,"%sCANNOT OPEN INITLIST %s",err_msg,IN_LDILIST);
+    printf("%sCANNOT OPEN INITLIST %s\n",err_msg,IN_LDILIST);
+    return(GLfail);
 	}
 
 	/*
@@ -237,7 +235,8 @@ INrdinls(Bool initflg, Bool audflg)
 	if (fptr != NULLPTR ) {
 		free(fptr);
 		fptr = NULLPTR;
-	    	INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): deallocated space for INITLIST from previous invocation"));
+    //INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): deallocated space for INITLIST from previous invocation"));
+    printf("INrdinls(): deallocated space for INITLIST from previous invocation\n");
 	}
 
 	/*
@@ -247,9 +246,10 @@ INrdinls(Bool initflg, Bool audflg)
 	 */
 
 	if ((fptr = (char *)malloc((stbuf.st_size+1))) == NULLPTR) {
-	    	INIT_ERROR(("Unable to malloc space to read in INITLIST"));
+    //INIT_ERROR(("Unable to malloc space to read in INITLIST"));
+    printf("Unable to malloc space to read in INITLIST");
 		close(fd);
-	    	return(GLfail);
+    return(GLfail);
 	}
 
 	int nread = read(fd,fptr,stbuf.st_size);
@@ -257,8 +257,9 @@ INrdinls(Bool initflg, Bool audflg)
 	close(fd);
 
 	if (nread != stbuf.st_size) {
-	    	//CR_PRM(a_lvl,"%sREAD ERROR ON INITLIST %s, ERRNO = %d",err_msg,IN_LDILIST,errno);
-	    	CR_PRM(POA_INF,"%sREAD ERROR ON INITLIST %s, ERRNO = %d",err_msg,IN_LDILIST,errno);
+    //CR_PRM(a_lvl,"%sREAD ERROR ON INITLIST %s, ERRNO = %d",err_msg,IN_LDILIST,errno);
+    //CR_PRM(POA_INF,"%sREAD ERROR ON INITLIST %s, ERRNO = %d",err_msg,IN_LDILIST,errno);
+    printf("%sREAD ERROR ON INITLIST %s, ERRNO = %d\n",err_msg,IN_LDILIST,errno);
 		free(fptr);
 		fptr = NULLPTR;
 	    	return(GLfail);
@@ -266,7 +267,9 @@ INrdinls(Bool initflg, Bool audflg)
 
 	fptr[stbuf.st_size] = '\0';
 
-	INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls():\n\tINITLIST file \"%s\" read successfully",IN_LDILIST));
+	//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls():\n\tINITLIST file \"%s\" read successfully",IN_LDILIST));
+  printf("INrdinls():\n\tINITLIST file \"%s\" read successfully\n",
+         IN_LDILIST);
 
 	file_index = fptr;
 
@@ -293,7 +296,8 @@ INrdinls(Bool initflg, Bool audflg)
 		/* Find = sign and replace it with string terminator */
 		if((equal_loc = strchr(token,'=')) == NULLPTR){
 			//CR_PRM(a_lvl,"%s%d NOT A NAME=VALUE ENTRY %s",lerr_msg,line,token);
-			CR_PRM(POA_INF,"%s%d NOT A NAME=VALUE ENTRY %s",lerr_msg,line,token);
+			//CR_PRM(POA_INF,"%s%d NOT A NAME=VALUE ENTRY %s",lerr_msg,line,token);
+      printf("%s%d NOT A NAME=VALUE ENTRY %s\n",lerr_msg,line,token);
 			return(GLfail);
 		}
 		
@@ -301,17 +305,20 @@ INrdinls(Bool initflg, Bool audflg)
 		*equal_loc = 0;
 		equal_loc++;
 		if(strlen(equal_loc) == 0){
-			CR_PRM(POA_INF,"%s%d NULL VALUE FOR PARAMETER %s",lerr_msg,line,token);
+			//CR_PRM(POA_INF,"%s%d NULL VALUE FOR PARAMETER %s",lerr_msg,line,token);
+      printf("%s%d NULL VALUE FOR PARAMETER %s\n",lerr_msg,line,token);
 			return(GLfail);
 		}
 
 		parameter = (IN_PARM_INDEX)INmatch_string(INparm_names,token,IN_PARM_MAX);
 		if(parm_updated[parameter] == TRUE){
-			CR_PRM(POA_INF,"%s%d DUPLICATE PARAMETER %s",lerr_msg,line,token);
+			//CR_PRM(POA_INF,"%s%d DUPLICATE PARAMETER %s",lerr_msg,line,token);
+      printf("%s%d DUPLICATE PARAMETER %s\n",lerr_msg,line,token);
 			return(GLfail);
 		}
 
-		INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): token %s, value %s",token,equal_loc));
+		//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): token %s, value %s",token,equal_loc));
+    printf("INrdinls(): token %s, value %s\n",token,equal_loc);
 		parm_updated[parameter] = TRUE;
 		
 		/* Parse the processor set first	*/
@@ -324,20 +331,25 @@ INrdinls(Bool initflg, Bool audflg)
 			int	nSets = 1;
 
 			if(pSet[0] == 0){
-				CR_PRM(POA_INF,"%s%d INVALID VALUE %s FOR %s",lerr_msg, line, equal_loc, token);
+				//CR_PRM(POA_INF,"%s%d INVALID VALUE %s FOR %s",lerr_msg, line, equal_loc, token);
+        printf("%s%d INVALID VALUE %s FOR %s\n",lerr_msg, line, equal_loc, token);
 				return(GLfail);
 			}
 			pNum[0] = pSet;
 			while(*cProc != 0){
 				if(!isdigit(*cProc) && *cProc != ','){
-					CR_PRM(POA_INF,"%s%d INVALID VALUE %s FOR %s",lerr_msg, line, equal_loc, token);
+					//CR_PRM(POA_INF,"%s%d INVALID VALUE %s FOR %s",lerr_msg, line, equal_loc, token);
+          printf("%s%d INVALID VALUE %s FOR %s\n",
+                 lerr_msg, line, equal_loc, token);
 					return(GLfail);
 				}
 				if(*cProc == ','){
 					*cProc = 0;
 					cProc++;
 					if(nSets == INmaxProcessors || !isdigit(*cProc)){
-						CR_PRM(POA_INF,"%s%d INVALID VALUE %s FOR %s",lerr_msg, line, equal_loc, token);
+						//CR_PRM(POA_INF,"%s%d INVALID VALUE %s FOR %s",lerr_msg, line, equal_loc, token);
+            printf("%s%d INVALID VALUE %s FOR %s\n",
+                   lerr_msg, line, equal_loc, token);
 						return(GLfail);
 					}
 					pNum[nSets] = cProc;
@@ -507,7 +519,9 @@ INrdinls(Bool initflg, Bool audflg)
 				INfailover_alarm = POA_CRIT;
 				break;
 			default:
-				CR_PRM(a_lvl,"%s%d VALUE FOR failover_alarm=%s MUST BE 0, 1 or 2, reset to 0",lerr_msg,line,equal_loc);
+				//CR_PRM(a_lvl,"%s%d VALUE FOR failover_alarm=%s MUST BE 0, 1 or 2, reset to 0",lerr_msg,line,equal_loc);
+        printf("%s%d VALUE FOR failover_alarm=%s MUST BE 0, 1 or 2, reset to 0",
+               lerr_msg,line,equal_loc);
 				INfailover_alarm = POA_INF;
 				break;
 			}
@@ -642,7 +656,9 @@ INrdinls(Bool initflg, Bool audflg)
         			return(GLfail);
 			}
 			if(!INissimplex){
-				CR_PRM(POA_INF,"%s%d max_boots NOT SUPPORTED ON ACTIVE/ACTIVE - IGNORED",lerr_msg,line);
+				//CR_PRM(POA_INF,"%s%d max_boots NOT SUPPORTED ON ACTIVE/ACTIVE - IGNORED",lerr_msg,line);
+        printf("%s%d max_boots NOT SUPPORTED ON ACTIVE/ACTIVE - IGNORED",
+               lerr_msg,line);
 				break;
 			}
 			if((INmax_boots = INconvparm(equal_loc,token,TRUE,INminBoot,line)) > INmaxBoot){
@@ -702,7 +718,9 @@ INrdinls(Bool initflg, Bool audflg)
 				return(GLfail);
 			}
 			if(sys_parms.vhost[0][0] == 0 || sys_parms.vhost[1][0] == 0){
-				CR_PRM(POA_INF,"%s%d VALUE FOR vhost=%s MUST HAVE TWO HOSTS",lerr_msg,line,equal_loc);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR vhost=%s MUST HAVE TWO HOSTS",lerr_msg,line,equal_loc);
+        printf("%s%d VALUE FOR vhost=%s MUST HAVE TWO HOSTS",
+               lerr_msg,line,equal_loc);
 				return(GLfail);
 			}
 			break;
@@ -721,7 +739,9 @@ INrdinls(Bool initflg, Bool audflg)
 				sys_parms.buffered = YES;
 				break;
 			case IN_MAX_BOOL:
-				CR_PRM(POA_INF,"%s%d VALUE FOR buffered=%s MUST BE YES OR NO",lerr_msg,line,equal_loc);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR buffered=%s MUST BE YES OR NO",lerr_msg,line,equal_loc);
+        printf("%s%d VALUE FOR buffered=%s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc);
 				return(GLfail);
 			}
 			break;
@@ -735,7 +755,9 @@ INrdinls(Bool initflg, Bool audflg)
 				sys_parms.sys_crerror_inh = YES;
 				break;
 			case IN_MAX_BOOL:
-				CR_PRM(POA_INF,"%s%d VALUE FOR sys_crerror_inh=%s MUST BE YES OR NO",lerr_msg,line,equal_loc);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR sys_crerror_inh=%s MUST BE YES OR NO",lerr_msg,line,equal_loc);
+        printf("%s%d VALUE FOR sys_crerror_inh=%s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc);
 				return(GLfail);
 			}
 			break;
@@ -744,10 +766,13 @@ INrdinls(Bool initflg, Bool audflg)
 			first_proc_parm = TRUE;
 			break;
 		case IN_PARM_MAX:
-			CR_PRM(POA_INF,"%s%d INVALID PARAMETER %s",lerr_msg,line,token);
+			//CR_PRM(POA_INF,"%s%d INVALID PARAMETER %s",lerr_msg,line,token);
+      printf("%s%d INVALID PARAMETER %s\n",lerr_msg,line,token);
 			return(GLfail);
 		default:
-			CR_PRM(POA_INF,"%s%d PROCESS PARAMETER %s APPEARING BEFORE msgh_name WAS DEFINED",lerr_msg,line,token);
+			//CR_PRM(POA_INF,"%s%d PROCESS PARAMETER %s APPEARING BEFORE msgh_name WAS DEFINED",lerr_msg,line,token);
+      printf("%s%d PROCESS PARAMETER %s APPEARING BEFORE msgh_name WAS DEFINED\n",
+             lerr_msg,line,token);
 			return(GLfail);
 		}
 	}
@@ -756,8 +781,10 @@ INrdinls(Bool initflg, Bool audflg)
 	Bool sys_all_set = TRUE;
 	for(parm_idx = IN_SYS_RUN_LVL; parm_idx < IN_PS000; parm_idx++){
 		if(parm_updated[parm_idx] == FALSE){
-				CR_PRM(POA_INF,"%s%d MISSING SYSTEM PARAMETER %s",lerr_msg,line,INparm_names[parm_idx]);
-				sys_all_set = FALSE;
+      //CR_PRM(POA_INF,"%s%d MISSING SYSTEM PARAMETER %s",lerr_msg,line,INparm_names[parm_idx]);
+      printf("%s%d MISSING SYSTEM PARAMETER %s\n",
+             lerr_msg,line,INparm_names[parm_idx]);
+      sys_all_set = FALSE;
 		}
 	}
 	
@@ -766,12 +793,16 @@ INrdinls(Bool initflg, Bool audflg)
 	** true then reset the tresholds and print the PRM indicating that.
 	*/
 	if(INvmem_major < INvmem_critical){
-		CR_PRM(POA_INF,"%s vmem_major=%d VALUE TOO SMALL - RESET TO %d",err_msg,INvmem_major,INvmem_critical);
+		//CR_PRM(POA_INF,"%s vmem_major=%d VALUE TOO SMALL - RESET TO %d",err_msg,INvmem_major,INvmem_critical);
+    printf("%s vmem_major=%d VALUE TOO SMALL - RESET TO %d\n",
+           err_msg,INvmem_major,INvmem_critical);
 		INvmem_major = INvmem_critical;
 	}
 
 	if(INvmem_minor < INvmem_major){
-		CR_PRM(POA_INF,"%s vmem_minor=%d VALUE TOO SMALL - RESET TO %d",err_msg,INvmem_minor,INvmem_major);
+		//CR_PRM(POA_INF,"%s vmem_minor=%d VALUE TOO SMALL - RESET TO %d",err_msg,INvmem_minor,INvmem_major);
+    printf("%s vmem_minor=%d VALUE TOO SMALL - RESET TO %d",
+           err_msg,INvmem_minor,INvmem_major);
 		INvmem_minor = INvmem_major;
 	}
 
@@ -798,7 +829,8 @@ INrdinls(Bool initflg, Bool audflg)
 			if(INgettoken(token,file_index,line) != GLfail){
 				/* Find = sign and replace it with string terminator */
 				if((equal_loc = strchr(token,'=')) == NULLPTR){
-					CR_PRM(POA_INF,"%s%d NOT A NAME=VALUE ENTRY %s",lerr_msg,line,token);
+					//CR_PRM(POA_INF,"%s%d NOT A NAME=VALUE ENTRY %s",lerr_msg,line,token);
+          printf("%s%d NOT A NAME=VALUE ENTRY %s\n",lerr_msg,line,token);
 					return(GLfail);
 				}
 
@@ -806,18 +838,21 @@ INrdinls(Bool initflg, Bool audflg)
 				*equal_loc = 0;
 				equal_loc++;
 				if(strlen(equal_loc) == 0){
-					CR_PRM(POA_INF,"%s%d NULL VALUE FOR PARAMETER %s",lerr_msg,line,token);
+					//CR_PRM(POA_INF,"%s%d NULL VALUE FOR PARAMETER %s",lerr_msg,line,token);
+          printf("%s%d NULL VALUE FOR PARAMETER %s\n",lerr_msg,line,token);
 					return(GLfail);
 				}
 
 				parameter = (IN_PARM_INDEX)INmatch_string(INparm_names,token,IN_PARM_MAX);
 				if(parm_updated[parameter] == TRUE){
-					CR_PRM(POA_INF,"%s%d DUPLICATE PARAMETER %s",lerr_msg,line,token);
+					//CR_PRM(POA_INF,"%s%d DUPLICATE PARAMETER %s",lerr_msg,line,token);
+          printf("%s%d DUPLICATE PARAMETER %s\n",lerr_msg,line,token);
 					return(GLfail);
 				}
 
 				parm_updated[parameter] = TRUE;
-				INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): token %s, value %s",token,equal_loc));
+				//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): token %s, value %s",token,equal_loc));
+        printf("INrdinls(): token %s, value %s\n",token,equal_loc);
 			} else {
 				process_info = FALSE;
 				// This will force required argument checking  for 
@@ -832,7 +867,10 @@ INrdinls(Bool initflg, Bool audflg)
 				/* Verify that previous process had all the required parameters */
 				for(parm_idx = IN_MSGH_NAME + 1; parm_idx <= IN_USER_ID; parm_idx++){
 					if(parm_updated[parm_idx] == FALSE){
-						CR_PRM(POA_INF,"%s%d REQUIRED PARAMETER %s NOT DEFINED FOR %s",lerr_msg,line,INparm_names[parm_idx],proc_parms[proc_parms_idx].msgh_name);
+						//CR_PRM(POA_INF,"%s%d REQUIRED PARAMETER %s NOT DEFINED FOR %s",lerr_msg,line,INparm_names[parm_idx],proc_parms[proc_parms_idx].msgh_name);
+            printf("%s%d REQUIRED PARAMETER %s NOT DEFINED FOR %s\n",
+                   lerr_msg,line,INparm_names[parm_idx],
+                   proc_parms[proc_parms_idx].msgh_name);
 						return(GLfail);
 					}
 				}
@@ -852,25 +890,32 @@ INrdinls(Bool initflg, Bool audflg)
 
 			proc_parms_idx++;
 			if(proc_parms_idx >= IN_SNPRCMX){
-				CR_PRM(POA_INF,"%s%d TOO MANY PROCESSES IN %s INITLIST",lerr_msg,line,IN_LDILIST);
+				//CR_PRM(POA_INF,"%s%d TOO MANY PROCESSES IN %s INITLIST",lerr_msg,line,IN_LDILIST);
+        printf("%s%d TOO MANY PROCESSES IN %s INITLIST\n",
+               lerr_msg,line,IN_LDILIST);
 				return(GLfail);
 			}
 			
 			/* Verify that there are no duplicate process names */
 			for(j = 0; j < proc_parms_idx; j++){
 				if(strcmp(equal_loc,proc_parms[j].msgh_name) == 0){
-					CR_PRM(POA_INF,"%s%d DUPLICATE MSGH_NAME %s",lerr_msg,line,equal_loc);
+					//CR_PRM(POA_INF,"%s%d DUPLICATE MSGH_NAME %s",lerr_msg,line,equal_loc);
+          printf("%s%d DUPLICATE MSGH_NAME %s\n",
+                 lerr_msg,line,equal_loc);
 					return(GLfail);
 				}
 			}
 			/* Verify that process name is not INIT name */
 			if (strcmp(equal_loc, IN_MSGHQNM) == 0) {
-				CR_PRM(POA_INF,"%s%d MSGH_NAME %s IS RESERVED",lerr_msg,line, equal_loc);
+				//CR_PRM(POA_INF,"%s%d MSGH_NAME %s IS RESERVED",lerr_msg,line, equal_loc);
+        printf("%s%d MSGH_NAME %s IS RESERVED\n",lerr_msg,line, equal_loc);
 				return(GLfail);
 			}
 			
 			if(strlen(equal_loc) >= IN_NAMEMX){ 
-				CR_PRM(POA_INF,"%s%d LENGTH OF PROCESS NAME %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_NAMEMX);
+				//CR_PRM(POA_INF,"%s%d LENGTH OF PROCESS NAME %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_NAMEMX);
+        printf("%s%d LENGTH OF PROCESS NAME %s GREATER THAN MAXIMUM LENGTH %d\n",
+               lerr_msg,line,equal_loc,IN_NAMEMX);
 				return(GLfail);
 			}
 			strcpy(proc_parms[proc_parms_idx].msgh_name,equal_loc);
@@ -882,7 +927,9 @@ INrdinls(Bool initflg, Bool audflg)
 			proc_parms[proc_parms_idx].run_lvl = atoi(equal_loc);
 			if((atoi(equal_loc) > 255) ||
 				(proc_parms[proc_parms_idx].run_lvl == 0)){
-				CR_PRM(POA_INF,"%s%d run_level %s INVALID FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d run_level %s INVALID FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d run_level %s INVALID FOR %s\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -892,7 +939,9 @@ INrdinls(Bool initflg, Bool audflg)
 			}
 			proc_parms[proc_parms_idx].msgh_qid = atoi(equal_loc);
 			if(atoi(equal_loc) > MHmaxPermProc){
-				CR_PRM(POA_INF,"%s%d msgh_qid %s INVALID FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d msgh_qid %s INVALID FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d msgh_qid %s INVALID FOR %s\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			/* Check for unique value, duplicated msgh_qids are not allowed */
@@ -901,39 +950,28 @@ INrdinls(Bool initflg, Bool audflg)
 
 			for(k = 0; k < proc_parms_idx; k++){
 				if(msgh_qid == proc_parms[k].msgh_qid){
-					CR_PRM(POA_INF,"%s%d msgh_qid %s IS NOT UNIQUE FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+					//CR_PRM(POA_INF,"%s%d msgh_qid %s IS NOT UNIQUE FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+          printf("%s%d msgh_qid %s IS NOT UNIQUE FOR %s\n",
+                 lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 					return(GLfail);
 				}
 			}
 			break;
         	case IN_PATH:
 			if(strlen(equal_loc) >= IN_PATHNMMX){ 
-				CR_PRM(POA_INF,"%s%d LENGTH OF PATH %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_PATHNMMX);
+				//CR_PRM(POA_INF,"%s%d LENGTH OF PATH %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_PATHNMMX);
+        printf("%s%d LENGTH OF PATH %s GREATER THAN MAXIMUM LENGTH %d\n",
+               lerr_msg,line,equal_loc,IN_PATHNMMX);
 				return(GLfail);
 			}
 #ifdef CC
 			if(*equal_loc != '/'){ 
-				CR_PRM(POA_INF,"%s%d PATH %s MUST START AT ROOT",lerr_msg,line,equal_loc);
+				//CR_PRM(POA_INF,"%s%d PATH %s MUST START AT ROOT",lerr_msg,line,equal_loc);
+        printf("%s%d PATH %s MUST START AT ROOT\n",lerr_msg,line,equal_loc);
 				return(GLfail);
 			}
 #endif
-#ifndef  EES
-			/* Do not bother checking path if process is not running
-			** on active node.  The entries in initlist must have 
-			** the on_active argument entered before path to insure
-			** process existence checking.
-			** Runlevel also must be entered before path.
-			*/
-			
-			if((IN_LDCURSTATE != S_LEADACT &&
-				proc_parms[proc_parms_idx].on_active == FALSE) ||
-			   (initflg == TRUE &&
-				proc_parms[proc_parms_idx].run_lvl > sys_parms.first_runlvl)){
-				INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): ignoring path check for %s",proc_parms[proc_parms_idx].msgh_name));
-				strcpy(proc_parms[proc_parms_idx].path,equal_loc);
-				break;
-			}
-#endif
+
 			/*
 		 	* Verify that the path references an existing executable
 		 	* file only if official path not specfied, otherwise
@@ -952,37 +990,41 @@ INrdinls(Bool initflg, Bool audflg)
 							strcat(tmp_path,".new");
 							if(INsudata[j].new_obj == FALSE ||
 								INgetpath(tmp_path,TRUE) != GLsuccess){
-								CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+								//CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+                printf("%s%d CANNOT FIND EXECUTABLE FILE %s\n",
+                       lerr_msg,line, equal_loc);
 								return(GLfail);
 							}
 						}
 					} else {
 #endif
-						CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+						//CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+            printf("%s%d CANNOT FIND EXECUTABLE FILE %s\n",
+                   lerr_msg,line, equal_loc);
 						return(GLfail);
 #ifdef OLD_SU
 					}
 #endif
 				}
 			} else if(INgetpath(equal_loc, TRUE, TRUE) != GLsuccess){
-				CR_PRM(POA_INF,"%s%d CANNOT FIND DIRECTORY %s",lerr_msg,line, equal_loc);
+				//CR_PRM(POA_INF,"%s%d CANNOT FIND DIRECTORY %s",lerr_msg,line, equal_loc);
+        printf("%s%d CANNOT FIND DIRECTORY %s",lerr_msg,line, equal_loc);
 				return(GLfail);
 			}
 			strcpy(proc_parms[proc_parms_idx].path,equal_loc);
 			break;
-        	case IN_OFC_PATH:
-			CR_PRM(a_lvl,"%s%d OFC_PATH PARAMETER NOT SUPPORTED ON CONTROL SERVER",lerr_msg,line);
-			return(GLfail);
-			if(strlen(equal_loc) >= IN_OPATHNMMX){ 
-				CR_PRM(POA_INF,"%s%d LENGTH OF OFC_PATH %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_OPATHNMMX);
-				return(GLfail);
-			}
-#ifndef EES
-			if(*equal_loc != '/'){ 
-				CR_PRM(POA_INF,"%s%d OFC_PATH %s MUST START AT ROOT",lerr_msg,line,equal_loc);
-				return(GLfail);
-			}
-#endif
+    case IN_OFC_PATH:
+      //CR_PRM(a_lvl,"%s%d OFC_PATH PARAMETER NOT SUPPORTED ON CONTROL SERVER",lerr_msg,line);
+      printf("%s%d OFC_PATH PARAMETER NOT SUPPORTED ON CONTROL SERVER\n",
+             lerr_msg,line);
+      return(GLfail);
+      if(strlen(equal_loc) >= IN_OPATHNMMX){ 
+        //CR_PRM(POA_INF,"%s%d LENGTH OF OFC_PATH %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_OPATHNMMX);
+        printf("%s%d LENGTH OF OFC_PATH %s GREATER THAN MAXIMUM LENGTH %d\n",
+               lerr_msg,line,equal_loc,IN_OPATHNMMX);
+        return(GLfail);
+      }
+
 			/*
 		 	* Verify that the path references an existing executable
 		 	* file:
@@ -996,7 +1038,9 @@ INrdinls(Bool initflg, Bool audflg)
 					** strategy is implemented
 					*/
 				} else {
-					CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+					//CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+          printf("%s%d CANNOT FIND EXECUTABLE FILE %s\n",
+                 lerr_msg,line, equal_loc);
 					return(GLfail);
 				}
 			}
@@ -1004,21 +1048,20 @@ INrdinls(Bool initflg, Bool audflg)
 			break;
         	case IN_EXT_PATH:
 			if(strlen(equal_loc) >= IN_EPATHNMMX){ 
-				CR_PRM(POA_INF,"%s%d LENGTH OF EXT_PATH %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_EPATHNMMX);
+				//CR_PRM(POA_INF,"%s%d LENGTH OF EXT_PATH %s GREATER THAN MAXIMUM LENGTH %d",lerr_msg,line,equal_loc,IN_EPATHNMMX);
+        printf("%s%d LENGTH OF EXT_PATH %s GREATER THAN MAXIMUM LENGTH %d\n",
+               lerr_msg,line,equal_loc,IN_EPATHNMMX);
 				return(GLfail);
 			}
-#ifndef EES
-			if(*equal_loc != '/'){ 
-				CR_PRM(POA_INF,"%s%d EXT_PATH %s MUST START AT ROOT",lerr_msg,line,equal_loc);
-				return(GLfail);
-			}
-#endif
+
 			/*
 		 	* Verify that the path references an existing executable
 		 	* file:
 		 	*/
 			if (audflg == TRUE && INgetpath(equal_loc, TRUE) != GLsuccess) {
-				CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+				//CR_PRM(POA_INF,"%s%d CANNOT FIND EXECUTABLE FILE %s",lerr_msg,line, equal_loc);
+        printf("%s%d CANNOT FIND EXECUTABLE FILE %s\n",
+               lerr_msg,line, equal_loc);
 				return(GLfail);
 			}
 			strcpy(proc_parms[proc_parms_idx].ext_path,equal_loc);
@@ -1028,7 +1071,9 @@ INrdinls(Bool initflg, Bool audflg)
 				// try to lookup user id from password file
 				struct passwd* pswd;
 				if((pswd = getpwnam(equal_loc)) == NULL){
-					CR_PRM(POA_INF,"%s%d CANNOT FIND USER ID %s ERRNO %d",lerr_msg,line, equal_loc, errno);
+					//CR_PRM(POA_INF,"%s%d CANNOT FIND USER ID %s ERRNO %d",lerr_msg,line, equal_loc, errno);
+          printf("%s%d CANNOT FIND USER ID %s ERRNO %d\n",
+                 lerr_msg,line, equal_loc, errno);
 					return(GLfail);
 				}
 				proc_parms[proc_parms_idx].user_id = pswd->pw_uid;
@@ -1043,7 +1088,9 @@ INrdinls(Bool initflg, Bool audflg)
 				// try to lookup group id from password file
 				struct passwd* pswd;
 				if((pswd = getpwnam(equal_loc)) == NULL){
-					CR_PRM(POA_INF,"%s%d CANNOT FIND GROUP ID %s ERRNO %d",lerr_msg,line, equal_loc, errno);
+					//CR_PRM(POA_INF,"%s%d CANNOT FIND GROUP ID %s ERRNO %d",lerr_msg,line, equal_loc, errno);
+          printf("%s%d CANNOT FIND GROUP ID %s ERRNO %d\n",
+                 lerr_msg,line, equal_loc, errno);
 					return(GLfail);
 				}
 				proc_parms[proc_parms_idx].group_id = pswd->pw_uid;
@@ -1057,15 +1104,12 @@ INrdinls(Bool initflg, Bool audflg)
 			if(INis_numeric(equal_loc,token,a_lvl,line) == FALSE){
 				return(GLfail);
 			} 
-#ifdef __linux
 			if(proc_parms[proc_parms_idx].isRT != IN_NOTRT){
 				proc_parms[proc_parms_idx].priority = INconvparm(equal_loc,token,FALSE,INmaxPrioRT - 1, line);
 			} else {
 				proc_parms[proc_parms_idx].priority = INconvparm(equal_loc,token,FALSE,IN_MAXPRIO-1,line);
 			}
-#else
-			proc_parms[proc_parms_idx].priority = INconvparm(equal_loc,token,FALSE,IN_MAXPRIO-1,line);
-#endif
+
 			break;
         	case IN_SANITY_TIMER:
 			if(INis_numeric(equal_loc,token,a_lvl,line) == FALSE){
@@ -1121,13 +1165,17 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].inhibit_restart = IN_INHRESTART;
 				break;
 			case IN_MAX_BOOL:
-				CR_PRM(POA_INF,"%s%d VALUE FOR inhibit_restart=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR inhibit_restart=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR inhibit_restart=%s FOR %s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
         	case IN_PROCESS_CATEGORY:
 			if((proc_parms[proc_parms_idx].proc_category = (IN_PROC_CATEGORY)INmatch_string(INcategory_vals,equal_loc,IN_MAX_CAT)) == IN_MAX_CAT){
-				CR_PRM(POA_INF,"%s%d INVALID process_category=%s FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d INVALID process_category=%s FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d INVALID process_category=%s FOR %s\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -1176,7 +1224,9 @@ INrdinls(Bool initflg, Bool audflg)
 			ps = atoi(equal_loc);
 			if(ps < 0 || ps >=INmaxPsets || 
 				(sys_parms.pset[ps][0] == -1 && IN_LDPSET[ps] == -1)){
-				CR_PRM(POA_INF,"%s%d INVALID PROCESSOR SET=%s FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d INVALID PROCESSOR SET=%s FOR %s",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d INVALID PROCESSOR SET=%s FOR %s\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			proc_parms[proc_parms_idx].ps = ps;
@@ -1204,7 +1254,9 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].crerror_inh = YES;
 				break;
 			case IN_MAX_BOOL:
-				CR_PRM(POA_INF,"%s%d VALUE FOR crerror_inh=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR crerror_inh=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR crerror_inh=%s FOR %s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -1218,7 +1270,9 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].on_active = YES;
 				break;
 			default:
-				CR_PRM(POA_INF,"%s%d VALUE FOR on_active=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR on_active=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR on_active=%s FOR %s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -1232,7 +1286,9 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].oamleadonly = YES;
 				break;
 			default:
-				CR_PRM(POA_INF,"%s%d VALUE FOR oamleadonly=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR oamleadonly=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR oamleadonly=%s FOR %s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -1246,7 +1302,9 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].active_vhost_only = YES;
 				break;
 			default:
-				CR_PRM(POA_INF,"%s%d VALUE FOR active_vhost_only=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR active_vhost_only=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR active_vhost_only=%s FOR %s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -1260,7 +1318,9 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].third_party = YES;
 				break;
 			default:
-				CR_PRM(POA_INF,"%s%d VALUE FOR third_party=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR third_party=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR third_party=%s FOR %s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -1273,7 +1333,9 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].isRT = rt_val;
 				break;
 			default:
-				CR_PRM(POA_INF,"%s%d VALUE FOR rt=%s FOR %s MUST BE NO, RR or FIFO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR rt=%s FOR %s MUST BE NO, RR or FIFO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR rt=%s FOR %s MUST BE NO, RR or FIFO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
@@ -1287,15 +1349,21 @@ INrdinls(Bool initflg, Bool audflg)
 				proc_parms[proc_parms_idx].inh_softchk = IN_INHSOFTCHK;
 				break;
 			case IN_MAX_BOOL:
-				CR_PRM(POA_INF,"%s%d VALUE FOR inhibit_softchk=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+				//CR_PRM(POA_INF,"%s%d VALUE FOR inhibit_softchk=%s FOR %s MUST BE YES OR NO",lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
+        printf("%s%d VALUE FOR inhibit_softchk=%s FOR %s MUST BE YES OR NO\n",
+               lerr_msg,line,equal_loc,proc_parms[proc_parms_idx].msgh_name);
 				return(GLfail);
 			}
 			break;
-        	case IN_PARM_MAX:
-			CR_PRM(POA_INF,"%s%d INVALID PARAMETER %s FOR %s",lerr_msg,line,token,proc_parms[proc_parms_idx].msgh_name);
+    case IN_PARM_MAX:
+      //CR_PRM(POA_INF,"%s%d INVALID PARAMETER %s FOR %s",lerr_msg,line,token,proc_parms[proc_parms_idx].msgh_name);
+      printf("%s%d INVALID PARAMETER %s FOR %s\n",
+             lerr_msg,line,token,proc_parms[proc_parms_idx].msgh_name);
 			return(GLfail);
 		default:
-			CR_PRM(POA_INF,"%s%d SYSTEM PARAMETER %s FOUND WHILE PROCESSING PROCESS %s ENTRIES",lerr_msg,line,token,proc_parms[proc_parms_idx].msgh_name);
+			//CR_PRM(POA_INF,"%s%d SYSTEM PARAMETER %s FOUND WHILE PROCESSING PROCESS %s ENTRIES",lerr_msg,line,token,proc_parms[proc_parms_idx].msgh_name);
+      printf("%s%d SYSTEM PARAMETER %s FOUND WHILE PROCESSING PROCESS %s ENTRIES\n",
+             lerr_msg,line,token,proc_parms[proc_parms_idx].msgh_name);
 			return(GLfail);
 		}
 
@@ -1306,7 +1374,8 @@ INrdinls(Bool initflg, Bool audflg)
 	if(audflg == TRUE){
 		free(fptr);
 		fptr = NULLPTR;
-		INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): returning success in audit mode"));
+		//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): returning success in audit mode"));
+    printf("INrdinls(): returning success in audit mode\n");
 		return(GLsuccess);
 	}
 
@@ -1363,7 +1432,10 @@ INrdinls(Bool initflg, Bool audflg)
 				 *  current run level.  Skip over it and go
 				 *  on.
 				 */
-				INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): run level %d lower than proc's %d in INITLIST for process %s",IN_LDSTATE.run_lvl,proc_parms[proc_parms_idx].run_lvl,proc_parms[proc_parms_idx].msgh_name));
+				//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): run level %d lower than proc's %d in INITLIST for process %s",IN_LDSTATE.run_lvl,proc_parms[proc_parms_idx].run_lvl,proc_parms[proc_parms_idx].msgh_name));
+        printf("INrdinls(): run level %d lower than proc's %d in INITLIST for process %s\n",
+               IN_LDSTATE.run_lvl,proc_parms[proc_parms_idx].run_lvl,
+               proc_parms[proc_parms_idx].msgh_name);
 				continue;
 	    		}
 			/* Check to see if we are going active or lead and do not
@@ -1371,28 +1443,35 @@ INrdinls(Bool initflg, Bool audflg)
 			*/
 			if(proc_parms[proc_parms_idx].on_active == FALSE &&
 				IN_LDCURSTATE == S_ACT){
-				INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s not running on active",proc_parms[proc_parms_idx].msgh_name));
+				//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s not running on active",proc_parms[proc_parms_idx].msgh_name));
+        printf("INrdinls(): process %s not running on active\n",
+               proc_parms[proc_parms_idx].msgh_name);
 				continue;
 			}
 			/* If we are on oamlead load oamlead only processes
 			** otherwise skip
 			*/
 			if(proc_parms[proc_parms_idx].oamleadonly == TRUE && INevent.getOAMLead() != INmyPeerHostId){
-				INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on oamlead",proc_parms[proc_parms_idx].msgh_name));
+				//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on oamlead",proc_parms[proc_parms_idx].msgh_name));
+        printf("INrdinls(): process %s only running on oamlead\n",
+               proc_parms[proc_parms_idx].msgh_name);
 				continue;
 			}
 			/* If we are on active vhost load on_active_vhost only processes
 			** otherwise skip
 			*/
 			if(proc_parms[proc_parms_idx].active_vhost_only == TRUE && !INevent.isVhostActive()){
-				INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on active vhost",proc_parms[proc_parms_idx].msgh_name));
+				//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on active vhost",proc_parms[proc_parms_idx].msgh_name));
+        printf("INrdinls(): process %s only running on active vhost\n",
+               proc_parms[proc_parms_idx].msgh_name);
 				continue;
 			}
 			proc_cnt++;
 			if (proc_cnt >= IN_SNPRCMX) {
 				/*  No more available process table entries... */
-				CR_PRM(POA_INF,"%sEXCEEDED MAXIMUM NUMBER OF PROCESSES %d IN PROCESS TABLE",err_msg, pt_indx);
-
+				//CR_PRM(POA_INF,"%sEXCEEDED MAXIMUM NUMBER OF PROCESSES %d IN PROCESS TABLE",err_msg, pt_indx);
+        printf("%sEXCEEDED MAXIMUM NUMBER OF PROCESSES %d IN PROCESS TABLE\n",
+               err_msg, pt_indx);
 				return(GLfail);
 			}
 		} else {
@@ -1401,19 +1480,26 @@ INrdinls(Bool initflg, Bool audflg)
 			** not being changed.
 			*/
 			if(IN_LDPTAB[pt_indx].run_lvl != proc_parms[proc_parms_idx].run_lvl){
-				CR_PRM(POA_INF,"%srun_level CHANGE OF EXISTING PROCESS %s FROM %d TO %d CAN ONLY OCCUR DURING SYSTEM INIT",err_msg, IN_LDPTAB[pt_indx].proctag,IN_LDPTAB[pt_indx].run_lvl,proc_parms[proc_parms_idx].run_lvl);
+				//CR_PRM(POA_INF,"%srun_level CHANGE OF EXISTING PROCESS %s FROM %d TO %d CAN ONLY OCCUR DURING SYSTEM INIT",err_msg, IN_LDPTAB[pt_indx].proctag,IN_LDPTAB[pt_indx].run_lvl,proc_parms[proc_parms_idx].run_lvl);
+        printf("%srun_level CHANGE OF EXISTING PROCESS %s FROM %d TO %d CAN ONLY OCCUR DURING SYSTEM INIT\n",
+               err_msg, IN_LDPTAB[pt_indx].proctag,IN_LDPTAB[pt_indx].run_lvl,proc_parms[proc_parms_idx].run_lvl);
 				return(GLfail);
 			}
 			/* Verify that msgh_qid level is not being changed.
 			*/
 			if(IN_LDPTAB[pt_indx].msgh_qid != proc_parms[proc_parms_idx].msgh_qid){
-				CR_PRM(POA_INF,"%smsgh_qid CHANGE OF EXISTING PROCESS %s FROM %d TO %d CAN ONLY OCCUR DURING SYSTEM INIT",err_msg, IN_LDPTAB[pt_indx].proctag,IN_LDPTAB[pt_indx].msgh_qid,proc_parms[proc_parms_idx].msgh_qid);
+				//CR_PRM(POA_INF,"%smsgh_qid CHANGE OF EXISTING PROCESS %s FROM %d TO %d CAN ONLY OCCUR DURING SYSTEM INIT",err_msg, IN_LDPTAB[pt_indx].proctag,IN_LDPTAB[pt_indx].msgh_qid,proc_parms[proc_parms_idx].msgh_qid);
+        printf("%smsgh_qid CHANGE OF EXISTING PROCESS %s FROM %d TO %d CAN ONLY OCCUR DURING SYSTEM INIT\n",
+               err_msg, IN_LDPTAB[pt_indx].proctag,IN_LDPTAB[pt_indx].msgh_qid,
+               proc_parms[proc_parms_idx].msgh_qid);
 				return(GLfail);
 			}
 
 			/* Only permament process info can be changed through initlist */
 			if(IN_LDPTAB[pt_indx].permstate != IN_PERMPROC){
-				CR_PRM(POA_INF,"%sINITLIST CANNOT CHANGE PROCESS PARAMETERS FOR AN EXISTING NON-PERMAMENT PROCESS %s",err_msg, IN_LDPTAB[pt_indx].proctag);
+				//CR_PRM(POA_INF,"%sINITLIST CANNOT CHANGE PROCESS PARAMETERS FOR AN EXISTING NON-PERMAMENT PROCESS %s",err_msg, IN_LDPTAB[pt_indx].proctag);
+        printf("%sINITLIST CANNOT CHANGE PROCESS PARAMETERS FOR AN EXISTING NON-PERMAMENT PROCESS %s\n",
+               err_msg, IN_LDPTAB[pt_indx].proctag);
 				return(GLfail);
 			}
 		}
@@ -1470,28 +1556,35 @@ INrdinls(Bool initflg, Bool audflg)
 			}
 			plist[strlen(plist) - 1] = 0;
 			/* New set, create it	*/
-			CR_PRM(POA_INF, "REPT INIT CREATING PROCESSOR SET %d - %s", psNum, plist);
+			//CR_PRM(POA_INF, "REPT INIT CREATING PROCESSOR SET %d - %s", psNum, plist);
+      printf("REPT INIT CREATING PROCESSOR SET %d - %s\n",
+             psNum, plist);
 			if(pset_create(&IN_LDPSET[psNum]) == 0){
 				psetid_t 	opset;
 				for(i = 0; i < INmaxProcessors && sys_parms.pset[psNum][i] != -1; i++){
 					opset = -1;
 					if(pset_assign(IN_LDPSET[psNum], sys_parms.pset[psNum][i], &opset) != 0){
-						CR_PRM(POA_MIN, "REPT INIT FAILED TO ADD PROCESSOR %d to PROCESSOR SET %d, ERRNO %d",
-						sys_parms.pset[psNum][i], psNum, errno);
+						//CR_PRM(POA_MIN, "REPT INIT FAILED TO ADD PROCESSOR %d to PROCESSOR SET %d, ERRNO %d",
+            //       sys_parms.pset[psNum][i], psNum, errno);
+            printf("REPT INIT FAILED TO ADD PROCESSOR %d to PROCESSOR SET %d, ERRNO %d",
+                   sys_parms.pset[psNum][i], psNum, errno);
 					}
 					if(opset != -1){
 						int 	j;
 						for(j = 0; j < INmaxPsets; j++){
 							if(IN_LDPSET[j] == opset){
 								CR_PRM(POA_INF, "REPT INIT PROCESSOR %d WAS REMOVED FROM PROCESSOR SET %d",
-								sys_parms.pset[psNum][i], j);
+                       sys_parms.pset[psNum][i], j);
+                printf("REPT INIT PROCESSOR %d WAS REMOVED FROM PROCESSOR SET %d\n",
+                       sys_parms.pset[psNum][i], j);
 								break;
 							}
 						}
 					}
 				}
 			} else {
-				CR_PRM(POA_MIN, "REPT INIT FAILED TO CREATE PROCESSOR SET %d, ERRNO %d", psNum, errno);
+				//CR_PRM(POA_MIN, "REPT INIT FAILED TO CREATE PROCESSOR SET %d, ERRNO %d", psNum, errno);
+        printf("REPT INIT FAILED TO CREATE PROCESSOR SET %d, ERRNO %d\n", psNum, errno);
 				IN_LDPSET[psNum] = -1;
 			}
 #endif
@@ -1551,11 +1644,15 @@ INrdinls(Bool initflg, Bool audflg)
 		*/
 		if(proc_parms[proc_parms_idx].on_active == FALSE &&
 			IN_LDCURSTATE == S_ACT){
-			INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s not running on active",proc_parms[proc_parms_idx].msgh_name));
+			//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s not running on active",proc_parms[proc_parms_idx].msgh_name));
+      printf("INrdinls(): process %s not running on active\n",
+             proc_parms[proc_parms_idx].msgh_name);
 			continue;
 		}
 		if(proc_parms[proc_parms_idx].oamleadonly == TRUE && INevent.getOAMLead() != INmyPeerHostId){
-			INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on oamlead",proc_parms[proc_parms_idx].msgh_name));
+			//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on oamlead",proc_parms[proc_parms_idx].msgh_name));
+      printf("INrdinls(): process %s only running on oamlead\n",
+             proc_parms[proc_parms_idx].msgh_name);
 			continue;
 		}
 
@@ -1563,7 +1660,9 @@ INrdinls(Bool initflg, Bool audflg)
 		** otherwise skip
 		*/
 		if(proc_parms[proc_parms_idx].active_vhost_only == TRUE && !INevent.isVhostActive()){
-			INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on active vhost",proc_parms[proc_parms_idx].msgh_name));
+			//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): process %s only running on active vhost",proc_parms[proc_parms_idx].msgh_name));
+      printf("INrdinls(): process %s only running on active vhost\n",
+             proc_parms[proc_parms_idx].msgh_name);
 			continue;
 		}
 		strcpy(IN_LDPTAB[pt_indx].proctag,proc_parms[proc_parms_idx].msgh_name);
@@ -1669,7 +1768,8 @@ INrdinls(Bool initflg, Bool audflg)
 	free(fptr);
 	fptr = NULLPTR;
 
-	INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): INITLIST table initialization completed"));
+	//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): INITLIST table initialization completed"));
+  printf("INrdinls(): INITLIST table initialization completed");
 	return(proc_cnt);
 }
 
@@ -1791,13 +1891,17 @@ INgetpath(char *path, Bool exec_flg, Bool check_dir)
 		envpath = getenv("VPATH");
 
 		if (envpath == (char *const) 0) {
-			CR_PRM(POA_INF,"INgetpath(): can't access %s\n\trelative path w/no VPATH defined", path);
+			//CR_PRM(POA_INF,"INgetpath(): can't access %s\n\trelative path w/no VPATH defined", path);
+      printf("INgetpath(): can't access %s\n\trelative path w/no VPATH defined\n",
+             path);
 			return(GLfail);
 		}
 
 		int strsize = strlen(envpath);
 		if ((strsize == 0) || (strsize >= (IN_PATHNMMX*8))) {
-			CR_PRM(POA_INF,"INgetpath(): VPATH size %d is invalid\n\tcan't access %s\n\trelative path invalid VPATH defined", strsize, path);
+			//CR_PRM(POA_INF,"INgetpath(): VPATH size %d is invalid\n\tcan't access %s\n\trelative path invalid VPATH defined", strsize, path);
+      printf("INgetpath(): VPATH size %d is invalid\n\tcan't access %s\n\trelative path invalid VPATH defined\n",
+             strsize, path);
 			return(GLfail);
 		}
 
@@ -1806,7 +1910,9 @@ INgetpath(char *path, Bool exec_flg, Bool check_dir)
 		root = strtok(vpath, ":");
 		while (root != (char *)0)  {
 			if ((strlen(root) + strlen(path)) >= (IN_PATHNMMX+1)) {
-				CR_PRM(POA_INF,"INgetpath(): path name too long, skipping over it\n\t\"%s/%s\"",root, path);
+				//CR_PRM(POA_INF,"INgetpath(): path name too long, skipping over it\n\t\"%s/%s\"",root, path);
+        printf("INgetpath(): path name too long, skipping over it\n\t\"%s/%s\"\n",
+               root, path)
 				continue;
 			}
 
@@ -1824,7 +1930,9 @@ INgetpath(char *path, Bool exec_flg, Bool check_dir)
 			}
 			root = strtok((char *const)0, ":");
 		}
-		CR_PRM(POA_INF,"INgetpath(): could not find executable along VPATH for:\n\t%s", path);
+		//CR_PRM(POA_INF,"INgetpath(): could not find executable along VPATH for:\n\t%s", path);
+    printf("INgetpath(): could not find executable along VPATH for:\n\t%s\n",
+           path);
 		return(GLfail);
 	}
 
@@ -1838,36 +1946,40 @@ INgetpath(char *path, Bool exec_flg, Bool check_dir)
 		if(i > 0){
 			tmp_path[i] = 0;
 		} else {
-			CR_PRM(POA_INF,"INgetpath(): invalid path %s", path);
+			//CR_PRM(POA_INF,"INgetpath(): invalid path %s", path);
+      printf("INgetpath(): invalid path %s\n", path);
 			return(GLfail);
 		}
 		ret = stat(tmp_path, &stbuf);
 		if (ret < 0) {
-			INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): can't access %s\n\t\"stat()\" returned errno %d", tmp_path, errno));
+			//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): can't access %s\n\t\"stat()\" returned errno %d", tmp_path, errno));
+      printf("INgetpath(): can't access %s\n\t\"stat()\" returned errno %d", tmp_path, errno);
 			return(GLfail);
 		}
 		if(stbuf.st_mode & S_IFDIR) { 
 			return(GLsuccess);
 		} else {
-			INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s not a directory, file %s", tmp_path, path));
+			//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s not a directory, file %s", tmp_path, path));
+      printf("INgetpath(): %s not a directory, file %s\n",
+             tmp_path, path);
 			return(GLfail);
 		}
 	}
 
 	ret = stat(path, &stbuf);
 	if (ret < 0) {
-		INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): can't access %s\n\t\"stat()\" returned errno %d", path, errno));
+		//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): can't access %s\n\t\"stat()\" returned errno %d", path, errno));
+    printf("INgetpath(): can't access %s\n\t\"stat()\" returned errno %d\n",
+           path, errno);
 		return(GLfail);
 	}
 
-#ifdef EES
-NXT:
-#endif
 	if (stbuf.st_size == 0) {
 		/*
 		 * Zero length file...skip this one!
 		 */
-		INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s is zero length!", path));
+		//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s is zero length!", path));
+    printf("INgetpath(): %s is zero length!\n", path);
 		return(GLfail);
 	}
 		
@@ -1876,7 +1988,8 @@ NXT:
 			/*
 			 * Not readable to others, skip this entry:
 			 */
-			INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s not readable by others", path));
+			//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s not readable by others", path));
+      printf("INgetpath(): %s not readable by others", path);
 			return(GLfail);
 		}
 		return(GLsuccess);
@@ -1886,7 +1999,8 @@ NXT:
 		/*
 		 * Not executable to others, skip this entry:
 		 */
-		INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s not executable to others", path));
+		//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INgetpath(): %s not executable to others", path));
+    printf("INgetpath(): %s not executable to others\n", path);
 		return(GLfail);
 	}
 	return(GLsuccess);
@@ -1972,7 +2086,9 @@ INis_numeric(char * str_ptr, char * parm_str, CRALARMLVL a_lvl,int line)
 	}
 	
 	if(is_numeric != TRUE){
-		CR_PRM(POA_INF,"%s%d PARAMETER %s VALUE MUST BE A WHOLE NUMBER",lerr_msg,line,parm_str,str_ptr);
+		//CR_PRM(POA_INF,"%s%d PARAMETER %s VALUE MUST BE A WHOLE NUMBER",lerr_msg,line,parm_str,str_ptr);
+    printf("%s%d PARAMETER %s VALUE MUST BE A WHOLE NUMBER\n",
+           lerr_msg,line,parm_str,str_ptr);
 		return(FALSE);
 	}
 
@@ -2011,12 +2127,16 @@ INconvparm(char * str_ptr, char * parm_str, Bool low, int limit, int line)
 
 	if(low == TRUE){
 		if(intvalue < limit){
-			CR_PRM(POA_INF,"%s%d %s=%s VALUE TOO SMALL - RESET TO %d",lerr_msg,line,parm_str,str_ptr,limit);
+			//CR_PRM(POA_INF,"%s%d %s=%s VALUE TOO SMALL - RESET TO %d",lerr_msg,line,parm_str,str_ptr,limit);
+      printf("%s%d %s=%s VALUE TOO SMALL - RESET TO %d\n",
+             lerr_msg,line,parm_str,str_ptr,limit);
 			return(limit);
 		}
 	} else {
 		if(intvalue > limit){
-			CR_PRM(POA_INF,"%s%d %s=%s VALUE TOO LARGE - RESET TO %d",lerr_msg,line,parm_str,str_ptr,limit);
+			//CR_PRM(POA_INF,"%s%d %s=%s VALUE TOO LARGE - RESET TO %d",lerr_msg,line,parm_str,str_ptr,limit);
+      printf("%s%d %s=%s VALUE TOO LARGE - RESET TO %d\n",
+             lerr_msg,line,parm_str,str_ptr,limit);
 			return(limit);
 		}
 	}

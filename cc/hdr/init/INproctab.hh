@@ -166,7 +166,7 @@ typedef struct {
   } init_data[IN_NUMINITS];
 } IN_INFO;
 
-#define INmaxQids 3 // Maximum number of global queue per process
+#define INmaxgQids 3 // Maximum number of global queue per process
 
 typedef struct {
   int ispare[64]; // Future use
@@ -175,8 +175,9 @@ typedef struct {
   Short shortspare;
   Short ps;   // Processor set this process belongs to
   U_long startime; // Process ID
+  pid_t pid; // process id
   pthread_t tid; // thread id of third party thread
-  U_short peg__intvl;  // Process Sanity interval
+  U_short peg_intvl;  // Process Sanity interval
   U_short rstrt_intvl; // Interval over which the process
                        // restart threashold is to be measured
   U_short rstrt_max;  // Max, number of process restarts
@@ -204,7 +205,7 @@ typedef struct {
 
   // during current initialization interval and the
   // process already failed.
-  Bool send_missedsan; // TRUE if missed sanity message was send
+  Bool sent_missedsan; // TRUE if missed sanity message was send
   Bool print_progress; // TRUE if progress message should print
   Bool third_party;    // TRUE if this is a third party process
   Char gqCnt;  // Number of outstanding gq transition requests
@@ -221,7 +222,7 @@ typedef struct {
   IN_UPDSTATE updstate;   // Software update in pgrogress
   IN_SOFTCHK softchk; // Status of process software check inhibits
   IN_PROC_CATEGORY proc_category; // Process category
-  U_short error_threadhold; // Process error threshold
+  U_short error_threshold; // Process error threshold
   U_short error_dec_rate; // Error decrement rate
   U_short init_complete_timer; // Time for a process to complete initialization
   U_short procinit_timer; // Time for a process to complete PROCINIT
@@ -238,7 +239,7 @@ typedef struct {
   Long time_missedsan;  // Time (sec) since sanity pegged
   IN_SYNCSTEP gqsync; // Synchronization step for global queue
   Long q_size;  // Unix queue size
-  MHqid gqid[INmaxQids]; // GLobal queue id
+  MHqid gqid[INmaxgQids]; // GLobal queue id
   MHqid realQ;
 } IN_PROCESS_DATA;
 
@@ -363,7 +364,7 @@ typedef struct {
 #define IN_LDBQID (IN_procdata->bqid)
 #define IN_LDAQID (IN_procdata->aqid)
 #define IN_LDBKOUT (IN_procdata->subkout)
-#define IN_LDEXIT (IN_procdata->init_exit)
+#define IN_LDEXIT (IN_procdata->int_exit)
 #define IN_LDVMEM (IN_procdata->availsmsn)
 #define IN_LDVMEMALVL	(IN_procdata->vmemalvl)
 #define IN_LDBKPID  	(IN_procdata->bkpid)

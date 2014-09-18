@@ -1,5 +1,5 @@
-#include <iostream>
 
-int main() {
-  ;
-}
+const char * IN_snlvlnm[] = {
+  "wangliang",
+  "haowei",
+};

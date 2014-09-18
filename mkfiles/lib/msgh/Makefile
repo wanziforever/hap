@@ -19,7 +19,8 @@ SRC = \
 	MHrt.cc \
 	MHmsgBase.cc \
 	MHname.cc \
-	MHgd.cc
+	MHgd.cc \
+	MHrmQueues.cc
 
 LIBS := $(LIBS) -lpthread -ldl
 CFLAGS := $(CFLAGS) -fPIC

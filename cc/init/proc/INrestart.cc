@@ -1,54 +1,40 @@
-/*
-**	File ID: 	@(#): <MID8520 () - 05/23/03, 29.1.1.3>
-**
-**	File:			MID8520
-**	Release:		29.1.1.3
-**	Date:			07/15/03
-**	Time:			17:01:35
-**	Newest applied delta:	05/23/03 16:20:27
-**
-** DESCRIPTION:
-** 	This file contains INIT subsystem routines used to restart
-**	and resynchronize processes which have died.
-**
-** FUNCTIONS:
-**	INgrimreaper()	- Check for processes whose "time has come"...
-**
-**	INdeath()	- Handle "death of process" processing
-**
-**	INreqinit()	- Initialize process
-**
-**	INsetrstrt()	- Cycle a process through resynchronization
-**
-**	INdeadproc()	- Processing required when a permanent process
-**			  with its restart state set to "INH_RESTART"
-**			  or whenever a temporary process exceeds its
-**			  restart threshold.
-**
-**	INkillprocs()	- Kill all procs in the process tables
-**
-**	INautobkout()	- Do automatic backout of updating process(es).
-**                        (When software update fails)
-**	INfreeshmem()	- Free shared memory for a process
-**	INfreesem()	- Free semaphores for a process
-**	INrun_bkout()	- Control execution of  BKOUT script
-**	INsys_bk()	- System call to run BKOUT script
-**	INalarm()	- Catches BKOUT script timeout alarm
-**	INfinish_bkout()- Execute end of BACKOUT cleanup activities
-**	INsudata_find() - Find index of a process in INsudata
-**
-** NOTES:
-*/
+//
+// DESCRIPTION:
+// 	This file contains INIT subsystem routines used to restart
+//	and resynchronize processes which have died.
+//
+// FUNCTIONS:
+//	INgrimreaper()	- Check for processes whose "time has come"...
+//
+//	INdeath()	- Handle "death of process" processing
+//
+//	INreqinit()	- Initialize process
+//
+//	INsetrstrt()	- Cycle a process through resynchronization
+//
+//	INdeadproc()	- Processing required when a permanent process
+//			  with its restart state set to "INH_RESTART"
+//			  or whenever a temporary process exceeds its
+//			  restart threshold.
+//
+//	INkillprocs()	- Kill all procs in the process tables
+//
+//	INautobkout()	- Do automatic backout of updating process(es).
+//                        (When software update fails)
+//	INfreeshmem()	- Free shared memory for a process
+//	INfreesem()	- Free semaphores for a process
+//	INrun_bkout()	- Control execution of  BKOUT script
+//	INsys_bk()	- System call to run BKOUT script
+//	INalarm()	- Catches BKOUT script timeout alarm
+//	INfinish_bkout()- Execute end of BACKOUT cleanup activities
+//	INsudata_find() - Find index of a process in INsudata
+//
+// NOTES:
+//
 #include <sysent.h>		/* external declaration for "kill()" */
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
-
-#ifdef EES
-#include <strings.h>
-#else
-#include <string.h>
-#endif
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -57,10 +43,6 @@
 #include <sys/sem.h>
 #ifdef CC
 #include <sys/param.h>
-#ifdef __sun
-#include <sys/pcb.h>
-#include <sys/pset.h>
-#endif
 #endif
 #include <sys/wait.h>
 #include <sys/time.h>
@@ -71,13 +53,13 @@
 #include "hdr/GLtypes.h"
 #include "hdr/GLreturns.h"
 
-#include "cc/hdr/init/INinit.h"
-#include "cc/hdr/init/INproctab.h"
-#include "cc/hdr/su/SUbkoutMsg.H"
-#include "cc/hdr/su/SUversion.H"
-#include "cc/hdr/su/SUparseName.H"
-#include "cc/init/proc/INlocal.H"
-#include "cc/init/proc/INmsgs.H"
+#include "cc/hdr/init/INinit.hh"
+#include "cc/hdr/init/INproctab.hh"
+//#include "cc/hdr/su/SUbkoutMsg.hh"
+//#include "cc/hdr/su/SUversion.hh"
+//#include "cc/hdr/su/SUparseName.hh"
+#include "cc/init/proc/INlocal.hh"
+#include "cc/init/proc/INmsgs.hh"
 
 /*
 ** NAME:
@@ -101,7 +83,8 @@
 Void
 INgrimreaper()
 {
-	INIT_DEBUG(IN_DEBUG,(POA_INF,"INgrimreaper(): routine entry"));
+	//INIT_DEBUG(IN_DEBUG,(POA_INF,"INgrimreaper(): routine entry"));
+  printf("INgrimreaper(): routine entry\n");
 	
 	/* Get all the zombies */
 	while(INcheck_zombie() > 0);
@@ -126,13 +109,15 @@ INgrimreaper()
 				 * Invalid PID...don't try to kill UNIX
 				 * proc0 or proc1!!!
 				 */
-				INIT_ERROR(("Invalid PID %d for process \"%s\"",IN_LDPTAB[i].pid,IN_LDPTAB[i].proctag));
+				//INIT_ERROR(("Invalid PID %d for process \"%s\"",IN_LDPTAB[i].pid,IN_LDPTAB[i].proctag));
+        printf("Invalid PID %d for process \"%s\"\n",
+               IN_LDPTAB[i].pid,IN_LDPTAB[i].proctag);
 			}
 			else {
 				if(INkill(i, 0) == 0) {
 					/*
-					* Process seems to be alive and well
-					*/
+           * Process seems to be alive and well
+           */
 					continue;
 				}
 			}
@@ -150,7 +135,9 @@ INgrimreaper()
 			 * to detect their death
 			 */
 			if (IN_LDPTAB[i].pid >= 0) {
-				INIT_ERROR(("Proc \"%s\", indx %d had non-null pid %d in procstate %s",IN_LDPTAB[i].proctag, i, IN_LDPTAB[i].pid,IN_PROCSTNM(IN_SDPTAB[i].procstate)));
+				//INIT_ERROR(("Proc \"%s\", indx %d had non-null pid %d in procstate %s",IN_LDPTAB[i].proctag, i, IN_LDPTAB[i].pid,IN_PROCSTNM(IN_SDPTAB[i].procstate)));
+        printf("Proc \"%s\", indx %d had non-null pid %d in procstate %s",
+               IN_LDPTAB[i].proctag, i, IN_LDPTAB[i].pid,IN_PROCSTNM(IN_SDPTAB[i].procstate));
 
 				/* Set PID to null values at this point... */
 				IN_LDPTAB[i].pid = IN_FREEPID;
@@ -160,7 +147,9 @@ INgrimreaper()
 		case IN_MAXSTATE:
 		case IN_INVSTATE:
 		default:
-			INIT_ERROR(("Invalid procstate %d encountered, indx %d", IN_SDPTAB[i].procstate, i));
+			//INIT_ERROR(("Invalid procstate %d encountered, indx %d", IN_SDPTAB[i].procstate, i));
+      printf("Invalid procstate %d encountered, indx %d\n",
+             IN_SDPTAB[i].procstate, i);
 			/* Reset the state to IN_RUNNING and reinit the process */
 			IN_SDPTAB[i].procstate = IN_RUNNING;
 			INreqinit(SN_LV0,i,INBADSHMEM,IN_SOFT,"CORRUPTED SHARED MEMORY");
@@ -212,7 +201,9 @@ INdeath(U_short indx)
 	SN_LVL		sn_lvl;
 	Bool		send_pdeath = TRUE;
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath():process died: \"%s\"\n\tpid = %d indx = %d",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid,indx));
+	//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath():process died: \"%s\"\n\tpid = %d indx = %d",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid,indx));
+  printf("INdeath():process died: \"%s\"\n\tpid = %d indx = %d",
+         IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid,indx);
 
 	/*
 	 * In any event, change the proc's state and clear its sanity
@@ -233,7 +224,9 @@ INdeath(U_short indx)
 		 * proc0 or proc1!!!
 		 */
 		oldpid = IN_FREEPID;	/* garbage pid for INpDeath msg */
-		INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath(): process \"%s\" found with invalid PID %d\n\tprevented killing it",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid));
+		//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath(): process \"%s\" found with invalid PID %d\n\tprevented killing it",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid));
+    printf("INdeath(): process \"%s\" found with invalid PID %d\n\tprevented killing it",
+           IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid);
 	}	
 
 	else {
@@ -279,28 +272,32 @@ INdeath(U_short indx)
 	*/
 
 	if(IN_SDPTAB[indx].procstep == IN_SU){
-		IN_SDPTAB[indx].procstep = IN_ESU;
-		if(updstate == UPD_PRESTART){
-			CR_PRM(POA_INF,"REPT INIT DETECTED THAT %s EXITED FOR FIELD UPDATE",IN_LDPTAB[indx].proctag);
-		} 
-		/* Find out what init level is the SU of this process scheduled to be */
-		int su_idx;
-		for(su_idx = 0; su_idx < SU_MAX_OBJ; su_idx++){
-			if(strcmp(IN_LDPTAB[indx].pathname, INsudata[su_idx].obj_path) == 0){
-				break;
-			}
-		}
-	
-		if(su_idx < SU_MAX_OBJ){
-			sn_lvl = INsudata[su_idx].sn_lvl;
-		} else {
-			INIT_ERROR(("Process death during SU while %s not in INsudata",IN_LDPTAB[indx].proctag));
-			sn_lvl = SN_LV0;
-		}
-		if(send_pdeath){
-			class INlpDeath pdeath(proctag,permstate, TRUE, TRUE, oldpid,sn_lvl);
-			(Void)pdeath.broadcast(INmsgqid, INbrdcast_delay, MHallClusters);
-		}
+		//IN_SDPTAB[indx].procstep = IN_ESU;
+		//if(updstate == UPD_PRESTART){
+		//	//CR_PRM(POA_INF,"REPT INIT DETECTED THAT %s EXITED FOR FIELD UPDATE",IN_LDPTAB[indx].proctag);
+    //  printf("REPT INIT DETECTED THAT %s EXITED FOR FIELD UPDATE\n",
+    //         IN_LDPTAB[indx].proctag);
+		//} 
+		///* Find out what init level is the SU of this process scheduled to be */
+		//int su_idx;
+		//for(su_idx = 0; su_idx < SU_MAX_OBJ; su_idx++){
+		//	if(strcmp(IN_LDPTAB[indx].pathname, INsudata[su_idx].obj_path) == 0){
+		//		break;
+		//	}
+		//}
+	  //
+		//if(su_idx < SU_MAX_OBJ){
+		//	sn_lvl = INsudata[su_idx].sn_lvl;
+		//} else {
+		//	//INIT_ERROR(("Process death during SU while %s not in INsudata",IN_LDPTAB[indx].proctag));
+    //  printf("Process death during SU while %s not in INsudata\n",
+    //         IN_LDPTAB[indx].proctag);
+		//	sn_lvl = SN_LV0;
+		//}
+		//if(send_pdeath){
+		//	class INlpDeath pdeath(proctag,permstate, TRUE, TRUE, oldpid,sn_lvl);
+		//	(Void)pdeath.broadcast(INmsgqid, INbrdcast_delay, MHallClusters);
+		//}
 		return;
 	} else {
 		IN_SDPTAB[indx].procstep = INV_STEP;
@@ -312,7 +309,7 @@ INdeath(U_short indx)
 	 */
 	if(IN_SDPTAB[indx].ireq_lvl != SN_NOINIT) {
 		INescalate(IN_SDPTAB[indx].ireq_lvl,IN_SDPTAB[indx].ecode,
-			   IN_LDPTAB[indx].source,indx);
+               IN_LDPTAB[indx].source,indx);
 	} else {
 		if(IN_LDPTAB[indx].startstate == IN_INHRESTART){
 			/* If restart was inhibited, do not print alarms */
@@ -320,7 +317,7 @@ INdeath(U_short indx)
 		} else if(IN_LDPTAB[indx].source == IN_MANUAL){
 			a_lvl = POA_MAN;
 		} else if(IN_LDPTAB[indx].proc_category == IN_CP_CRITICAL ||
-			  IN_LDPTAB[indx].proc_category == IN_PSEUDO_CRITICAL) {
+              IN_LDPTAB[indx].proc_category == IN_PSEUDO_CRITICAL) {
 			/* If restart allowed and process is critical print
 			** critical alarm
 			*/
@@ -329,12 +326,14 @@ INdeath(U_short indx)
 		if(send_pdeath){
 			// If process was supposed to die silently, do not print this
 			if(a_lvl == POA_INF || a_lvl == POA_MAN){
-				CR_PRM(a_lvl, "REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
+				//CR_PRM(a_lvl, "REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
+        printf("REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
 				IN_SDPTAB[indx].alvl = POA_INF;
 			} else {
-				CR_X733PRM(a_lvl, IN_LDPTAB[indx].proctag, qualityOfServiceAlarm, 
-					softwareProgramAbnormallyTerminated, NULL,";201", 
-					"REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
+				//CR_X733PRM(a_lvl, IN_LDPTAB[indx].proctag, qualityOfServiceAlarm, 
+        //           softwareProgramAbnormallyTerminated, NULL,";201", 
+        //           "REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
+        printf("REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
 				IN_SDPTAB[indx].alvl = a_lvl;
 			}
 		}
@@ -356,9 +355,9 @@ INdeath(U_short indx)
 		/* Get the level of initialization this process is scheduled for */
 		if(IN_LDPTAB[indx].syncstep == INV_STEP){
 			/* Process scheduled for delayed restart, processes
-			** will be initialized at least at level 1 following
-			** delayed restart.
-			*/
+                                          ** will be initialized at least at level 1 following
+                                          ** delayed restart.
+                                          */
 			sn_lvl = SN_LV1;
 		} else {
 			sn_lvl = IN_LDPTAB[indx].sn_lvl;
@@ -366,12 +365,14 @@ INdeath(U_short indx)
 
 		if(send_pdeath){
 			class INlpDeath pdeath(proctag,permstate, rstrt_flg,
-				((updstate == NO_UPD)?FALSE:TRUE), oldpid, sn_lvl);
+                             ((updstate == NO_UPD)?FALSE:TRUE), oldpid, sn_lvl);
 			(Void)pdeath.broadcast(INmsgqid, INbrdcast_delay, MHallClusters);
 		}
 	}
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath():returning after scheduling process \"%s\" for restart",IN_LDPTAB[indx].proctag));
+	//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath():returning after scheduling process \"%s\" for restart",IN_LDPTAB[indx].proctag));
+  printf("INdeath():returning after scheduling process \"%s\" for restart\n",
+         IN_LDPTAB[indx].proctag);
 	return;
 }
 
@@ -407,49 +408,57 @@ GLretVal
 INreqinit(SN_LVL sn_lvl,U_short indx, GLretVal err_code, IN_SOURCE source, const char * string)
 {
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INreqinit():entered for process \"%s\"\n\tsn_lvl = %d err_code = %d source = %s",IN_LDPTAB[indx].proctag,sn_lvl,err_code,IN_SNSRCNM(source)));
+	//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INreqinit():entered for process \"%s\"\n\tsn_lvl = %d err_code = %d source = %s",IN_LDPTAB[indx].proctag,sn_lvl,err_code,IN_SNSRCNM(source)));
+  printf("INreqinit():entered for process \"%s\"\n\tsn_lvl = %d err_code = %d source = %s\n",
+         IN_LDPTAB[indx].proctag,sn_lvl,err_code,IN_SNSRCNM(source));
 
 	CRALARMLVL alarm_lvl = POA_MAJ;
 	
-        switch(sn_lvl){
-        case SN_LV0:
-        case SN_LV1:
-                if(IN_LDPTAB[indx].proc_category == IN_CP_CRITICAL ||
-                   IN_LDPTAB[indx].proc_category == IN_PSEUDO_CRITICAL){ 
-                        alarm_lvl = POA_CRIT;
-                }
-                break;
-        case SN_LV2:
-        case SN_LV3:
-        case SN_LV4:
-        case SN_LV5:
-        default:        /* Do not accept invalid initialization level */
-		INIT_ERROR(("Invalid sn_lvl requested %s",IN_SNLVLNM(sn_lvl)));
-                return(GLfail);
-        }
+  switch(sn_lvl){
+  case SN_LV0:
+  case SN_LV1:
+    if(IN_LDPTAB[indx].proc_category == IN_CP_CRITICAL ||
+       IN_LDPTAB[indx].proc_category == IN_PSEUDO_CRITICAL){ 
+      alarm_lvl = POA_CRIT;
+    }
+    break;
+  case SN_LV2:
+  case SN_LV3:
+  case SN_LV4:
+  case SN_LV5:
+  default:        /* Do not accept invalid initialization level */
+		//INIT_ERROR(("Invalid sn_lvl requested %s",IN_SNLVLNM(sn_lvl)));
+    printf("Invalid sn_lvl requested %s\n",IN_SNLVLNM(sn_lvl));
+    return(GLfail);
+  }
 
 	if(indx == (U_short)INIT_INDEX || indx > IN_SNPRCMX){
-		INIT_ERROR(("Invalid process index %d",indx));
+		//INIT_ERROR(("Invalid process index %d",indx));
+    printf("Invalid process index %d\n",indx);
 		return(GLfail);
 	}
  
-        /* Report that an initialization has been requrested */
+  /* Report that an initialization has been requrested */
 	if(source == IN_MANUAL){
 		alarm_lvl = POA_MAN;
-        	CR_PRM(alarm_lvl,"REPT INIT REQUESTED %s INIT OF %s DUE TO %s",
-              		IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag,string);
+    //CR_PRM(alarm_lvl,"REPT INIT REQUESTED %s INIT OF %s DUE TO %s",
+    //       IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag,string);
+    printf("REPT INIT REQUESTED %s INIT OF %s DUE TO %s\n",
+           IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag,string);
 	
 	} else {
-		CR_X733PRM(alarm_lvl, IN_LDPTAB[indx].proctag, qualityOfServiceAlarm, 
-			softwareProgramAbnormallyTerminated, NULL,";201", 
-			"REPT INIT REQUESTED %s INIT OF %s DUE TO %s",
-              		IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag,string);
+		//CR_X733PRM(alarm_lvl, IN_LDPTAB[indx].proctag, qualityOfServiceAlarm, 
+    //           softwareProgramAbnormallyTerminated, NULL,";201", 
+    //           "REPT INIT REQUESTED %s INIT OF %s DUE TO %s",
+    //           IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag,string);
+    printf("REPT INIT REQUESTED %s INIT OF %s DUE TO %s\n",
+           IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag,string);
 		IN_SDPTAB[indx].alvl = alarm_lvl;
 	}
         
 	// Check software check inhibits if source is not manual
 	if((source != IN_MANUAL) && ((IN_LDPTAB[indx].softchk == IN_INHSOFTCHK ||
-	    IN_LDSTATE.softchk == IN_INHSOFTCHK))){
+                                IN_LDSTATE.softchk == IN_INHSOFTCHK))){
 		/* Indicate that the initialization failed so other processes
 		** can be advanced.
 		*/
@@ -480,8 +489,10 @@ INreqinit(SN_LVL sn_lvl,U_short indx, GLretVal err_code, IN_SOURCE source, const
 				} else {
 					tmplvl = SN_LV4;
 				}
-				CR_PRM(POA_INF,"REPT INIT CHANGED MANUAL %s INIT OF DEAD PROCESS %s TO %s",
-					IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag, IN_SNLVLNM(tmplvl)); 
+				//CR_PRM(POA_INF,"REPT INIT CHANGED MANUAL %s INIT OF DEAD PROCESS %s TO %s",
+        //       IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag, IN_SNLVLNM(tmplvl));
+        printf("REPT INIT CHANGED MANUAL %s INIT OF DEAD PROCESS %s TO %s",
+               IN_SNLVLNM(sn_lvl),IN_LDPTAB[indx].proctag, IN_SNLVLNM(tmplvl));
 				INsetrstrt(tmplvl,indx,source);
 			} else {
 				INsetrstrt(sn_lvl,indx,source);
@@ -515,42 +526,44 @@ INreqinit(SN_LVL sn_lvl,U_short indx, GLretVal err_code, IN_SOURCE source, const
 		if(IN_procdata->debug_timer > 0 && source != IN_MANUAL){
 			int	timeout = (IN_procdata->debug_timer / 20) + 1;
 #ifdef __sun
-        		if((createpid = fork1()) == 0){
+      if((createpid = fork1()) == 0){
 #else
-        		if((createpid = fork()) == 0){
+        if((createpid = fork()) == 0){
 #endif  
-				char	pid[20];
-				char	ecode[20];
-				// more efficient conversion functions exist but sprintf
-				// works both in linux and solaris and efficiency is not
-				// a big deal here
-				sprintf(pid, "%d", IN_LDPTAB[indx].pid);
-				sprintf(ecode, "%d", err_code);
-				execl("/sn/init/debug", "debug", IN_LDPTAB[indx].proctag, pid, ecode, (char*) 0);
-				_exit(1);
-			} else if(createpid != ((pid_t) -1)){
-				// wait for script to finish up to timeout value
-				int	pstatus;
-				while(timeout > 0 && waitpid(createpid, &pstatus, WNOHANG) != createpid){
-					IN_SLEEPN(0,20000000);
-					timeout --;
-				}
-			}
-		}
+          char	pid[20];
+          char	ecode[20];
+          // more efficient conversion functions exist but sprintf
+          // works both in linux and solaris and efficiency is not
+          // a big deal here
+          sprintf(pid, "%d", IN_LDPTAB[indx].pid);
+          sprintf(ecode, "%d", err_code);
+          execl("/sn/init/debug", "debug", IN_LDPTAB[indx].proctag, pid, ecode, (char*) 0);
+          _exit(1);
+        } else if(createpid != ((pid_t) -1)){
+          // wait for script to finish up to timeout value
+          int	pstatus;
+          while(timeout > 0 && waitpid(createpid, &pstatus, WNOHANG) != createpid){
+            IN_SLEEPN(0,20000000);
+            timeout --;
+          }
+        }
+      }
 #endif
-		INsync(indx,IN_BCLEANUP);
-		INworkflg = TRUE;
-		if(IN_LDSTATE.initstate != INITING){
-			/* Set fast poll timer to quickly detect process death if
-			** INIT is not the parent.
-			*/
-			INsettmr(INpolltmr,INPROCPOLL,(INITTAG | INPOLLTAG),TRUE,TRUE);
-		}
-	}
+      INsync(indx,IN_BCLEANUP);
+      INworkflg = TRUE;
+      if(IN_LDSTATE.initstate != INITING){
+        /* Set fast poll timer to quickly detect process death if
+        ** INIT is not the parent.
+        */
+        INsettmr(INpolltmr,INPROCPOLL,(INITTAG | INPOLLTAG),TRUE,TRUE);
+      }
+    }
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INreqinit():\n\treturning after scheduling process \"%s\" for initialization",IN_LDPTAB[indx].proctag));
-	return(GLsuccess);
-}
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INreqinit():\n\treturning after scheduling process \"%s\" for initialization",IN_LDPTAB[indx].proctag));
+    printf("INreqinit():\n\treturning after scheduling process \"%s\" for initialization\n",
+           IN_LDPTAB[indx].proctag);
+    return(GLsuccess);
+  }
 
 /*
 ** NAME:
@@ -578,123 +591,140 @@ INreqinit(SN_LVL sn_lvl,U_short indx, GLretVal err_code, IN_SOURCE source, const
 ** SIDE EFFECTS:
 */
 
-GLretVal
-INsetrstrt(SN_LVL sn_lvl, U_short indx,IN_SOURCE source)
-{
-	CRALARMLVL  alvl = POA_INF;
+  GLretVal
+     INsetrstrt(SN_LVL sn_lvl, U_short indx,IN_SOURCE source)
+  {
+    CRALARMLVL  alvl = POA_INF;
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt():entered indx %d, process \"%s\" sn_lvl = %s",indx, IN_LDPTAB[indx].proctag,IN_SNLVLNM(sn_lvl)));
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt():entered indx %d, process \"%s\" sn_lvl = %s",indx, IN_LDPTAB[indx].proctag,IN_SNLVLNM(sn_lvl)));
+    printf("INsetrstrt():entered indx %d, process \"%s\" sn_lvl = %s\n",
+           indx, IN_LDPTAB[indx].proctag,IN_SNLVLNM(sn_lvl));
 
-	if(IN_INVPROC(indx)){
-		INIT_ERROR(("Invalid process entry"));
-		return(GLfail);
-	}
+    if(IN_INVPROC(indx)){
+      //INIT_ERROR(("Invalid process entry"));
+      printf("Invalid process entry\n");
+      return(GLfail);
+    }
 
-	if(IN_SDPTAB[indx].procstate != IN_DEAD){
-		INIT_ERROR(("Invalid process state %s",IN_PROCSTNM(IN_SDPTAB[indx].procstate)));
-		return(GLfail);
-	}
+    if(IN_SDPTAB[indx].procstate != IN_DEAD){
+      //INIT_ERROR(("Invalid process state %s",IN_PROCSTNM(IN_SDPTAB[indx].procstate)));
+      printf("Invalid process state %s\n",IN_PROCSTNM(IN_SDPTAB[indx].procstate));
+      return(GLfail);
+    }
 
-	// Do not try to restart processes that should not be in the system
-	if(IN_LDSTATE.run_lvl < IN_LDPTAB[indx].run_lvl){
-		INIT_ERROR(("Proc %s run_lvl %d > sys run_lvl %d",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].run_lvl,IN_LDSTATE.run_lvl));
-		return(GLfail);
-	}
+    // Do not try to restart processes that should not be in the system
+    if(IN_LDSTATE.run_lvl < IN_LDPTAB[indx].run_lvl){
+      //INIT_ERROR(("Proc %s run_lvl %d > sys run_lvl %d",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].run_lvl,IN_LDSTATE.run_lvl));
+      printf("Proc %s run_lvl %d > sys run_lvl %d\n",
+             IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].run_lvl,IN_LDSTATE.run_lvl);
+      return(GLfail);
+    }
 
-	/* Reset the source to insure no repeated manual inits 
-	*/
-	IN_LDPTAB[indx].source = IN_SOFT;
+    /* Reset the source to insure no repeated manual inits 
+     */
+    IN_LDPTAB[indx].source = IN_SOFT;
 
-	// If this is manual request, clear the restart counts
-	// Do not count manual request in total restart count
-	// Also clear next_rstrt interval
-	if(source == IN_MANUAL){
-		IN_LDPTAB[indx].rstrt_cnt = 0;
-		IN_LDPTAB[indx].next_rstrt = 0;
-		INCLRTMR(INproctmr[indx].rstrt_tmr);
-		/* If software updated process is manually inited prior to
-		** commit, the new version of process should be restarted.
-		*/
-		if (IN_LDPTAB[indx].updstate == UPD_POSTSTART) {
-			IN_LDPTAB[indx].updstate = UPD_PRESTART;
-		}
-		alvl = POA_MAN;
-	} else {
-		if(INic_crit_up(indx) == FALSE && IN_LDSTATE.initstate != INITING){
-			INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt(): not all critical procs up"));
-		}
-		IN_LDPTAB[indx].tot_rstrt++;
-	}
+    // If this is manual request, clear the restart counts
+    // Do not count manual request in total restart count
+    // Also clear next_rstrt interval
+    if(source == IN_MANUAL){
+      IN_LDPTAB[indx].rstrt_cnt = 0;
+      IN_LDPTAB[indx].next_rstrt = 0;
+      INCLRTMR(INproctmr[indx].rstrt_tmr);
+      /* If software updated process is manually inited prior to
+      ** commit, the new version of process should be restarted.
+      */
+      if (IN_LDPTAB[indx].updstate == UPD_POSTSTART) {
+        IN_LDPTAB[indx].updstate = UPD_PRESTART;
+      }
+      alvl = POA_MAN;
+    } else {
+      if(INic_crit_up(indx) == FALSE && IN_LDSTATE.initstate != INITING){
+        //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt(): not all critical procs up"));
+        printf("INsetrstrt(): not all critical procs up\n");
+      }
+      IN_LDPTAB[indx].tot_rstrt++;
+    }
 
-	IN_LDPTAB[indx].syncstep = IN_LDSTATE.systep;
+    IN_LDPTAB[indx].syncstep = IN_LDSTATE.systep;
 
-	if(IN_LDSTATE.systep != IN_STEADY){
-		if(IN_LDPTAB[indx].permstate == IN_TEMPPROC){
-			INIT_ERROR(("Temp proc %s initialized when systep is %s",IN_LDPTAB[indx].proctag,IN_SQSTEPNM(IN_LDSTATE.systep)));
-			return(GLfail);
-		} 
-	} else if(IN_LDPTAB[indx].run_lvl > IN_LDSTATE.sync_run_lvl){
+    if(IN_LDSTATE.systep != IN_STEADY){
+      if(IN_LDPTAB[indx].permstate == IN_TEMPPROC){
+        //INIT_ERROR(("Temp proc %s initialized when systep is %s",IN_LDPTAB[indx].proctag,IN_SQSTEPNM(IN_LDSTATE.systep)));
+        printf("Temp proc %s initialized when systep is %s\n",
+               IN_LDPTAB[indx].proctag,IN_SQSTEPNM(IN_LDSTATE.systep));
+        return(GLfail);
+      } 
+    } else if(IN_LDPTAB[indx].run_lvl > IN_LDSTATE.sync_run_lvl){
 			// Do not set sync step to steady for a process not yet
 			// ready to run
 			IN_LDPTAB[indx].syncstep = IN_SYSINIT;
-	} else if(IN_LDPTAB[indx].run_lvl == IN_LDSTATE.sync_run_lvl){
+    } else if(IN_LDPTAB[indx].run_lvl == IN_LDSTATE.sync_run_lvl){
 			IN_LDPTAB[indx].syncstep = IN_PROCINIT;
-	}
+    }
 
-	IN_LDPTAB[indx].sn_lvl = sn_lvl;
-	IN_LDPTAB[indx].gqCnt = 0;
-	IN_SDPTAB[indx].ireq_lvl = SN_NOINIT;
-	IN_SDPTAB[indx].procstep = INV_STEP;
-	IN_SDPTAB[indx].procstate = IN_NOEXIST;
-	IN_SDPTAB[indx].error_count = 0;
-	IN_SDPTAB[indx].progress_mark = 0;
-	IN_SDPTAB[indx].progress_check = 0;
-	IN_SDPTAB[indx].count = 0;
+    IN_LDPTAB[indx].sn_lvl = sn_lvl;
+    IN_LDPTAB[indx].gqCnt = 0;
+    IN_SDPTAB[indx].ireq_lvl = SN_NOINIT;
+    IN_SDPTAB[indx].procstep = INV_STEP;
+    IN_SDPTAB[indx].procstate = IN_NOEXIST;
+    IN_SDPTAB[indx].error_count = 0;
+    IN_SDPTAB[indx].progress_mark = 0;
+    IN_SDPTAB[indx].progress_check = 0;
+    IN_SDPTAB[indx].count = 0;
 	
-	/* Free process shared memory allocated with release flag set
-	** if sn_lvl > 0
-	*/
-	if(sn_lvl > SN_LV0){
-		INfreeshmem(indx,FALSE);
-	}
+    /* Free process shared memory allocated with release flag set
+    ** if sn_lvl > 0
+    */
+    if(sn_lvl > SN_LV0){
+      INfreeshmem(indx,FALSE);
+    }
 
-	/*
-	 * The death of the old version of an updating process shouldn't
-	 * increment system error counts. However it does require that
-	 * the polling timer be set to quickly restart the new version.
-	 * Do nothing about the SU status if the process exited intentionally
-	 * NOTE: this code relies on IN_SDPTAB[indx].ecode not being reset
-	 */
-	if(IN_SDPTAB[indx].ecode != IN_INTENTIONAL){
-		if (IN_LDPTAB[indx].updstate == UPD_PRESTART) {
-			CR_PRM(alvl,"REPT INIT STARTING NEW VERSION OF \"%s\" ",
-				IN_LDPTAB[indx].proctag);
-		} else if (IN_LDPTAB[indx].updstate == UPD_POSTSTART) {
-			CR_PRM(alvl,"REPT INIT STARTING PREVIOUS VERSION OF \"%s\" ",
-				IN_LDPTAB[indx].proctag);
-			IN_LDPTAB[indx].updstate = NO_UPD;
-		}
-	} else {
-		INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt():received intentional exit"));
-	}
+    /*
+     * The death of the old version of an updating process shouldn't
+     * increment system error counts. However it does require that
+     * the polling timer be set to quickly restart the new version.
+     * Do nothing about the SU status if the process exited intentionally
+     * NOTE: this code relies on IN_SDPTAB[indx].ecode not being reset
+     */
+    if(IN_SDPTAB[indx].ecode != IN_INTENTIONAL){
+      if (IN_LDPTAB[indx].updstate == UPD_PRESTART) {
+        //CR_PRM(alvl,"REPT INIT STARTING NEW VERSION OF \"%s\" ",
+        //       IN_LDPTAB[indx].proctag);
+        printf("REPT INIT STARTING NEW VERSION OF \"%s\" \n",
+               IN_LDPTAB[indx].proctag);
+      } else if (IN_LDPTAB[indx].updstate == UPD_POSTSTART) {
+        //CR_PRM(alvl,"REPT INIT STARTING PREVIOUS VERSION OF \"%s\" ",
+        //       IN_LDPTAB[indx].proctag);
+        printf("REPT INIT STARTING PREVIOUS VERSION OF \"%s\" \n",
+               IN_LDPTAB[indx].proctag);
+        IN_LDPTAB[indx].updstate = NO_UPD;
+      }
+    } else {
+      //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt():received intentional exit"));
+      printf("INsetrstrt():received intentional exit\n");
+    }
 	
-	// Clear the error code
-	IN_SDPTAB[indx].ecode = GLsuccess;
+    // Clear the error code
+    IN_SDPTAB[indx].ecode = GLsuccess;
 
-	if(IN_LDPTAB[indx].print_progress){
-		CR_PRM(alvl,"REPT INIT STARTING INIT OF PROCESS %s AT %s",
-			IN_LDPTAB[indx].proctag,IN_SNLVLNM(sn_lvl)); 
-	}
-	INworkflg = TRUE;
+    if(IN_LDPTAB[indx].print_progress){
+      //CR_PRM(alvl,"REPT INIT STARTING INIT OF PROCESS %s AT %s",
+      //       IN_LDPTAB[indx].proctag,IN_SNLVLNM(sn_lvl));
+      printf("REPT INIT STARTING INIT OF PROCESS %s AT %s\n",
+             IN_LDPTAB[indx].proctag,IN_SNLVLNM(sn_lvl));
+    }
+    INworkflg = TRUE;
 
-	/* Set poll timer if not already set */
-	if(INpolltmr.tindx < 0){
-		INsettmr(INpolltmr,INPROCPOLL,(INITTAG | INPOLLTAG),TRUE,TRUE);
-	}
+    /* Set poll timer if not already set */
+    if(INpolltmr.tindx < 0){
+      INsettmr(INpolltmr,INPROCPOLL,(INITTAG | INPOLLTAG),TRUE,TRUE);
+    }
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt():successful return"));
-	return(GLsuccess);
-}
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INsetrstrt():successful return"));
+    printf("INsetrstrt():successful return\n");
+    return(GLsuccess);
+  }
 
 /*
 ** NAME:
@@ -717,137 +747,145 @@ INsetrstrt(SN_LVL sn_lvl, U_short indx,IN_SOURCE source)
 ** SIDE EFFECTS:
 */
 
-Void
-INdeadproc(U_short indx,Bool remove)
-{
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeadproc(): entered w/indx %d, proc %s, remove = %d",indx,IN_LDPTAB[indx].proctag,remove));
+  Void
+     INdeadproc(U_short indx,Bool remove)
+  {
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeadproc(): entered w/indx %d, proc %s, remove = %d",indx,IN_LDPTAB[indx].proctag,remove));
+    printf("INdeadproc(): entered w/indx %d, proc %s, remove = %d\n",
+           indx,IN_LDPTAB[indx].proctag,remove);
 
-	/*
-	 * Process is not to be reinited, make sure it's
-	 * dead:
-	 */
-	IN_SDPTAB[indx].procstate = IN_DEAD;
-	INCLRTMR(INproctmr[indx].sync_tmr);
-	INCLRTMR(INproctmr[indx].gq_tmr);
-	IN_LDPTAB[indx].gqsync = IN_MAXSTEP;
+    /*
+     * Process is not to be reinited, make sure it's
+     * dead:
+     */
+    IN_SDPTAB[indx].procstate = IN_DEAD;
+    INCLRTMR(INproctmr[indx].sync_tmr);
+    INCLRTMR(INproctmr[indx].gq_tmr);
+    IN_LDPTAB[indx].gqsync = IN_MAXSTEP;
 
-	/*
-	 * Don't try to kill UNIX
-	 * proc0 or proc1!!!
-	 */
-	if (IN_LDPTAB[indx].pid > 1) {
-		/* OK, blast away */
-		(Void)INkill(indx, -SIGKILL);
-	}
+    /*
+     * Don't try to kill UNIX
+     * proc0 or proc1!!!
+     */
+    if (IN_LDPTAB[indx].pid > 1) {
+      /* OK, blast away */
+      (Void)INkill(indx, -SIGKILL);
+    }
 
-	IN_LDPTAB[indx].pid = IN_FREEPID;
-	IN_LDPTAB[indx].rstrt_cnt = 0;
-	IN_SDPTAB[indx].error_count = 0;
-	IN_LDPTAB[indx].sn_lvl = SN_NOINIT;
-	INCLRTMR(INproctmr[indx].rstrt_tmr);
+    IN_LDPTAB[indx].pid = IN_FREEPID;
+    IN_LDPTAB[indx].rstrt_cnt = 0;
+    IN_SDPTAB[indx].error_count = 0;
+    IN_LDPTAB[indx].sn_lvl = SN_NOINIT;
+    INCLRTMR(INproctmr[indx].rstrt_tmr);
 
-	// Deallocate shared memory only for NON-CRITICAL processes
+    // Deallocate shared memory only for NON-CRITICAL processes
 
-	if (IN_LDPTAB[indx].proc_category == IN_NON_CRITICAL) {
-		/*
-		 * Automatically deallocate shared memory segments and
-		 * semaphores associated with non-critical processes
-		 * 
-		 */
-		INfreeshmem(indx,TRUE);
-		INfreesem(indx);
-	} else {
+    if (IN_LDPTAB[indx].proc_category == IN_NON_CRITICAL) {
+      /*
+       * Automatically deallocate shared memory segments and
+       * semaphores associated with non-critical processes
+       * 
+       */
+      INfreeshmem(indx,TRUE);
+      INfreesem(indx);
+    } else {
 
-		/* For all other processes, release any memory they allocated with
-		** the release option.
-		*/
-		INfreeshmem(indx,FALSE);
-	}
+      /* For all other processes, release any memory they allocated with
+      ** the release option.
+      */
+      INfreeshmem(indx,FALSE);
+    }
 
-	if(remove == TRUE ||
-	   (IN_LDPTAB[indx].proc_category == IN_NON_CRITICAL && 
-	    IN_LDPTAB[indx].permstate == IN_TEMPPROC && (!IN_LDPTAB[indx].third_party))){
-		/*
-	 	* Now, "delete" the process from the
-	 	* process tables. Also, unconditonally delete all temporary
-		* non-critical processes. 
-	 	*/
-		if(IN_LDPTAB[indx].print_progress){
-			CR_PRM(POA_INF,"REPT INIT %s REMOVED FROM SYSTEM", IN_LDPTAB[indx].proctag);
-		}
-		INinitptab(indx);
-	} else {
-		// Schedule the process for delayed restart
-		if(IN_LDPTAB[indx].next_rstrt  < 300) {
-			IN_LDPTAB[indx].next_rstrt = 300;  // Wait 5 minutes
-		} else if(IN_LDPTAB[indx].next_rstrt < 900){
-			IN_LDPTAB[indx].next_rstrt = 900;  // Wait 15 minutes
-		} else if(IN_LDPTAB[indx].next_rstrt != IN_NO_RESTART){
-			IN_LDPTAB[indx].next_rstrt = 1800;  // Keep trying every 30 minutes
-		} 
+    if(remove == TRUE ||
+       (IN_LDPTAB[indx].proc_category == IN_NON_CRITICAL && 
+        IN_LDPTAB[indx].permstate == IN_TEMPPROC && (!IN_LDPTAB[indx].third_party))){
+      /*
+       * Now, "delete" the process from the
+       * process tables. Also, unconditonally delete all temporary
+       * non-critical processes. 
+       */
+      if(IN_LDPTAB[indx].print_progress){
+        //CR_PRM(POA_INF,"REPT INIT %s REMOVED FROM SYSTEM", IN_LDPTAB[indx].proctag);
+        printf("REPT INIT %s REMOVED FROM SYSTEM\n",
+               IN_LDPTAB[indx].proctag);
+      }
+      INinitptab(indx);
+    } else {
+      // Schedule the process for delayed restart
+      if(IN_LDPTAB[indx].next_rstrt  < 300) {
+        IN_LDPTAB[indx].next_rstrt = 300;  // Wait 5 minutes
+      } else if(IN_LDPTAB[indx].next_rstrt < 900){
+        IN_LDPTAB[indx].next_rstrt = 900;  // Wait 15 minutes
+      } else if(IN_LDPTAB[indx].next_rstrt != IN_NO_RESTART){
+        IN_LDPTAB[indx].next_rstrt = 1800;  // Keep trying every 30 minutes
+      } 
 		
-		// Indicate that we should give up trying to bring up this
-		// process for a while
-		IN_LDPTAB[indx].syncstep = INV_STEP;
-		if(IN_LDPTAB[indx].next_rstrt != IN_NO_RESTART){
-			INSETTMR(INproctmr[indx].sync_tmr,IN_LDPTAB[indx].next_rstrt,
-			 (INPROCTAG | INSYNCTAG | indx), FALSE);
+      // Indicate that we should give up trying to bring up this
+      // process for a while
+      IN_LDPTAB[indx].syncstep = INV_STEP;
+      if(IN_LDPTAB[indx].next_rstrt != IN_NO_RESTART){
+        INSETTMR(INproctmr[indx].sync_tmr,IN_LDPTAB[indx].next_rstrt,
+                 (INPROCTAG | INSYNCTAG | indx), FALSE);
 
-			CR_PRM(POA_INF,"REPT INIT %s SCHEDULED FOR RESTART IN %d MIN", IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].next_rstrt/60);
-		} else {
-			INCLRTMR(INproctmr[indx].sync_tmr);
-			CR_PRM(POA_INF,"REPT INIT %s WILL NOT BE RESTARTED", IN_LDPTAB[indx].proctag);
-		}
-	}
+        //CR_PRM(POA_INF,"REPT INIT %s SCHEDULED FOR RESTART IN %d MIN", IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].next_rstrt/60);
+        printf("REPT INIT %s SCHEDULED FOR RESTART IN %d MIN\n",
+               IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].next_rstrt/60);
+      } else {
+        INCLRTMR(INproctmr[indx].sync_tmr);
+        //CR_PRM(POA_INF,"REPT INIT %s WILL NOT BE RESTARTED", IN_LDPTAB[indx].proctag);
+        printf("REPT INIT %s WILL NOT BE RESTARTED\n", IN_LDPTAB[indx].proctag);
+      }
+    }
 
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeadproc(): returned successfully"));
-	return;
-}
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeadproc(): returned successfully"));
+    printf("INdeadproc(): returned successfully\n");
+    return;
+  }
 
-int
-INkill(U_short indx, int sig)
-{
-	if(IN_LDPTAB[indx].third_party){
-		if(IN_LDPTAB[indx].pid > 1){
-			// If third party process is in the middle of execution
-			// kill it too
-			if(sig < 0){
-				kill(-IN_LDPTAB[indx].pid, -sig);
-			} else {
-				kill(IN_LDPTAB[indx].pid, sig);
-			}
-			if(IN_LDPTAB[indx].tid == IN_FREEPID && sig == 0){
-				return(kill(IN_LDPTAB[indx].pid, 0));
-			}
-		}
-		if(IN_LDPTAB[indx].tid == IN_FREEPID){
-			return(GLsuccess);
-		}
-		if(sig == 0){
-			if(IN_SDPTAB[indx].procstep != IN_ECLEANUP){
-				return(thr_kill(IN_LDPTAB[indx].tid, 0));
-			} else {
-				return(-1);
-			}
-		} else {
-			IN_SDPTAB[indx].procstate = IN_RUNNING;
-			IN_SDPTAB[indx].procstep = IN_ECLEANUP;
-			return(thr_kill(IN_LDPTAB[indx].tid, SIGTERM));
-		}
-	} else {
-		if(sig < 0){
-			return(kill(-IN_LDPTAB[indx].pid, -sig));
-		} else {
-			return(kill(IN_LDPTAB[indx].pid, sig));
-		}
-	}	
-}
+  int
+     INkill(U_short indx, int sig)
+  {
+    if(IN_LDPTAB[indx].third_party){
+      if(IN_LDPTAB[indx].pid > 1){
+        // If third party process is in the middle of execution
+        // kill it too
+        if(sig < 0){
+          kill(-IN_LDPTAB[indx].pid, -sig);
+        } else {
+          kill(IN_LDPTAB[indx].pid, sig);
+        }
+        if(IN_LDPTAB[indx].tid == IN_FREEPID && sig == 0){
+          return(kill(IN_LDPTAB[indx].pid, 0));
+        }
+      }
+      if(IN_LDPTAB[indx].tid == IN_FREEPID){
+        return(GLsuccess);
+      }
+      if(sig == 0){
+        if(IN_SDPTAB[indx].procstep != IN_ECLEANUP){
+          return(thr_kill(IN_LDPTAB[indx].tid, 0));
+        } else {
+          return(-1);
+        }
+      } else {
+        IN_SDPTAB[indx].procstate = IN_RUNNING;
+        IN_SDPTAB[indx].procstep = IN_ECLEANUP;
+        return(thr_kill(IN_LDPTAB[indx].tid, SIGTERM));
+      }
+    } else {
+      if(sig < 0){
+        return(kill(-IN_LDPTAB[indx].pid, -sig));
+      } else {
+        return(kill(IN_LDPTAB[indx].pid, sig));
+      }
+    }	
+  }
 
 #define IN_SHUT_WAIT	(IN_procdata->shutdown_timer) 
-extern  GLretVal	INthirdPartyExec(U_short, IN_SYNCSTEP);
+  extern  GLretVal	INthirdPartyExec(U_short, IN_SYNCSTEP);
 
-extern int INsnstop;
+  extern int INsnstop;
 /*
 ** NAME:
 **	INkillprocs()
@@ -868,230 +906,245 @@ extern int INsnstop;
 ** SIDE EFFECTS:
 */
 
-Void
-INkillprocs(Bool sendSigterm)
-{
-	U_short i;
+  Void
+     INkillprocs(Bool sendSigterm)
+  {
+    U_short i;
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INkillprocs(): entered"));
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INkillprocs(): entered"));
+    printf("INkillprocs(): entered\n");
 
-	// Ignore signals
-	(Void) signal(SIGCLD,SIG_IGN);
+    // Ignore signals
+    (Void) signal(SIGCLD,SIG_IGN);
 
-	/* If backout process was running, kill it too */
-	if(IN_LDBKPID != IN_FREEPID && IN_LDBKPID > 1){
-		kill(IN_LDBKPID,SIGKILL);
-		IN_LDBKPID = IN_FREEPID;
-	}
+    /* If backout process was running, kill it too */
+    if(IN_LDBKPID != IN_FREEPID && IN_LDBKPID > 1){
+      kill(IN_LDBKPID,SIGKILL);
+      IN_LDBKPID = IN_FREEPID;
+    }
 
-	Bool	found_alive;
+    Bool	found_alive;
 
-	for(int nTry = 0; nTry < 2; nTry++){
-		int	waittime;
-		found_alive = TRUE;
+    for(int nTry = 0; nTry < 2; nTry++){
+      int	waittime;
+      found_alive = TRUE;
 
-		if(nTry > 0){
-			waittime = 80;
-			// Do shutdown
+      if(nTry > 0){
+        waittime = 80;
+        // Do shutdown
 #ifndef EES
-		        if(sendSigterm && !INcmd && IN_LDCURSTATE == S_LEADACT){  
+        if(sendSigterm && !INcmd && IN_LDCURSTATE == S_LEADACT){  
 #ifdef __sun
-                        	INShut = FALSE;
-				thr_create(NULL, thr_min_stack()+32000, INshutOracle, NULL, THR_BOUND, NULL);
+          INShut = FALSE;
+          thr_create(NULL, thr_min_stack()+32000, INshutOracle, NULL, THR_BOUND, NULL);
 
-                		/* Wait for a while for Oracle shutdown to complete */
-                		for(i = 0; i < IN_SHUT_WAIT; i++){
-                       			INsanityPeg++;
-                        		IN_SLEEP(1);  
-                        		if(INShut == TRUE){
-                               			CR_PRM(POA_INF,"REPT INIT SHUTDOWN SCRIPT COMPLETED");
-                               		 	break;
-                        		}       
-                		}       
+          /* Wait for a while for Oracle shutdown to complete */
+          for(i = 0; i < IN_SHUT_WAIT; i++){
+            INsanityPeg++;
+            IN_SLEEP(1);  
+            if(INShut == TRUE){
+              //CR_PRM(POA_INF,"REPT INIT SHUTDOWN SCRIPT COMPLETED");
+              printf("REPT INIT SHUTDOWN SCRIPT COMPLETED\n");
+              break;
+            }       
+          }       
                         
-                		if(i >= IN_SHUT_WAIT){
-                        		CR_X733PRM(POA_TMN,"SHUTDOWN", qualityOfServiceAlarm, softwareProgramError, NULL, ";207", "REPT INIT SHUTDOWN SCRIPT TIMED OUT");
-                		} 
+          if(i >= IN_SHUT_WAIT){
+            //CR_X733PRM(POA_TMN,"SHUTDOWN", qualityOfServiceAlarm, softwareProgramError, NULL, ";207", "REPT INIT SHUTDOWN SCRIPT TIMED OUT");
+            printf("REPT INIT SHUTDOWN SCRIPT TIMED OUT\n");
+          } 
 #endif
 #ifdef __linux
-				pid_t     ret;
-				if((ret = fork()) == 0){
-					static int type = INscriptsStop;
-					(Void)setpgrp();
-					mutex_unlock(&CRlockVarible);
-					(Void) sigset(SIGCLD,INsigcld);
-					CR_PRM(POA_INF, "REPT INIT RUNNING STOP SCRIPTS");
-					IN_LDSCRIPTSTATE = INscriptsRunning;
-					INrunScriptList(&type);
-					exit(0);
-				} else if(ret < 0){
-					CR_PRM(POA_INF, "REPT INIT ERROR FAILED TO FORK STOP PROCESS, RET %d", ret);
-					IN_LDSCRIPTSTATE = INscriptsFailed;
-				}
+          pid_t     ret;
+          if((ret = fork()) == 0){
+            static int type = INscriptsStop;
+            (Void)setpgrp();
+            //mutex_unlock(&CRlockVarible);
+            (Void) sigset(SIGCLD,INsigcld);
+            //CR_PRM(POA_INF, "REPT INIT RUNNING STOP SCRIPTS");
+            printf("REPT INIT RUNNING STOP SCRIPTS\n");
+            IN_LDSCRIPTSTATE = INscriptsRunning;
+            INrunScriptList(&type);
+            exit(0);
+          } else if(ret < 0){
+            //CR_PRM(POA_INF, "REPT INIT ERROR FAILED TO FORK STOP PROCESS, RET %d", ret);
+            printf("REPT INIT ERROR FAILED TO FORK STOP PROCESS, RET %d\n", ret);
+            IN_LDSCRIPTSTATE = INscriptsFailed;
+          }
 
 
-                		/* Wait for a while for stop scripts to complete */
-                		for(i = 0; i < ((IN_SHUT_WAIT) * 4); i++){
-                       			INsanityPeg++;
-                        		IN_SLEEPN(0,250000000);  
-                        		if(IN_LDSCRIPTSTATE != INscriptsRunning){
-						if(IN_LDSCRIPTSTATE == INscriptsFinished){
-                               				CR_PRM(POA_INF,"REPT INIT STOP SCRIPTS COMPLETED SUCCESSFULLY");
-						} else {
-                               				CR_PRM(POA_INF,"REPT INIT STOP SCRIPTS FAILED");
-						}
-                               		 	break;
-                        		}       
-                		}       
+          /* Wait for a while for stop scripts to complete */
+          for(i = 0; i < ((IN_SHUT_WAIT) * 4); i++){
+            INsanityPeg++;
+            IN_SLEEPN(0,250000000);  
+            if(IN_LDSCRIPTSTATE != INscriptsRunning){
+              if(IN_LDSCRIPTSTATE == INscriptsFinished){
+                //CR_PRM(POA_INF,"REPT INIT STOP SCRIPTS COMPLETED SUCCESSFULLY");
+                printf("REPT INIT STOP SCRIPTS COMPLETED SUCCESSFULLY\n");
+              } else {
+                //CR_PRM(POA_INF,"REPT INIT STOP SCRIPTS FAILED");
+                printf("REPT INIT STOP SCRIPTS FAILED\n");
+              }
+              break;
+            }       
+          }       
                         
-                		if(i >= IN_SHUT_WAIT){
-                        		CR_X733PRM(POA_TMN,"SHUTDOWN", qualityOfServiceAlarm, softwareProgramError, NULL, ";207", "REPT INIT STOP SCRIPTS TIMED OUT");
-					kill(-ret, SIGKILL);
-                		}
+          if(i >= IN_SHUT_WAIT){
+            //CR_X733PRM(POA_TMN,"SHUTDOWN", qualityOfServiceAlarm, softwareProgramError, NULL, ";207", "REPT INIT STOP SCRIPTS TIMED OUT");
+            printf("REPT INIT STOP SCRIPTS TIMED OUT\n");
+            kill(-ret, SIGKILL);
+          }
 #endif
-        		}
+        }
 #endif  
 
 			
-		} else {
-			if(INsnstop){
-				waittime = 15;
-			} else {
-				if(INvhostMate >= 0 && INevent.isVhostActive()){
-					waittime = 3;
-				} else {
-					waittime = 20;
-				}
-			}
-		}
+      } else {
+        if(INsnstop){
+          waittime = 15;
+        } else {
+          if(INvhostMate >= 0 && INevent.isVhostActive()){
+            waittime = 3;
+          } else {
+            waittime = 20;
+          }
+        }
+      }
 
-		/* Send SIGTERM to all processes in case some of them catch it.
-		** Do it for the processes in above first run lvl fist
-		** then send it to the proceses below first runlvl
-		*/
-		for (i = 0; i < IN_SNPRCMX && sendSigterm; i++) {
-			if (IN_VALIDPROC(i) && (IN_LDPTAB[i].pid > 1 || IN_LDPTAB[i].tid != IN_FREEPID) && 
-				IN_SDPTAB[i].procstate != IN_DEAD && (nTry > 0 ||
-				IN_LDPTAB[i].run_lvl > IN_LDSTATE.first_runlvl)) {
-				if(INcmd && nTry > 0){
-					// This is /etc/Astop do not allow
-					// disks to be unmounted
-					if(IN_LDPTAB[i].third_party == FALSE){	
-						INkill(i,SIGKILL);
-					} else if(IN_LDPTAB[i].tid != IN_FREEPID){
-						INthirdPartyExec(i, IN_CLEANUP);
-						IN_LDPTAB[i].tid = IN_FREEPID;
-					}
-				} else {
-					if(IN_LDPTAB[i].third_party == FALSE){
-						INkill(i,SIGTERM);
-					} else if(IN_LDPTAB[i].tid != IN_FREEPID && (!INcmd)){
-						IN_SDPTAB[i].procstep = IN_BCLEANUP;
-						thr_kill(IN_LDPTAB[i].tid, SIGTERM);
-						IN_LDPTAB[i].tid = IN_FREEPID;
-					}
-				}
-			}
-		}
+      /* Send SIGTERM to all processes in case some of them catch it.
+      ** Do it for the processes in above first run lvl fist
+      ** then send it to the proceses below first runlvl
+      */
+      for (i = 0; i < IN_SNPRCMX && sendSigterm; i++) {
+        if (IN_VALIDPROC(i) && (IN_LDPTAB[i].pid > 1 || IN_LDPTAB[i].tid != IN_FREEPID) && 
+            IN_SDPTAB[i].procstate != IN_DEAD && (nTry > 0 ||
+                                                  IN_LDPTAB[i].run_lvl > IN_LDSTATE.first_runlvl)) {
+          if(INcmd && nTry > 0){
+            // This is /etc/Astop do not allow
+            // disks to be unmounted
+            if(IN_LDPTAB[i].third_party == FALSE){	
+              INkill(i,SIGKILL);
+            } else if(IN_LDPTAB[i].tid != IN_FREEPID){
+              INthirdPartyExec(i, IN_CLEANUP);
+              IN_LDPTAB[i].tid = IN_FREEPID;
+            }
+          } else {
+            if(IN_LDPTAB[i].third_party == FALSE){
+              INkill(i,SIGTERM);
+            } else if(IN_LDPTAB[i].tid != IN_FREEPID && (!INcmd)){
+              IN_SDPTAB[i].procstep = IN_BCLEANUP;
+              thr_kill(IN_LDPTAB[i].tid, SIGTERM);
+              IN_LDPTAB[i].tid = IN_FREEPID;
+            }
+          }
+        }
+      }
 
 
-		// Wait for processes to die 
-		for(int j = 0; j < waittime && found_alive == TRUE && sendSigterm; j++){
-			/* Get all the zombies */
-			while(INcheck_zombie() > 0);
-			INsanityPeg++;
-			IN_SLEEP(1); 
-			found_alive = FALSE;
-			for(i = 0; i < IN_SNPRCMX; i++){
-				if (IN_VALIDPROC(i) && IN_SDPTAB[i].procstate != IN_DEAD &&
-				    IN_LDPTAB[i].pid > 1) {
-					if(INkill(i,0) < 0){
-						// Do not clear pid since we will want to
-						// kill all members of this process's process group
-						IN_SDPTAB[i].procstate = IN_DEAD;
-					} else if((nTry > 0 && IN_LDPTAB[i].run_lvl <= IN_LDSTATE.first_runlvl) 
-						|| (nTry == 0 &&IN_LDPTAB[i].run_lvl > IN_LDSTATE.first_runlvl)){
-						found_alive = TRUE;
-						break;
-					}
-				}
-			}
-		}
+      // Wait for processes to die 
+      for(int j = 0; j < waittime && found_alive == TRUE && sendSigterm; j++){
+        /* Get all the zombies */
+        while(INcheck_zombie() > 0);
+        INsanityPeg++;
+        IN_SLEEP(1); 
+        found_alive = FALSE;
+        for(i = 0; i < IN_SNPRCMX; i++){
+          if (IN_VALIDPROC(i) && IN_SDPTAB[i].procstate != IN_DEAD &&
+              IN_LDPTAB[i].pid > 1) {
+            if(INkill(i,0) < 0){
+              // Do not clear pid since we will want to
+              // kill all members of this process's process group
+              IN_SDPTAB[i].procstate = IN_DEAD;
+            } else if((nTry > 0 && IN_LDPTAB[i].run_lvl <= IN_LDSTATE.first_runlvl) 
+                      || (nTry == 0 &&IN_LDPTAB[i].run_lvl > IN_LDSTATE.first_runlvl)){
+              found_alive = TRUE;
+              break;
+            }
+          }
+        }
+      }
 
-		/* blast any process still alive and all processes in their process group */
-		for (i = 0; i < IN_SNPRCMX; i++) {
+      /* blast any process still alive and all processes in their process group */
+      for (i = 0; i < IN_SNPRCMX; i++) {
 
-			if (IN_VALIDPROC(i)) {
+        if (IN_VALIDPROC(i)) {
 	
-				if (IN_LDPTAB[i].pid <= 1) {
-					/*
-					 * Invalid PID...don't try to kill UNIX
-					 * proc0 or proc1!!!
-					 */
-					INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INkillprocs(): proc %s already dead",IN_LDPTAB[i].proctag));
-				} else {
-					// If the process did not exit, report on it
-					// Do not print this PRM if Astop, it can hang in MSGH
-					if(!INcmd && sendSigterm && IN_SDPTAB[i].procstate != IN_DEAD){
-				/*		CR_PRM(POA_INF,"REPT INIT KILLED %s DURING SHUTDOWN",IN_LDPTAB[i].proctag); */
-					}
-					if(nTry > 0 || IN_LDPTAB[i].run_lvl > IN_LDSTATE.first_runlvl){
-						INIT_DEBUG((IN_DEBUG | IN_RSTRTR),
-						(POA_INF,"INkillprocs(): killing proc group %s pid %d",
-						IN_LDPTAB[i].proctag,IN_LDPTAB[i].pid));
+          if (IN_LDPTAB[i].pid <= 1) {
+            /*
+             * Invalid PID...don't try to kill UNIX
+             * proc0 or proc1!!!
+             */
+            //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INkillprocs(): proc %s already dead",IN_LDPTAB[i].proctag));
+            printf("INkillprocs(): proc %s already dead\n",
+                   IN_LDPTAB[i].proctag);
+          } else {
+            // If the process did not exit, report on it
+            // Do not print this PRM if Astop, it can hang in MSGH
+            if(!INcmd && sendSigterm && IN_SDPTAB[i].procstate != IN_DEAD){
+              /*		CR_PRM(POA_INF,"REPT INIT KILLED %s DURING SHUTDOWN",IN_LDPTAB[i].proctag); */
+            }
+            if(nTry > 0 || IN_LDPTAB[i].run_lvl > IN_LDSTATE.first_runlvl){
+              //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),
+              //           (POA_INF,"INkillprocs(): killing proc group %s pid %d",
+              //            IN_LDPTAB[i].proctag,IN_LDPTAB[i].pid));
+              printf("INkillprocs(): killing proc group %s pid %d\n",
+                     IN_LDPTAB[i].proctag,IN_LDPTAB[i].pid);
 
-						/* OK, blast away */
-						(Void)INkill(i, -SIGKILL);
-					}
-				}
-			}
-		}
-	}
+              /* OK, blast away */
+              (Void)INkill(i, -SIGKILL);
+            }
+          }
+        }
+      }
+    }
 	
-	CRALARMLVL alarm_lvl;
-	INsanityPeg ++;
-	if(found_alive == TRUE){
-		if(sendSigterm){
-			IN_SLEEP(5);
-		} else {
-			IN_SLEEP(2);
-		}
-		/* Get all the zombies */
-		while(INcheck_zombie() > 0);
-	}
+    CRALARMLVL alarm_lvl;
+    INsanityPeg ++;
+    if(found_alive == TRUE){
+      if(sendSigterm){
+        IN_SLEEP(5);
+      } else {
+        IN_SLEEP(2);
+      }
+      /* Get all the zombies */
+      while(INcheck_zombie() > 0);
+    }
 
-	for (i = 0; i < IN_SNPRCMX; i++) {
-		if(IN_VALIDPROC(i) && (IN_LDPTAB[i].pid > 1) &&
-		   (INkill(i,0) >= 0)){
-			// Process still did not die, all we can do here
-			// is report.  UNIX boot may be called for in the
-			// future, for now just print a message and leave
-			// it for manual recovery
-			if(IN_LDPTAB[i].proc_category == IN_NON_CRITICAL){
-				alarm_lvl = POA_MAJ;
-			} else {
-				alarm_lvl = POA_CRIT;
-			}
-			if(!INcmd){
-				CR_PRM(alarm_lvl,"REPT INIT %s DID NOT DIE DURING SYSTEM SHUTDOWN",IN_LDPTAB[i].proctag);
-			}
-		}
-		IN_LDPTAB[i].pid = IN_FREEPID;
-	}
+    for (i = 0; i < IN_SNPRCMX; i++) {
+      if(IN_VALIDPROC(i) && (IN_LDPTAB[i].pid > 1) &&
+         (INkill(i,0) >= 0)){
+        // Process still did not die, all we can do here
+        // is report.  UNIX boot may be called for in the
+        // future, for now just print a message and leave
+        // it for manual recovery
+        if(IN_LDPTAB[i].proc_category == IN_NON_CRITICAL){
+          alarm_lvl = POA_MAJ;
+        } else {
+          alarm_lvl = POA_CRIT;
+        }
+        if(!INcmd){
+          //CR_PRM(alarm_lvl,"REPT INIT %s DID NOT DIE DURING SYSTEM SHUTDOWN",IN_LDPTAB[i].proctag);
+          printf("REPT INIT %s DID NOT DIE DURING SYSTEM SHUTDOWN\n",
+                 IN_LDPTAB[i].proctag);
+        }
+      }
+      IN_LDPTAB[i].pid = IN_FREEPID;
+    }
 
 #ifdef __sun
-	// Clear out all the allocated prosessor sets so they do not accumulate
-	// during system restarts
-	for(i = 0; i < INmaxPsets; i++){
-		if(IN_LDPSET[i] >= 0){
-			pset_destroy(IN_LDPSET[i]);
-			IN_LDPSET[i] = -1;
-		}
-	}
+    // Clear out all the allocated prosessor sets so they do not accumulate
+    // during system restarts
+    for(i = 0; i < INmaxPsets; i++){
+      if(IN_LDPSET[i] >= 0){
+        pset_destroy(IN_LDPSET[i]);
+        IN_LDPSET[i] = -1;
+      }
+    }
 #endif
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INkillprocs(): exited"));
-}
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INkillprocs(): exited"));
+    printf("INkillprocs(): exited\n");
+  }
 
 #ifdef OLD_SU
 /*
@@ -1115,193 +1168,198 @@ INkillprocs(Bool sendSigterm)
 **	INsetrstrt() for case 1.
 **	INsysreset() for case 2.
 */
-Void
-INautobkout(Bool manual, Bool sys_reset)
-{
-	U_short i;
-	static CRALARMLVL a_lvl;
+  Void
+     INautobkout(Bool manual, Bool sys_reset)
+  {
+    U_short i;
+    static CRALARMLVL a_lvl;
 
-	INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INautobkout(): entered"));
+    //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INautobkout(): entered"));
+    printf("INautobkout(): entered\n");
 
-	if(INsupresent == FALSE || IN_LDBKOUT == TRUE){	
-		/* This function is called out of INescalate after every process
-		** death, so this may happen when SU backout is already in
-		** progress. INautobkout() should only run once per backout.
-		** Also, this function should not run when no SU is present.
-		*/
-		return;	
-	}
+    if(INsupresent == FALSE || IN_LDBKOUT == TRUE){	
+      /* This function is called out of INescalate after every process
+      ** death, so this may happen when SU backout is already in
+      ** progress. INautobkout() should only run once per backout.
+      ** Also, this function should not run when no SU is present.
+      */
+      return;	
+    }
 
-	/* Change the value of alarm level only if manual is TRUE or FALSE,
-	** leave a_lvl unchanged for any other input.
-	*/
-	if(manual == TRUE){
-		a_lvl = POA_MAN;
-	} else if (manual == FALSE) {
-		a_lvl = POA_MAJ;
-	}
+    /* Change the value of alarm level only if manual is TRUE or FALSE,
+    ** leave a_lvl unchanged for any other input.
+    */
+    if(manual == TRUE){
+      a_lvl = POA_MAN;
+    } else if (manual == FALSE) {
+      a_lvl = POA_MAJ;
+    }
 
-	/* Run INrun_bkout() until BKOUT script succeeds or it is abandoned.
-	** If sys_reset is TRUE, INrun_bkout() executes in blocking mode and
-	** returns success when BKOUT script finishes.
-	** If sys_reset is FALSE, INrun_bkout() forks a copy of INIT which
-	** runs the BKOUT script in background and returns success when it 
-	** completes.
-	*/ 
+    /* Run INrun_bkout() until BKOUT script succeeds or it is abandoned.
+    ** If sys_reset is TRUE, INrun_bkout() executes in blocking mode and
+    ** returns success when BKOUT script finishes.
+    ** If sys_reset is FALSE, INrun_bkout() forks a copy of INIT which
+    ** runs the BKOUT script in background and returns success when it 
+    ** completes.
+    */ 
 
-	if(INrun_bkout(sys_reset) != GLsuccess){
-		return;
-	}
+    if(INrun_bkout(sys_reset) != GLsuccess){
+      return;
+    }
 	
-	CR_PRM(a_lvl,"REPT INIT TERMINATING PROCESS UPDATES - REVERTING TO ORIGINAL PROCESSES");
-	if(sys_reset == TRUE){
-		/* Make all image files consistent and change
-		** update state to no update.
-		*/
-		SN_LVL  sn_lvl;
-		int	j;
-		(void) INmvsufiles(IN_SNPRCMX, sn_lvl,INSU_BKOUT);
-		for(i = 0; i < IN_SNPRCMX; i++){
-			if(IN_VALIDPROC(i)){
-				IN_LDPTAB[i].updstate = NO_UPD;
-				/* Delete the process from process table if new */
-				j = INsudata_find(IN_LDPTAB[i].pathname);
-				if(j < SU_MAX_OBJ && INsudata[j].new_obj == TRUE){
-					INinitptab(i);
-				}
+    //CR_PRM(a_lvl,"REPT INIT TERMINATING PROCESS UPDATES - REVERTING TO ORIGINAL PROCESSES");
+    printf("REPT INIT TERMINATING PROCESS UPDATES - REVERTING TO ORIGINAL PROCESSES\n");
+    if(sys_reset == TRUE){
+      /* Make all image files consistent and change
+      ** update state to no update.
+      */
+      SN_LVL  sn_lvl;
+      int	j;
+      (void) INmvsufiles(IN_SNPRCMX, sn_lvl,INSU_BKOUT);
+      for(i = 0; i < IN_SNPRCMX; i++){
+        if(IN_VALIDPROC(i)){
+          IN_LDPTAB[i].updstate = NO_UPD;
+          /* Delete the process from process table if new */
+          j = INsudata_find(IN_LDPTAB[i].pathname);
+          if(j < SU_MAX_OBJ && INsudata[j].new_obj == TRUE){
+            INinitptab(i);
+          }
 				
-			}
-		}
+        }
+      }
 		
-		if(INinit_su_idx != -1){
-			INmvsuinit(INSU_BKOUT);
-		}
+      if(INinit_su_idx != -1){
+        INmvsuinit(INSU_BKOUT);
+      }
 
-		IN_LDBKOUT = FALSE;
-		IN_LDAQID = MHnullQ;
-		IN_LDBQID = MHnullQ;
+      IN_LDBKOUT = FALSE;
+      IN_LDAQID = MHnullQ;
+      IN_LDBQID = MHnullQ;
 
-		(void)INfinish_bkout();
-		/* Reread the initlist since it may have changed */
-	        if (INrdinls(TRUE,FALSE) == GLfail){
-       		         INescalate(SN_LV2,INBADINITLIST,IN_SOFT,INIT_INDEX);
-        	}
+      (void)INfinish_bkout();
+      /* Reread the initlist since it may have changed */
+      if (INrdinls(TRUE,FALSE) == GLfail){
+        INescalate(SN_LV2,INBADINITLIST,IN_SOFT,INIT_INDEX);
+      }
 
-		return;
-	}
+      return;
+    }
 
-	Bool	proc_initialized;
+    Bool	proc_initialized;
 
-	for (i = 0; i < IN_SNPRCMX; i++) {
-		/* Skip empty process table entries */
-		if (IN_INVPROC(i)){
-			continue;
-		} 
-		/* The process itself may not have been part of the SU
-		** but may have been initialized as part of the SU.
-		** If that already happened, then make sure that this
-		** process gets reinitialized again and the files associated with
-		** it get backed out.
-		*/
-		proc_initialized = FALSE;
+    for (i = 0; i < IN_SNPRCMX; i++) {
+      /* Skip empty process table entries */
+      if (IN_INVPROC(i)){
+        continue;
+      } 
+      /* The process itself may not have been part of the SU
+      ** but may have been initialized as part of the SU.
+      ** If that already happened, then make sure that this
+      ** process gets reinitialized again and the files associated with
+      ** it get backed out.
+      */
+      proc_initialized = FALSE;
 		
-		int c;
+      int c;
 
-		if((c = INsudata_find(IN_LDPTAB[i].pathname)) < SU_MAX_OBJ){
-			/* Only restart the process if already restarted */
-			if(INsudata[c].changed == FALSE && 
-			   IN_LDPTAB[i].run_lvl <= IN_LDSTATE.sync_run_lvl){
-				proc_initialized = TRUE;
-			}
-			SN_LVL sn_lvl;
-			if(INsudata[c].new_obj == TRUE){
-				/* Update any related files */
-				(void)INmvsufiles(i,sn_lvl,INSU_BKOUT);
-				/* Delete that process */
-				INdeadproc(i,TRUE);	
-				continue;
-			}
-		}
+      if((c = INsudata_find(IN_LDPTAB[i].pathname)) < SU_MAX_OBJ){
+        /* Only restart the process if already restarted */
+        if(INsudata[c].changed == FALSE && 
+           IN_LDPTAB[i].run_lvl <= IN_LDSTATE.sync_run_lvl){
+          proc_initialized = TRUE;
+        }
+        SN_LVL sn_lvl;
+        if(INsudata[c].new_obj == TRUE){
+          /* Update any related files */
+          (void)INmvsufiles(i,sn_lvl,INSU_BKOUT);
+          /* Delete that process */
+          INdeadproc(i,TRUE);	
+          continue;
+        }
+      }
 		
 
-		if(IN_LDPTAB[i].updstate != NO_UPD || proc_initialized == TRUE){
-			IN_LDBKOUT = TRUE;
-			// Print a message if overriding inhibit restart
-			if(IN_LDPTAB[i].startstate == IN_INHRESTART){
-				CR_PRM(POA_INF,"REPT INIT AUTOBACKOUT ALLOWING RESTART FOR PROCESS %s",IN_LDPTAB[i].proctag);
-			}
-			IN_LDPTAB[i].startstate = IN_ALWRESTART;
-			/* Clear restart count to prevent escalations */
-			IN_LDPTAB[i].rstrt_cnt = 0;
-			INCLRTMR(INproctmr[i].rstrt_tmr);
-			/* If manual backout requested, set reason to
-			** manual to avoid alarmed messages.
-			*/
-			if(a_lvl == POA_MAN){
-				IN_LDPTAB[i].source = IN_MANUAL;
-			} else {
-				IN_LDPTAB[i].source = IN_SOFT;
-			}
+      if(IN_LDPTAB[i].updstate != NO_UPD || proc_initialized == TRUE){
+        IN_LDBKOUT = TRUE;
+        // Print a message if overriding inhibit restart
+        if(IN_LDPTAB[i].startstate == IN_INHRESTART){
+          //CR_PRM(POA_INF,"REPT INIT AUTOBACKOUT ALLOWING RESTART FOR PROCESS %s",IN_LDPTAB[i].proctag);
+          prinf("REPT INIT AUTOBACKOUT ALLOWING RESTART FOR PROCESS %s\n",
+                IN_LDPTAB[i].proctag);
+        }
+        IN_LDPTAB[i].startstate = IN_ALWRESTART;
+        /* Clear restart count to prevent escalations */
+        IN_LDPTAB[i].rstrt_cnt = 0;
+        INCLRTMR(INproctmr[i].rstrt_tmr);
+        /* If manual backout requested, set reason to
+        ** manual to avoid alarmed messages.
+        */
+        if(a_lvl == POA_MAN){
+          IN_LDPTAB[i].source = IN_MANUAL;
+        } else {
+          IN_LDPTAB[i].source = IN_SOFT;
+        }
 			
-			if(IN_LDPTAB[i].updstate == UPD_PRESTART && 
-			   IN_SDPTAB[i].procstep == IN_BSU){
-                       		 /* Simply undo the SU info for processes that did not
-                       		 ** yet get SUexitMsg sent to them.
-                       		 */
-				IN_SDPTAB[i].procstep = IN_STEADY;
-				IN_LDPTAB[i].syncstep = IN_STEADY;
-				IN_LDPTAB[i].updstate = NO_UPD;
-			} else {
-				IN_LDPTAB[i].syncstep = IN_BSU;
-				if(proc_initialized == FALSE){
-					/* Modify updstate to UPD_POSTART for cases were
-					** processes are still in UPD_PRESTART but
-					** already received SUexitMsg message.
-					*/
-					IN_LDPTAB[i].updstate = UPD_POSTSTART;
-				}
+        if(IN_LDPTAB[i].updstate == UPD_PRESTART && 
+           IN_SDPTAB[i].procstep == IN_BSU){
+          /* Simply undo the SU info for processes that did not
+          ** yet get SUexitMsg sent to them.
+          */
+          IN_SDPTAB[i].procstep = IN_STEADY;
+          IN_LDPTAB[i].syncstep = IN_STEADY;
+          IN_LDPTAB[i].updstate = NO_UPD;
+        } else {
+          IN_LDPTAB[i].syncstep = IN_BSU;
+          if(proc_initialized == FALSE){
+            /* Modify updstate to UPD_POSTART for cases were
+            ** processes are still in UPD_PRESTART but
+            ** already received SUexitMsg message.
+            */
+            IN_LDPTAB[i].updstate = UPD_POSTSTART;
+          }
 
-				/* If a process was in the middle of the apply
-				** just back it out immediately regardless of
-				** any sequencing. This may create dependencies but
-				** the alternative is to let the process wait dead
-				** until it's sequencing order and that would
-				** cause more downtime.
-				*/
-				if(IN_SDPTAB[i].procstep != IN_STEADY){
-					INsync(i,IN_SU);
-				} else {
-					IN_SDPTAB[i].procstep = IN_BSU;
-				}
-			}
-		} 
+          /* If a process was in the middle of the apply
+          ** just back it out immediately regardless of
+          ** any sequencing. This may create dependencies but
+          ** the alternative is to let the process wait dead
+          ** until it's sequencing order and that would
+          ** cause more downtime.
+          */
+          if(IN_SDPTAB[i].procstep != IN_STEADY){
+            INsync(i,IN_SU);
+          } else {
+            IN_SDPTAB[i].procstep = IN_BSU;
+          }
+        }
+      } 
 
-	}
+    }
 
-	if(IN_LDBKOUT == FALSE && INinit_su_idx < 0){
-		INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INautobkout found no processes that are being SU'd"));
-		/* In case SU only had CEPs (no permanent process objects)
-		** insure that backout completes correctly.
-		*/
-		IN_LDBKOUT = TRUE;
-		INinitover();
-		return;
-	}
+    if(IN_LDBKOUT == FALSE && INinit_su_idx < 0){
+      //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INautobkout found no processes that are being SU'd"));
+      printf("INautobkout found no processes that are being SU'd\n");
+      /* In case SU only had CEPs (no permanent process objects)
+      ** insure that backout completes correctly.
+      */
+      IN_LDBKOUT = TRUE;
+      INinitover();
+      return;
+    }
 
-	/* Make sure that the old INIT process gets restarted */
-	if(INinit_su_idx >= 0){
-		INmvsuinit(INSU_BKOUT);
-		IN_LDBKOUT = TRUE;
-		IN_LDEXIT = TRUE;	/* Causes INIT to exit from main loop */
-	}
+    /* Make sure that the old INIT process gets restarted */
+    if(INinit_su_idx >= 0){
+      INmvsuinit(INSU_BKOUT);
+      IN_LDBKOUT = TRUE;
+      IN_LDEXIT = TRUE;	/* Causes INIT to exit from main loop */
+    }
 
-	/* Schedule restart work */
-	INworkflg = TRUE;
-	INsettmr(INpolltmr,INPROCPOLL,(INITTAG|INPOLLTAG), TRUE, TRUE);
-	IN_LDSTATE.sync_run_lvl = 0;
-	INnext_rlvl();
-	return;
-}
+    /* Schedule restart work */
+    INworkflg = TRUE;
+    INsettmr(INpolltmr,INPROCPOLL,(INITTAG|INPOLLTAG), TRUE, TRUE);
+    IN_LDSTATE.sync_run_lvl = 0;
+    INnext_rlvl();
+    return;
+  }
 #endif
 
 /*
@@ -1320,37 +1378,41 @@ INautobkout(Bool manual, Bool sys_reset)
 **
 **
 */
-Void
-INfreeshmem(U_short indx, Bool release_ucl)
-{
-	int seg_id;
-	struct shmid_ds	membuf;
+  Void
+     INfreeshmem(U_short indx, Bool release_ucl)
+  {
+    int seg_id;
+    struct shmid_ds	membuf;
 
-        mutex_lock(&IN_SDSHMLOCK);
-        IN_SDSHMLOCKCNT++;
+    mutex_lock(&IN_SDSHMLOCK);
+    IN_SDSHMLOCKCNT++;
 
-	for (int i = 0; i < INmaxSegs; i++) {
-		/* Release allocated shared memory segment only if unconditional
-		** release has been requested or process has allocated this 
-		** segment with the release option enabled.
-		*/
-		INsanityPeg++;
-		if (((IN_SDSHMDATA[i].m_pIndex == indx) && (seg_id = IN_SDSHMDATA[i].m_shmid) >= 0) && 
-		    (release_ucl == TRUE || IN_SDSHMDATA[i].m_rel == TRUE)) {
-			if (shmctl(seg_id, IPC_RMID, &membuf) < 0) {
-				INIT_ERROR(("Return %d from \"shmctl()\" deallocating \"%s\"s shared memory segment ID %d, indx %d",errno,IN_LDPTAB[indx].proctag, seg_id, i));
-			} else {
-				INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INfreeshmem(): successfully deallocated \"%s\"s shmem seg, ID %d",IN_LDPTAB[indx].proctag, seg_id ));
-			}
-			 memmove(&IN_SDSHMDATA[i], &IN_SDSHMDATA[i + 1], sizeof(INshmemInfo) * (INmaxSegs - i - 1));
-			// Adjust the index, otherwise may miss one
-			i--;
-			IN_SDSHMDATA[INmaxSegs - 1].m_pIndex = -1;
-		}
-	}
-        mutex_unlock(&IN_SDSHMLOCK);
+    for (int i = 0; i < INmaxSegs; i++) {
+      /* Release allocated shared memory segment only if unconditional
+      ** release has been requested or process has allocated this 
+      ** segment with the release option enabled.
+      */
+      INsanityPeg++;
+      if (((IN_SDSHMDATA[i].m_pIndex == indx) && (seg_id = IN_SDSHMDATA[i].m_shmid) >= 0) && 
+          (release_ucl == TRUE || IN_SDSHMDATA[i].m_rel == TRUE)) {
+        if (shmctl(seg_id, IPC_RMID, &membuf) < 0) {
+          //INIT_ERROR(("Return %d from \"shmctl()\" deallocating \"%s\"s shared memory segment ID %d, indx %d",errno,IN_LDPTAB[indx].proctag, seg_id, i));
+          printf("Return %d from \"shmctl()\" deallocating \"%s\"s shared memory segment ID %d, indx %d\n",
+                 errno,IN_LDPTAB[indx].proctag, seg_id, i);
+        } else {
+          //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INfreeshmem(): successfully deallocated \"%s\"s shmem seg, ID %d",IN_LDPTAB[indx].proctag, seg_id ));
+          printf("INfreeshmem(): successfully deallocated \"%s\"s shmem seg, ID %d\n",
+                 IN_LDPTAB[indx].proctag, seg_id );
+        }
+        memmove(&IN_SDSHMDATA[i], &IN_SDSHMDATA[i + 1], sizeof(INshmemInfo) * (INmaxSegs - i - 1));
+        // Adjust the index, otherwise may miss one
+        i--;
+        IN_SDSHMDATA[INmaxSegs - 1].m_pIndex = -1;
+      }
+    }
+    mutex_unlock(&IN_SDSHMLOCK);
 
-}
+  }
 
 /*
 ** NAME:
@@ -1367,23 +1429,27 @@ INfreeshmem(U_short indx, Bool release_ucl)
 **
 **
 */
-Void
-INfreesem(U_short indx)
-{
-	int sem_id;
+  Void
+     INfreesem(U_short indx)
+  {
+    int sem_id;
 
-	for (int i = 0; i < IN_NUMSEMIDS; i++) {
-		if ((sem_id = IN_SDPTAB[indx].semids[i]) >= 0) {
-			if (semctl(sem_id, 0, IPC_RMID, 0) < 0) {
-				INIT_ERROR(("Return %d from \"semctl()\" deallocating \"%s\"s semaphore ID %d, indx %d", errno, IN_LDPTAB[indx].proctag, sem_id, i));
-			}
-			else {
-				INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INfreesem(): successfully deallocated \"%s\"s semaphore set, ID %d",IN_LDPTAB[indx].proctag, sem_id ));
-			}
-			IN_SDPTAB[indx].semids[i] = -1;
-		}
-	}
-}
+    for (int i = 0; i < IN_NUMSEMIDS; i++) {
+      if ((sem_id = IN_SDPTAB[indx].semids[i]) >= 0) {
+        if (semctl(sem_id, 0, IPC_RMID, 0) < 0) {
+          //INIT_ERROR(("Return %d from \"semctl()\" deallocating \"%s\"s semaphore ID %d, indx %d", errno, IN_LDPTAB[indx].proctag, sem_id, i));
+          printf("Return %d from \"semctl()\" deallocating \"%s\"s semaphore ID %d, indx %d\n",
+                 errno, IN_LDPTAB[indx].proctag, sem_id, i);
+        }
+        else {
+          //INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INfreesem(): successfully deallocated \"%s\"s semaphore set, ID %d",IN_LDPTAB[indx].proctag, sem_id ));
+          printf("INfreesem(): successfully deallocated \"%s\"s semaphore set, ID %d\n",
+                 IN_LDPTAB[indx].proctag, sem_id);
+        }
+        IN_SDPTAB[indx].semids[i] = -1;
+      }
+    }
+  }
 #ifdef OLD_SU
 /*
 ** NAME:
@@ -1401,42 +1467,42 @@ INfreesem(U_short indx)
 **
 **
 */
-GLretVal
-INrun_bkout(Bool sys_reset)
-{
+  GLretVal
+     INrun_bkout(Bool sys_reset)
+  {
 
 
-	if(sys_reset == TRUE){
-		/* If system reset in progress, execute INsys_bk() in line
-		** without doing concurrent processing.
-		** Disable system monitor since don't really know how long
-		** the backup script will be
-		*/
-		INsanset(0L);
-		INsys_bk();
+    if(sys_reset == TRUE){
+      /* If system reset in progress, execute INsys_bk() in line
+      ** without doing concurrent processing.
+      ** Disable system monitor since don't really know how long
+      ** the backup script will be
+      */
+      INsanset(0L);
+      INsys_bk();
 
-		if((IN_LDARUINT & 0x1) == 0){
-			INsanset(IN_LDARUINT * 1000L);
-		}
-		IN_LDBKPID = IN_FREEPID;
-		return(GLsuccess);
-	} else {
-		/* Execute a backout script in a forked process if
-		** one is not currently executing.
-		*/
+      if((IN_LDARUINT & 0x1) == 0){
+        INsanset(IN_LDARUINT * 1000L);
+      }
+      IN_LDBKPID = IN_FREEPID;
+      return(GLsuccess);
+    } else {
+      /* Execute a backout script in a forked process if
+      ** one is not currently executing.
+      */
 
-		if(IN_LDBKPID != IN_FREEPID){
-			/* make sure that the backout script is truly dead */
-			if(kill(IN_LDBKPID,0) < 0){
-				/* Backout script completed, return success */
-				IN_LDBKPID = IN_FREEPID;
-				return(GLsuccess);
-			} else {
-				return(GLfail);
-			}
-		} else {
-			/* Start executing the backout script */
-			Short bk_pid;
+      if(IN_LDBKPID != IN_FREEPID){
+        /* make sure that the backout script is truly dead */
+        if(kill(IN_LDBKPID,0) < 0){
+          /* Backout script completed, return success */
+          IN_LDBKPID = IN_FREEPID;
+          return(GLsuccess);
+        } else {
+          return(GLfail);
+        }
+      } else {
+        /* Start executing the backout script */
+Short bk_pid;
 			if((bk_pid = fork()) > 0){
 				/* Old process */
 				IN_LDBKPID = bk_pid;
@@ -1445,7 +1511,9 @@ INrun_bkout(Bool sys_reset)
 				/* Failed to fork, print a message and 
 				** continue the backout anyway.
 				*/
-				CR_PRM(POA_INF,"REPT INIT ERROR FAILED TO EXECUTE BKOUT SCRIPT ERRNO = %d",errno);
+				//CR_PRM(POA_INF,"REPT INIT ERROR FAILED TO EXECUTE BKOUT SCRIPT ERRNO = %d",errno);
+        printf("REPT INIT ERROR FAILED TO EXECUTE BKOUT SCRIPT ERRNO = %d\n",
+               errno);
 				return(GLsuccess);
 			} else {
 				/* Drop priority of the child process */
@@ -1483,7 +1551,8 @@ INrun_bkout(Bool sys_reset)
 void
 INalarm(int)
 {
-	CR_PRM(POA_INF,"REPT INIT ERROR BKOUT SCRIPT TIMED OUT");
+	//CR_PRM(POA_INF,"REPT INIT ERROR BKOUT SCRIPT TIMED OUT");
+  printf("REPT INIT ERROR BKOUT SCRIPT TIMED OUT\n");
 	IN_LDBKRET = EINTR;
 	kill(-getpid(),SIGKILL); 
 	return;
@@ -1516,11 +1585,14 @@ int	ret;
 	strncpy(bkout_file,INsupath,IN_PATHNMMX-6);
 	strcat(bkout_file,"/BKOUT");
 
-	INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Entered INsys_bk"));
+	//INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Entered INsys_bk"));
+  prinf("Entered INsys_bk\n");
 
 	int fd;
 	if((fd = open(bkout_file,O_RDONLY)) < 0){
-		CR_PRM(POA_INF,"REPT INIT ERROR FAILED TO OPEN BKOUT FILE %s",bkout_file);
+		//CR_PRM(POA_INF,"REPT INIT ERROR FAILED TO OPEN BKOUT FILE %s",bkout_file);
+    printf("REPT INIT ERROR FAILED TO OPEN BKOUT FILE %s\n",
+           bkout_file);
 		IN_LDBKRET = GLfail;
 		return;
 	}
@@ -1528,7 +1600,9 @@ int	ret;
 	memset(bkout_time,0,sizeof(bkout_time));
 
 	if(read(fd,(void*)bkout_time,10) < 3 || bkout_time[0] != '#'){
-		CR_PRM(POA_INF,"REPT INIT ERROR FAILED TO READ BKOUT FILE %s",bkout_file);
+		//CR_PRM(POA_INF,"REPT INIT ERROR FAILED TO READ BKOUT FILE %s",bkout_file);
+    printf("REPT INIT ERROR FAILED TO READ BKOUT FILE %s\n",
+           bkout_file);
 		close(fd);
 		IN_LDBKRET = GLfail;
 		return;
@@ -1539,14 +1613,18 @@ int	ret;
 	long	timeout = atol(&bkout_time[1]);
 	
 	if(timeout == 0 || timeout > 7200){
-		CR_PRM(POA_MIN,"REPT INIT BKOUT TIME OUT VALUE OF %ld",timeout);
+		//CR_PRM(POA_MIN,"REPT INIT BKOUT TIME OUT VALUE OF %ld",timeout);
+    printf("REPT INIT BKOUT TIME OUT VALUE OF %ld\n",
+           timeout);
 	}
 
 	timeVal.it_value.tv_sec = timeout;
 	timeVal.it_value.tv_usec = 0;
 	setitimer(ITIMER_REAL, &timeVal, NULL);
 
-	INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"INsys_bk: bkout_file = %s, bkout_time = %s",bkout_file,bkout_time));
+	//INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"INsys_bk: bkout_file = %s, bkout_time = %s",bkout_file,bkout_time));
+  printf("INsys_bk: bkout_file = %s, bkout_time = %s\n",
+         bkout_file,bkout_time);
 
 	/* This is necessary so that processes created through "system" call
 	** have the out process group id and therefore get killed properly
@@ -1558,16 +1636,19 @@ int	ret;
 
 	if(ret != 0){
 		if(errno == EINTR){
-			CR_PRM(POA_INF,"REPT INIT ERROR BKOUT SCRIPT TIMED OUT");
+			//CR_PRM(POA_INF,"REPT INIT ERROR BKOUT SCRIPT TIMED OUT");
+      printf("REPT INIT ERROR BKOUT SCRIPT TIMED OUT\n");
 		} else {
-			CR_PRM(POA_INF,"REPT INIT ERROR BKOUT SCRIPT RETURNED %d",ret);
+			//CR_PRM(POA_INF,"REPT INIT ERROR BKOUT SCRIPT RETURNED %d",ret);
+      printf("REPT INIT ERROR BKOUT SCRIPT RETURNED %d\n",ret);
 		}
 		IN_LDBKRET = ret;
 		return;
 	}
 
 	IN_LDBKRET = GLsuccess;
-	INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Exited INsys_bk"));
+	//INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Exited INsys_bk"));
+  printf("Exited INsys_bk\n");
 }
 
 /*
@@ -1598,30 +1679,37 @@ INfinish_bkout()
 	GLretVal ret = GLfail;
 	char	p_n[128],verb[128];
 
-	INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Entered INfinish_bkout"));
+	//INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Entered INfinish_bkout"));
+  printf("Entered INfinish_bkout\n");
 
 	/* Do not finish backout unless backout script was successful or
 	** unconditonal backout was requested
 	*/
 	
 	if(IN_LDBKRET != GLsuccess && IN_LDBKUCL != TRUE){
-		INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"INfinish_bkout: BKOUT script failed during conditional backout"));
+		//INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"INfinish_bkout: BKOUT script failed during conditional backout"));
+    printf("INfinish_bkout: BKOUT script failed during conditional backout\n");
 		/* This condition is not a failure in this script */
 		return(GLsuccess);
 	}
 
 	if(IN_LDSTATE.isactive == FALSE){
-		CR_PRM(POA_INF,"REPT INIT COMPLETED SU BACKOUT");
+		//CR_PRM(POA_INF,"REPT INIT COMPLETED SU BACKOUT");
+    printf("REPT INIT COMPLETED SU BACKOUT\n");
 
 		INsupresent = FALSE;
 		if(unlink(INsufile) < 0){
-			INIT_ERROR(("INfinish_bkout: failed to remove %s, errno = %d",INsufile, errno));
+			//INIT_ERROR(("INfinish_bkout: failed to remove %s, errno = %d",INsufile, errno));
+      printf("INfinish_bkout: failed to remove %s, errno = %d\n",
+             INsufile, errno);
 		}
 		return(GLsuccess);
 	}
 
 	if ((file_ptr = fopen(INhistfile, "r")) == NULL) {
-		CR_PRM(POA_INF,"REPT INIT ERROR COULD NOT OPEN %s, BACKOUT FAILED",INhistfile);
+		//CR_PRM(POA_INF,"REPT INIT ERROR COULD NOT OPEN %s, BACKOUT FAILED",INhistfile);
+    printf("REPT INIT ERROR COULD NOT OPEN %s, BACKOUT FAILED\n",
+           INhistfile);
 		return(ret);
 	}
  
@@ -1646,7 +1734,9 @@ INfinish_bkout()
 	fclose(file_ptr);
  
 	if ((file_ptr = fopen(INhistfile, "a")) == NULL) {
-		CR_PRM(POA_INF,"REPT INIT ERROR COULD NOT OPEN %s, BACKOUT FAILED",INhistfile);
+		//CR_PRM(POA_INF,"REPT INIT ERROR COULD NOT OPEN %s, BACKOUT FAILED",INhistfile);
+    prinf("REPT INIT ERROR COULD NOT OPEN %s, BACKOUT FAILED\n",
+          INhistfile);
 		return(ret);
 	}
 
@@ -1666,14 +1756,18 @@ INfinish_bkout()
 	SUversion versionmsg;
 	(void)versionmsg.broadcast(INmsgqid,0L);
 	
-	CR_PRM(POA_INF,"REPT INIT COMPLETED SU BACKOUT");
+	//CR_PRM(POA_INF,"REPT INIT COMPLETED SU BACKOUT");
+  printf("REPT INIT COMPLETED SU BACKOUT\n");
 
 	INsupresent = FALSE;
 	if(unlink(INsufile) < 0){
-		INIT_ERROR(("INfinish_bkout: failed to remove %s, errno = %d",INsufile, errno));
+		//INIT_ERROR(("INfinish_bkout: failed to remove %s, errno = %d",INsufile, errno));
+    printf("INfinish_bkout: failed to remove %s, errno = %d\n",
+           INsufile, errno);
 	}
  
-	INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Exited INfinish_bkout"));
+	//INIT_DEBUG((IN_DEBUG | IN_MSGHTR), (POA_INF,"Exited INfinish_bkout"));
+  printf("Exited INfinish_bkout\n");
 	return(GLsuccess);
 }
 
