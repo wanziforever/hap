@@ -3,3 +3,6 @@
 *.so
 *.a
 bin/*
+GPATH
+GRTAGS
+GTAGS
