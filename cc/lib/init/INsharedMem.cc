@@ -98,6 +98,7 @@ int
 INsharedMem::allocSeg(key_t memkey, unsigned long size, int perm_flg, Bool &new_flg, 
 Bool rel_flg, IN_SHM_KEY private_key)
 {
+  printf("INsharedMem::allocSeg() enter\n");
 	int	ret_id;		/* Shared memory ID returned from "shmget()" */
 	U_short	nindx;
 
@@ -113,6 +114,7 @@ Bool rel_flg, IN_SHM_KEY private_key)
 
 	// We do not support shared memory allocation in lab mode
 	if(IN_IS_LAB()){
+    printf("lab mode return fail\n");
 		return(GLfail);
 	}
 
@@ -135,7 +137,7 @@ Bool rel_flg, IN_SHM_KEY private_key)
 		}
 	}
 
-
+  printf("INsharedMem::allocSeg() going to check shared memory\n");
 	if ((memkey != IPC_PRIVATE) &&
 	    ((ret_id = shmget(memkey, size, 0)) >= 0))  {
 		/*
@@ -207,6 +209,7 @@ Bool rel_flg, IN_SHM_KEY private_key)
 
 	IN_SDSHMDATA[nindx].m_rel = rel_flg;
 	IN_SDSHMDATA[nindx].m_pkey = private_key;
+  printf("INsharedMem::allocSeg() going to shmget memory \n");
 	if((IN_SDSHMDATA[nindx].m_shmid = shmget(memkey, size,((0x1ff & perm_flg) | IPC_CREAT))) >=0){
 		new_flg = TRUE;
 		IN_SDSHMDATA[nindx].m_pIndex = IN_PINDX;

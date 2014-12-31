@@ -1,0 +1,1 @@
+the MHproc process will create the MHrt share memory, defined in cc/proc/msgh/MHinfoInt.cc

@@ -429,7 +429,7 @@ Short sysinit(int, Char *[], SN_LVL, U_char) {
 // The future INIT implementation will not require this.
 Short procinit(int, Char *[], SN_LVL sn_lvl, U_char) {
   /* CRERRINIT(msghName) // input subsystem name */
-
+  printf("MHproc::procinit() enter\n");
   GLretVal rtn;
   Long tmrtype;
   MHqid myQid;
@@ -586,6 +586,7 @@ Short procinit(int, Char *[], SN_LVL sn_lvl, U_char) {
   }
 
   MHevent.clrTmr(MHtmrIndx);
+  printf("MHproc::procinit() exit\n");
   return (GLsuccess);
 }
 

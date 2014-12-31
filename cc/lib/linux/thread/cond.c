@@ -159,7 +159,7 @@ cond_wait ( cond_t* cvp, mutex_t* mp )
  */
 
 int
-cond_timedwait ( cond_t* cvp, mutex_t* mp, timestruc_t* abstime )
+cond_timedwait ( cond_t* cvp, mutex_t* mp, struct timespec* abstime )
 {
 	struct timespec	_abstime;
 	int		rc;
@@ -222,7 +222,7 @@ cond_timedwait ( cond_t* cvp, mutex_t* mp, timestruc_t* abstime )
  */
 
 int
-cond_reltimedwait ( cond_t* cvp, mutex_t* mp, timestruc_t* reltime )
+cond_reltimedwait ( cond_t* cvp, mutex_t* mp, struct timespec* reltime )
 {
 	int	rc;
 

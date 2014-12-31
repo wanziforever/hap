@@ -318,7 +318,7 @@ INrdinls(Bool initflg, Bool audflg)
 		}
 
 		//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): token %s, value %s",token,equal_loc));
-    printf("INrdinls(): token %s, value %s\n",token,equal_loc);
+    //printf("INrdinls(): token %s, value %s\n",token,equal_loc);
 		parm_updated[parameter] = TRUE;
 		
 		/* Parse the processor set first	*/
@@ -852,7 +852,7 @@ INrdinls(Bool initflg, Bool audflg)
 
 				parm_updated[parameter] = TRUE;
 				//INIT_DEBUG((IN_DEBUG | IN_RDINTR),(POA_INF,"INrdinls(): token %s, value %s",token,equal_loc));
-        printf("INrdinls(): token %s, value %s\n",token,equal_loc);
+        //printf("INrdinls(): token %s, value %s\n",token,equal_loc);
 			} else {
 				process_info = FALSE;
 				// This will force required argument checking  for 

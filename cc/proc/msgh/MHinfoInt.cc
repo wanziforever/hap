@@ -28,7 +28,7 @@ Short MHinfoInt::sysinit() {
   GLretVal retval;
   int shmid;
   char *pBuffer;
-
+  printf("MHinfoInt::sysinit() enter\n");
   // create a shared memory segment if it is does not exists
   if ((shmid = INshmem.allocSeg(MHkey, sizeof(MHrt), 0666, noExist)) < 0) {
     printf("MHsysinit: allocSeq() FAILED! ret=%d, errn=%d", shmid, errno);

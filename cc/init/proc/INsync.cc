@@ -82,6 +82,7 @@
 Void
 INgqsequence()
 {
+  printf("INsync::INgqsequence() enter\n");
 	U_short	i;
 	U_char	l_runlvl = IN_LDSTATE.run_lvl;
 
@@ -135,6 +136,7 @@ INgqsequence()
 			}
 		}
 	}
+  printf("INsync::INgqsequence() exit\n");
 }
 
 
@@ -174,8 +176,8 @@ INsequence()
 	if(INworkflg == FALSE){
 		return;
 	}
-
-#ifdef __linux
+  printf("IN_LDSCRIPTSTATE=%d, IN_LDSTATE.final_runlvl=%d, IN_LDSTATE=%d\n",
+         IN_LDSCRIPTSTATE, IN_LDSTATE.final_runlvl, IN_LDSTATE.run_lvl);
 	if(IN_LDSCRIPTSTATE != INscriptsNone && IN_LDSTATE.final_runlvl == IN_LDSTATE.run_lvl){
 		switch(IN_LDSCRIPTSTATE){
 		case INscriptsRunning:
@@ -191,7 +193,6 @@ INsequence()
 			break;
 		}
 	}
-#endif
 	
 	switch(IN_LDSTATE.systep){
 	case IN_CLEANUP:

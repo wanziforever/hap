@@ -165,9 +165,9 @@ extern "C" {
   extern int	cond_init( cond_t* cvp, int type, void* arg );
   extern int	cond_wait( cond_t* cvp, mutex_t* mp );
   extern int	cond_timedwait( cond_t* cvp, mutex_t* mp,
-                              timespec* abstime );
+                              struct timespec* abstime );
   extern int	cond_reltimedwait( cond_t* cvp, mutex_t* mp,
-                                 timespec* reltime );
+                                 struct timespec* reltime );
   extern int	cond_signal( cond_t* cvp );
   extern int	cond_broadcast( cond_t* cvp );
   extern int	cond_destroy( cond_t* cvp );
