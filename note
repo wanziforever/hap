@@ -1,0 +1,2 @@
+the MHproc process will create the MHrt share memory, defined in cc/proc/msgh/MHinfoInt.cc
+when developing the init process, we always should a the MSGH process avaliable, and MSGH is a new process, it should be started by init, and the printf will not work, should develop PRM om log modules, and the dbi process

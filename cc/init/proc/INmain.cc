@@ -147,14 +147,18 @@ int main(Short argc, char *argv[]) {
   INbase_thread = thr_self();
 
   if (getuid() == 0 || getuid() == 0) {
+    printf("INmain::main() set INroot to True\n");
     INroot = TRUE;
   } else {
+    printf("INmain::main() set INroot to False\n");
     INroot = FALSE;
   }
 
   if (stat(INinhfile, &stbuf) < 0) {
+    printf("INmain::main() set sys_softchk to IN_ALWSOFTCHK\n");
     sys_softchk = IN_ALWSOFTCHK;
   } else {
+    printf("INmain::main() set sys_softchk to IN_INHSOFTCHK\n");
     sys_softchk = IN_INHSOFTCHK;
   }
 
@@ -165,8 +169,10 @@ int main(Short argc, char *argv[]) {
       exit(1);
     }
     // INIT is not being run from command line
+    printf("INmain::main() INIT is not being run from command line\n");
     INcmd = FALSE;
   }else {
+    printf("INmain::main() INIT is being run from command line\n");
     INcmd = TRUE;
   }
 
@@ -200,6 +206,7 @@ int main(Short argc, char *argv[]) {
   }
 
   MHisCC(INissimplex, hostId);
+  printf("MHisCC set INissimplex to %d\n", INissimplex);
   INmain_init();
 
   if (INcmd == FALSE) {
@@ -236,17 +243,6 @@ int main(Short argc, char *argv[]) {
     }
   }
 
-#ifdef CC
-  // On the CC, INIT can be started without arguments only
-  // if it is created by /etc/init. It must not be run from
-  // console without arguments
-  if (argc == 1 && INcmd == TRUE) {
-    printf("INIT: INIT can only be started by /etc/init without arguments"
-           "/n/tmust provide \"kill\" or \"dump\" option");
-    exit(0)
-       }
-#endif
-
   //GLretVal fdRet;
   char bStarted = -1;
   //if (hostId > 0) {
@@ -280,20 +276,11 @@ int main(Short argc, char *argv[]) {
   if (stat(IN_OFFLINE_FILE, &stbuf) >= 0) {
     offline = TRUE;
   }
+  printf("INmain::main() the offline is set to %d\n", offline);
 
-#ifdef CC
-  // If INIT is started from /etc/init and it is not root, it cannot
-  // do its job, its permissions are wrong, Print a message and exit.
-
-  if (INcmd == FALSE && INroot != TRUE) {
-    printf("REPT INIT /sn/init/init UID NOT ROOT, INIT EXITING\n");
-    sleep(150);
-    exit(0);
-  }
-
-#endif
   int i;
   // Initialize global timer variables
+  printf("Initialize global timer variables\n");
   for (i = 0; i < IN_SNPRCMX; i++) {
     INproctmr[i].sync_tmr.tindx = -1;
     INproctmr[i].rstrt_tmr.tindx = -1;
@@ -312,9 +299,10 @@ int main(Short argc, char *argv[]) {
 	INvhostReadyTmr.tindx = -1;
 	INevent.tmrInit(FALSE, INnTIMERS);	/* Initialize relative timers */
 	INworkflg = TRUE;
-
+  printf("Initialize signals\n");
 	INsetSignals();
 
+  printf("Check to see if we should use the data in the shared memory\n");
   // Check to see if we should use the data in the shared memory
   // segments -- if they exist;
   if (((pd_shmid = shmget((key_t)INPDATA, sizeof(IN_PROCDATA), 0)) >= 0) &&
@@ -322,6 +310,7 @@ int main(Short argc, char *argv[]) {
     // Shared memory segments already existed, clear
     // create flag
     create_flg = FALSE;
+    printf("Shared memory segments already existed, clear it, set create flag to %d\n", create_flg);
   } else if (dump_flg == TRUE) {
     // INIT's shared memory is not currently there, simply
     // print a warning message and exit;
@@ -330,16 +319,18 @@ int main(Short argc, char *argv[]) {
   } else if (kill_flg == TRUE) {
     // Deallocate pd_shmid if it was attached
     // NOTE: INfreeres must always release client shared memory first
+    printf("INmain::main() kill flag is True, rm the share memory\n");
     if (pd_shmid > 0 && shmctl(pd_shmid, IPC_RMID, &membuf) < 0) {
       printf("INmain(): shmctl() fail, errno = %d", errno);
     }
     exit(0);
   } else {
     // Deallocate pd_shmid if it was attached
+    printf("Deallocate pd_shmid if it was attached\n");
     if (pd_shmid > 0 && shmctl(pd_shmid, IPC_RMID, &membuf) < 0) {
       printf("INmain(): shmctl() fail, error = %d", errno);
     }
-
+    printf("Going to create the share memory for INPDATA\n");
     if ((pd_shmid = shmget((key_t)INPDATA, sizeof(IN_PROCDATA),
                            (0744 | IPC_CREAT))) < 0) {
       // Something's wrong, can't go on without shared memory
@@ -351,28 +342,22 @@ int main(Short argc, char *argv[]) {
         sleep(150);
         INsysboot(IN_SHMFAIL, TRUE);
       }
-#ifdef CC
-      printf("REPT INIT ERROR SYSTEM BOOT DENIED INIT EXITING\n");
-      sleep(150);
-#endif
       exit(0);
     }
+    printf("Going to create the share memory for IN_SDATA\n");
     if ((ld_shmid = shmget((key_t)INMSGBASE, sizeof(IN_SDATA),
                            (0766 | IPC_CREAT))) < 0) {
       // Something's wrong, can't go on without shared memory
       // so try to boot if possible
-      printf("INmain(): shmget() error for IN_SDATA, errno = %d", errno);
+      printf("INmain(): shmget() error for IN_SDATA, errno = %d\n", errno);
       if ((sys_softchk == IN_ALWSOFTCHK) && (INcmd == FALSE)) {
         // Do UNIX BOOT
         sleep(150);
         INsysboot(IN_SHMFAIL, TRUE);
       }
-#ifdef CC
-      printf("REPT INIT ERROR SYSTEM BOOT DENIED INIT EXITING\n");
-      sleep(150);
-#endif
       exit(0);
     }
+    printf("INmain::main() set create flag to True\n");
     create_flg = TRUE;
   }
   // If SHM_RDONLY bit is not set, read/write mode is the default for shmat
@@ -385,10 +370,11 @@ int main(Short argc, char *argv[]) {
     shmflag = SHM_LOCK;
   }
   // Now attach to the shared memory segmens
+  printf("Now attach to the shared memory segmens for IN_procdata\n");
   if ((IN_procdata = (IN_PROCDATA*)shmat(pd_shmid, (Char*)0,
                                          shmflag)) == (IN_PROCDATA*)-1) {
     // "Fatal" error, boot
-    printf("INmain():shmat() error on PROCDATA table, errno = %d", errno);
+    printf("INmain():shmat() error on PROCDATA table, errno = %d\n", errno);
     if ((sys_softchk == IN_ALWSOFTCHK) && (INcmd == FALSE)) {
       // Do Unix BOOT
       sleep(150);
@@ -415,7 +401,7 @@ int main(Short argc, char *argv[]) {
     // shared memory version to conform.
     IN_LDSHM_VER = IN_SHM_VER;
   }
-
+  printf("Now attach to the shared memory segmens for IN_SDATA\n");
   if ((IN_sdata = (IN_SDATA*)shmat(ld_shmid, (Char*)0,
                                    shmflag)) == (IN_SDATA*)-1) {
     // "Fatal" error, boot
@@ -437,6 +423,7 @@ int main(Short argc, char *argv[]) {
     // preset the shared memory to 0xff to easily notice
     // uninitialized fields.
     // Also report that full node initialization is occuring
+    printf("INmain::main() create flag is True branch enter\n");
     time_t last_running = (time_t) -1;
     int timefd = open(INtimeFile, O_RDONLY);
     if (timefd >= 0) {
@@ -454,8 +441,10 @@ int main(Short argc, char *argv[]) {
     memset((char*)IN_procdata, 0xff, sizeof(IN_PROCDATA));
     INinit();
     init_flg = TRUE;
+    printf("INmain::main() init_flag is set to True here\n");
   }
   if (kill_flg == TRUE) {
+    printf("INmain::main() init use kill argument\n");
     if (graceful_kill == TRUE) {
       printf("REPT INIT EECUTION A GRACEFUL SYSTEM SHUT DOWN");
     } else {
@@ -560,9 +549,10 @@ int main(Short argc, char *argv[]) {
   }
 
   // Set system software checks
+  printf("Set system software checks\n");
   IN_LDSTATE.softchk = sys_softchk;
 
-  if (sys_softchk == sys_softchk) {
+  if (sys_softchk == IN_INHSOFTCHK) {
     INSETTMR(INsoftchktmr, INSOFTCHKTMR, INSOFTCHKTAG, TRUE);
   } else {
     INCLRTMR(INsoftchktmr);
@@ -627,6 +617,7 @@ int main(Short argc, char *argv[]) {
   INetype = EHTMRONLY;
 
   // Set the runlevel based on the state we want to go to.
+  printf("INmain::main() going to check IN_LDCURSTATE %c\n", IN_LDCURSTATE);
   switch (IN_LDCURSTATE) {
   case S_INIT:
   case S_UNAV:
@@ -653,6 +644,7 @@ int main(Short argc, char *argv[]) {
     IN_LDCURSTATE = S_ACT;
   }
 
+  printf("INmain::main() going to check sn_lvl %d\n", IN_LDSTATE.sn_lvl);
   switch (IN_LDSTATE.sn_lvl) {
   case SN_NOINIT:
     // Take no recovery actions on intentional INIT exits
@@ -739,14 +731,19 @@ int main(Short argc, char *argv[]) {
   case SN_LV4:
   case SN_LV5:
     // Take no recovery actions on intentional INIT exits
-    if (IN_LDEXIT == TRUE || IN_LDSTATE.initstate != INITING2) {
-      // INIT merely died dring system init
+    if (IN_LDEXIT == TRUE || IN_LDCURSTATE == S_OFFLINE) {
+      break;
+    }
+    if (create_flg == FALSE && IN_LDSTATE.initstate != INITING2) {
+      // INIT merely died during system init
+      printf("INIT merely died during system init, IN_LDEXIT=%d, initstat=%d\n", IN_LDEXIT, IN_LDSTATE.initstate);
       INescalate(SN_LV4, IN_DEATH_INIT, IN_SOFT, INIT_INDEX);
     } else {
+      printf("setup information about this init\n");
       IN_LDSTATE.initstate = INITING;
       // If threshold of level 4 inits is exceeded, do a UNIX Boot
       long lv4_count;
-      lv4_count = INlv4_count(FALSE);
+      //lv4_count = INlv4_count(FALSE);
       // Set up information about this init. for future reference
       // in IN_LDINFO:
       IN_LDINFO.init_data[IN_LDINFO.ld_indx].psn_lvl = IN_LDSTATE.sn_lvl;
@@ -768,7 +765,7 @@ int main(Short argc, char *argv[]) {
   default:
     INescalate(SN_LV2, INBADSHMEM, IN_SOFT, INIT_INDEX);
   }
-
+  printf("going to reset intentional exit variable\n");
   // Reset intentional exit variable
   IN_LDEXIT = FALSE;
 
@@ -776,7 +773,7 @@ int main(Short argc, char *argv[]) {
   if (INkernel_map() != GLsuccess) {
     INescalate(SN_LV0, INKMEM_FAIL, IN_SOFT, INIT_INDEX);
   }
-
+  printf("going to setup timers\n");
   // Set up timers
   if (IN_LDSTATE.initstate == IN_CUINTVL) {
     // Setup post init timer
@@ -1129,6 +1126,7 @@ void INsetConfig() {
 // 
 
 Void INinit() {
+  printf("INmain::INinit() enter\n");
   IN_LDSHM_VER = IN_SHM_VER;
 	IN_LDINFO.ld_indx = 0;
 	IN_LDINFO.uld_indx = 0;
@@ -1164,21 +1162,17 @@ Void INinit() {
 	IN_procdata->network_timeout = 10;
 
   GLretVal ret;
-
+  printf("INmain::INinit() IN_LDSTATE.sn_lvl=%d, INlevel4=%d, IN_LDSTATE.sn_lvl=%d\n", IN_LDSTATE.sn_lvl, INlevel4, IN_LDSTATE.sn_lvl);
   if(IN_LDSTATE.sn_lvl == -1) {
     IN_MYNODEID = MHmaxHostReg;
     IN_LDCURSTATE = S_INIT;
-    if(INlevel4){
-      IN_LDSTATE.sn_lvl = SN_LV4; 
-      IN_LDCURSTATE = S_ACT;
+    IN_LDSTATE.sn_lvl = SN_LV5;
+    if(INissimplex){
+      printf("INmain::INinit() it is a simplex mode\n");
+      IN_LDCURSTATE = S_LEADACT;
     } else {
-      IN_LDSTATE.sn_lvl = SN_LV5;
-      if(INissimplex){
-        IN_LDCURSTATE = S_LEADACT;
-      } else {
-        IN_LDCURSTATE = S_ACT;
-        IN_LDSTATE.sn_lvl = SN_LV4;
-      }
+      IN_LDCURSTATE = S_ACT;
+      IN_LDSTATE.sn_lvl = SN_LV4;
     }
   }
 
@@ -1792,6 +1786,7 @@ INprocinit()
 
 	if((IN_LDMSGHINDX < 0) || (IN_SDPTAB[IN_LDMSGHINDX].procstep < IN_PROCINIT)){
 		//INIT_DEBUG((IN_DEBUG | IN_RSTRTR | IN_PROCITR),(POA_INF,"INprocinit() returned without registering queue name \"%s\"...",IN_MSGHQNM));
+    printf("INmain::INprocinit() IN_SDPTAB[%d].procstep=%d\n", IN_LDMSGHINDX, IN_SDPTAB[IN_LDMSGHINDX]);
     printf("INprocinit() returned without registering queue name \"%s\"...\n",
            IN_MSGHQNM);
 		return;
@@ -2401,6 +2396,7 @@ INcountprocs()
 Void
 INmain_init()
 {
+  printf("INmain::INmain_init() enter\n");
 	struct stat	stbuf;
 	// Record our start time
 	(void)time(&INinit_start_time);
@@ -2454,6 +2450,7 @@ INmain_init()
 	if((ep = getenv("LD_BIND_NOW")) == 0 || strlen(ep) == 0) {
 		putenv((char *)"LD_BIND_NOW=1");
 	}
+  printf("INmain::INmain_init() exit\n");
 }
 
 /*

@@ -33,21 +33,18 @@ MHqid DBImhqid = MHnullQ;	// mhqid associated with process DBI or DBIhelper
 MHqid DBIglbMhqid = MHnullQ;     // MH global ID with DBI or DBIhelper
 EHhandler DBIeventHandler;
 
-Short DBIregister(const Char * Pname, MHregisterTyp regTyp)
-{
+Short DBIregister(const Char * Pname, MHregisterTyp regTyp) {
   GLretVal rtn;		// MSGH function return value
 
   // attach to the MSGH subsystem
-  if ((rtn = DBIeventHandler.attach()) != GLsuccess) 
-  {
+  if ((rtn = DBIeventHandler.attach()) != GLsuccess) {
     CRERROR("Unable to attach to MSGH, rtn(%d)", rtn);
     return DBFAILURE;
   }
 
   // register process name Pname and get a MSGH queue
   if ((rtn = DBIeventHandler.regName(Pname, DBImhqid, FALSE,
-                                     FALSE, FALSE, regTyp)) != GLsuccess) 
-  {
+                                     FALSE, FALSE, regTyp)) != GLsuccess) {
     CRERROR("Unable to register for name %s", Pname);
     return DBFAILURE;
   }
@@ -55,8 +52,7 @@ Short DBIregister(const Char * Pname, MHregisterTyp regTyp)
   return DBSUCCESS;
 }
 
-Short DBIglobalReg(const Char *Pname)
-{
+Short DBIglobalReg(const Char *Pname) {
 	if (DBIeventHandler.regGlobalName(Pname,  DBImhqid, DBIglbMhqid,
 #ifdef LX
                                     TRUE, MH_systemGlobal) != GLsuccess)

@@ -82,6 +82,7 @@
 Void
 INgqsequence()
 {
+  printf("INsync::INgqsequence() enter\n");
 	U_short	i;
 	U_char	l_runlvl = IN_LDSTATE.run_lvl;
 
@@ -135,6 +136,7 @@ INgqsequence()
 			}
 		}
 	}
+  printf("INsync::INgqsequence() exit\n");
 }
 
 
@@ -158,8 +160,7 @@ INgqsequence()
 */
 
 Void
-INsequence()
-{
+INsequence() {
 	U_short	i;
 	IN_SYNCSTEP next_step;
 	register IN_PROCESS_DATA *ldp;
@@ -174,8 +175,8 @@ INsequence()
 	if(INworkflg == FALSE){
 		return;
 	}
-
-#ifdef __linux
+  printf("IN_LDSCRIPTSTATE=%d, IN_LDSTATE.final_runlvl=%d, IN_LDSTATE=%d\n",
+         IN_LDSCRIPTSTATE, IN_LDSTATE.final_runlvl, IN_LDSTATE.run_lvl);
 	if(IN_LDSCRIPTSTATE != INscriptsNone && IN_LDSTATE.final_runlvl == IN_LDSTATE.run_lvl){
 		switch(IN_LDSCRIPTSTATE){
 		case INscriptsRunning:
@@ -191,8 +192,7 @@ INsequence()
 			break;
 		}
 	}
-#endif
-	
+	printf("INsync::INsequence() IN_LDSTATE.systep=%d\n", IN_LDSTATE.systep);
 	switch(IN_LDSTATE.systep){
 	case IN_CLEANUP:
 		// Wait until all processes have died 		
@@ -252,30 +252,8 @@ INsequence()
 		   ldp->syncstep == INV_STEP){
 			continue;
 		}
-
+    printf("INsync::INsequence() set next_step to entriy %s, current procstep is %d\n", ldp->proctag, sdp->procstep);
 		switch(sdp->procstep){
-#ifdef OLD_SU
-		case IN_BSU:
-			next_step = IN_SU;
-			break;
-		case IN_ESU:
-			/* At this point the process is dead one way or another,
-			** either because it responded to SUexitMsg or it got
-			** killed during backout.  Verify that correct image
-			** files are in place and restart the appropriate version
-			** of the process.
-			*/
-			if(IN_LDBKOUT == FALSE){
-				if(INmvsufiles(i,snlvl,INSU_APPLY) != GLsuccess){
-					INautobkout(FALSE,FALSE);
-					return;
-				}
-			} else {
-				(void)INmvsufiles(i,snlvl,INSU_BKOUT);
-			}
-			INsetrstrt(snlvl,i,IN_SOFT);
-			continue;
-#endif
 		case INV_STEP:
 			next_step = IN_READY;
 			break;
@@ -336,9 +314,6 @@ INsequence()
 			ldp->time_missedsan = 0;
 			INCLRTMR(INproctmr[i].sync_tmr);
 			continue;
-#ifdef OLD_SU
-		case IN_SU:
-#endif
 		case IN_BHALT:
 		case IN_HALT:
 		case IN_BSTARTUP:
@@ -367,7 +342,7 @@ INsequence()
              sdp->procstep,ldp->proctag);
 			continue;
 		}
-		
+		printf("process %s has next_step to %d, and syncstep is %d\n", ldp->proctag, sdp->procstep, ldp->syncstep);
 		if(next_step <= ldp->syncstep){
 			INsync(i,next_step);
 		}
@@ -782,12 +757,12 @@ INsync(U_short indx, IN_SYNCSTEP step, MHqid realQ, MHqid gqid)
 	GLretVal ret;
 
 	//INIT_DEBUG((IN_DEBUG | IN_SSEQTR | IN_RSTRTR),(POA_INF,"INsync(): entered w/indx %d, step %s", indx, IN_SQSTEPNM(step)));
-  printf("INsync(): entered w/indx %d, step %s",
+  printf("INsync(): entered w/indx %d, step %s\n",
          indx, IN_SQSTEPNM(step));
 
 	if (indx >= IN_SNPRCMX) {
 		//INIT_ERROR(("Proc indx %d out of range, max %d",indx, (IN_SNPRCMX - 1)));
-    printf("Proc indx %d out of range, max %d",
+    printf("Proc indx %d out of range, max %d\n",
            indx, (IN_SNPRCMX - 1));
 		return(GLfail);
 	}
@@ -814,7 +789,7 @@ INsync(U_short indx, IN_SYNCSTEP step, MHqid realQ, MHqid gqid)
 #endif
 		} else if(step == IN_READY){
 			//INIT_DEBUG((IN_DEBUG | IN_SSEQTR | IN_RSTRTR),(POA_INF,"INsync(): waiting for process %s creation to complete", IN_LDPTAB[indx].proctag));
-      printf("INsync(): waiting for process %s creation to complete",
+      printf("INsync(): waiting for process %s creation to complete\n",
              IN_LDPTAB[indx].proctag);
 			return(GLsuccess);
 		} else {

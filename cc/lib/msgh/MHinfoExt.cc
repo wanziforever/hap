@@ -174,8 +174,10 @@ GLretVal MHinfoExt::attach(Char *attach_address) {
   if (isAttach == TRUE)
      return (MHexist);
 
-  if ((shmid = shmget(MHkey, sizeof(MHrt), 0)) < 0)
-     return (MHnoShm); // MSGH's shared memory does not exist!
+  if ((shmid = shmget(MHkey, sizeof(MHrt), 0)) < 0) {
+    printf("MSGH's shared memory does not exist\n");
+    return (MHnoShm); // MSGH's shared memory does not exist!
+  }
 
   // Map shared memory into calling process's address space
   if (attach_address == NULL) {

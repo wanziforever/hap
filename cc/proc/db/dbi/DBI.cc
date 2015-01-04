@@ -84,6 +84,7 @@ extern Void DBIcleanupFreeNode();
 Short
 sysinit(Long, Char **, SN_LVL , U_char)
 {
+  printf("------dbi sysinit enter--");
   return(GLsuccess);
 }
 

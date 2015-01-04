@@ -104,12 +104,15 @@ void INmain(short argc, char *argv[]) {
 
   // If we're in "lab" mode invoke procinit() (and, if at a
   // recorvery level of SN_LV2 or above, sysinit()) directly
-
+  printf("before defined nomain\n");
 #ifndef NOMAIN
+  printf("defined nomain\n");
   if (IN_IS_LAB()) {
+    printf("you are currently in lab mode\n");
     IN_LDPTAB[0].permstate = IN_PERMPROC;
     strncpy(IN_LDPTAB[0].proctag, argv[0], IN_NAMEMX);
     if ((sn_lvl != SN_LV0) && (sn_lvl != SN_LV1)) {
+      printf("INmain::INmain() lab mode going to call sysinit\n");
       ret = sysinit(argc, argv, sn_lvl, dbg_runlvl);
       if (ret != GLsuccess) {
         printf("INmain(): \n\t\"%s\" error in lab mode\n\terror return %d "
@@ -362,8 +365,10 @@ int _in_shutdown_timer() {
 //
 
 int main(int argc, char *argv[]) {
+  printf("INmain::main() enter\n");
   INmain_init();
   // INmain() never returns
+  printf("INmain::main() before call Inmain()\n");
   INmain(argc, argv);
   return(1);
 }

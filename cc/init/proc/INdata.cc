@@ -66,42 +66,27 @@ const char *IN_srcnm[] = {
 };
 
 /* Global data */
-IN_SDATA	*IN_sdata = NULL;	/* Ptr to shmem seg. access by INIT's chldren*/
+IN_SDATA *IN_sdata = NULL;	/* Ptr to shmem seg. access by INIT's chldren*/
 IN_PROCDATA	*IN_procdata = (IN_PROCDATA *) -1;/* Ptr to INIT's "private" shared memory seg.*/
 
-U_long	IN_trace = IN_ALWAYSTR;	/* Global data used for INIT proc's trace flg*/
-long	INinit_start_time;
+U_long IN_trace = IN_ALWAYSTR;	/* Global data used for INIT proc's trace flg*/
+long INinit_start_time;
 
 int	INinit_su_idx = -1;		/* Index in INsudata of INIT if it is in the SU,
 					** negative number otherwise.
 					*/
 //IN_SU_PROCINFO INsudata[SU_MAX_OBJ];	/* Data for current SU	*/
-Bool	INsupresent = FALSE;		/* TRUE if SU present in the system */
+Bool INsupresent = FALSE;		/* TRUE if SU present in the system */
 
-Char		INsupath[IN_PATHNMMX];
+Char INsupath[IN_PATHNMMX];
 
-#ifdef EES
-const Char	INdinitlist[]="cc/init/EEinitlist";
-const Char	INinhfile[]="softchk";
-const Char	INinitcount[]="initcount";
-const Char	INsufile[]="suinfo";
-const Char	INinitpath[]="cc/init/proc/EE/EEinit";
-const Char	INhistfile[]="./HISTORY";
-const Char	INtimeFile[] ="./timestamp";
-#else
 const Char	INdinitlist[]="/sn/init/initlist";
 const Char	INinitcount[]="/sn/init/initcount";
-#ifdef __linux
-const Char	INinhfile[]="/opt/config/status/softchk";
-#else
 const Char	INinhfile[]="/sn/init/softchk";
-#endif
 const Char	INsufile[]="/sn/init/suinfo";
 const Char	INinitpath[]="/opt/sn/init/init";
 const Char	INhistfile[]="/sn/release/HISTORY";
 const Char	INtimeFile[] ="/sn/init/timestamp";
-#endif
-
 const Char	INexecdir[]="/sn/core";
 
 Bool	INroot;			/* Flag indicating whether INIT is being */
