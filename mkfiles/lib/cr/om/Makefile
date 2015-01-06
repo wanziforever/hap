@@ -19,26 +19,18 @@ SRC = \
 	CRmsg.cc \
 	CRomInfo.cc \
 	CRspoolMsg.cc \
-	CRomBrevityCtl.cc \
 	CRmsgClass.cc \
-	CRdirCheck.cc \
 	CRalarmLevel.cc \
-	CRtmstamp.cc \
 	CRomHdrFtr.cc \
-	CRomDest.cc \
-	CRsopMsg.cc \
 	CRofficeNm.cc \
-	CRomdbMsg.cc \
 	CRlogFile.cc \
-	CRomdbKey.cc \
+	CRloadName.cc \
 	CRmofMsg.cc \
 	CRlogLoc.cc \
 	CRlogFileSwitchUpd.cc \
 	CRprmMsg.cc \
 	CRprmSpool.cc \
 	CRalarmMsg.cc \
-	CRsysError.cc \
-	CRsopRegMsg.cc \
 	CRdbCmdMsg.cc
 
 
@@ -50,6 +42,9 @@ VPATH := $(subst " ", ":", $(src_dirs))
 
 OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 .PHONY : clean info Prepare
+
+LINUX_HDR = ${TOP_SRC}/hdr/linux
+INC := ${INC} -I${LINUX_HDR}
 
 all: info Prepare $(TARGET)
 

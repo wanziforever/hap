@@ -20,11 +20,11 @@
 **      There is no provision for OMs that do not fit.
 */
 #include <string.h>
-#include "cc/hdr/cr/CRsopMsg.H"
-#include "cc/hdr/cr/CRmtype.H"
-#include "cc/cr/hdr/CRshtrace.H"
-#include "cc/hdr/cr/CRlocalLogMsg.H"
-#include "cc/hdr/msgh/MHinfoExt.H"
+#include "cc/hdr/cr/CRsopMsg.hh"
+#include "cc/hdr/cr/CRmtype.hh"
+//#include "cc/cr/hdr/CRshtrace.hh"
+#include "cc/hdr/cr/CRlocalLogMsg.hh"
+#include "cc/hdr/msgh/MHinfoExt.hh"
 
 short CRsopMsg::nextMsgNumber = 1;
 

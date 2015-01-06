@@ -19,7 +19,7 @@
 */
 
 #include <string.h>
-#include "cc/hdr/cr/CRomInfo.H"
+#include "cc/hdr/cr/CRomInfo.hh"
 
 CRomInfo::CRomInfo()
 {

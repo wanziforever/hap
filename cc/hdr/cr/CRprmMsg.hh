@@ -24,7 +24,7 @@ const short CRassertFlag = 2;
 const short CRprmLogOnly = 1;
 const short CRprmLogAndCnsl = 2;
 
-extern vod CRsetAssertFn(void (*fnPtr)(short));
+extern void CRsetAssertFn(void (*fnPtr)(short));
 
 // this macro used by init code to long messages into log file
 // when CSOP process is not up and running

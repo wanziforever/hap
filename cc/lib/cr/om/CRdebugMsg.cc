@@ -25,12 +25,12 @@
 
 #include <libgen.h>
 
-#include "cc/hdr/cr/CRdebugMsg.H"
-#include "cc/hdr/cr/CRmsg.H"
-#include "cc/hdr/cr/CRprmMsg.H"
-#include "cc/hdr/msgh/MHnames.H"
+#include "cc/hdr/cr/CRdebugMsg.hh"
+#include "cc/hdr/cr/CRmsg.hh"
+#include "cc/hdr/cr/CRprmMsg.hh"
+#include "cc/hdr/msgh/MHnames.hh"
 
-#include "cc/hdr/misc/GLvsprintf.h"
+//#include "cc/hdr/misc/GLvsprintf.h"
 
 static CRmsg* CRassertOM = NULL;
 static CRmsg* CRcraftErrorOM = NULL;

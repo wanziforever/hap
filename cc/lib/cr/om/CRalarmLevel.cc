@@ -1,4 +1,4 @@
-#include "cc/hdr/cr/CRmsgClass.H"
+#include "cc/hdr/cr/CRmsgClass.hh"
 
 /*
 **      File ID:        @(#): <MID18635 () - 08/17/02, 29.1.1.1>

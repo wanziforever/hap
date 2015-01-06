@@ -24,16 +24,16 @@
 
 #include <String.h>
 #include <stdlib.h>
-#include "cc/hdr/cr/CRmsg.H"
-#include "cc/cr/hdr/CRmsgInt.H"
-#include "cc/hdr/cr/CRdebugMsg.H"
-#include "cc/hdr/cr/CRomInfo.H"
-#include "cc/hdr/cr/CRspoolMsg.H"
-#include "cc/cr/hdr/CRshtrace.H"
+#include "cc/hdr/cr/CRmsg.hh"
+#include "cc/hdr/cr/CRmsgInt.hh"
+#include "cc/hdr/cr/CRdebugMsg.hh"
+#include "cc/hdr/cr/CRomInfo.hh"
+#include "cc/hdr/cr/CRspoolMsg.hh"
+//#include "cc/cr/hdr/CRshtrace.hh"
 
-#include "cc/hdr/misc/GLvsprintf.h"
+//#include "cc/hdr/misc/GLvsprintf.h"
 
-#include "cc/cr/hdr/CRomHdrFtr.H"
+#include "cc/hdr/cr/CRomHdrFtr.hh"
 
 CRmsg::CRmsg(const Char* initStr, Bool buffering) : 
         OMclass(CL_DEBUG), alarmLevel(POA_DEFAULT)
@@ -113,12 +113,12 @@ CRmsg::title(const char *format,...)
 	if (num_bytes_printed < 0)
 	{
 		msg->abort();
-		CRSHERROR(CRbad_fmt, format);
+		//CRSHERROR(CRbad_fmt, format);
 	}
 	else if (num_bytes_printed >= 1000)
 	{
 		msg->abort();
-		CRSHERROR(CRcorrupt_mem, num_bytes_printed+1);
+		//CRSHERROR(CRcorrupt_mem, num_bytes_printed+1);
 	}
 	else
 		msg->title(hdr);
@@ -143,7 +143,7 @@ extern const char* CRbad_fmt = "Invalid message format '%s'";
 // 	comment is that the String class is not thread save.
 //
 void
-CRaddblanks(const char* instring, String& outbuf)
+CRaddblanks(const char* instring, std::string& outbuf)
 {
 	for (const char* inptr = instring; *inptr; inptr++)
 	{
@@ -159,7 +159,7 @@ CRmsg::add(int len, const char *str)
 	if (len < 0)
 	{
 		msg->abort();
-		CRSHERROR("invalid length (%d)", len);
+		//CRSHERROR("invalid length (%d)", len);
 	}
 	else
 	{
@@ -195,7 +195,7 @@ CRmsg::add(const Char *format,...)
 	if (num_bytes_printed < 0)
 	{
 		msg->abort();
-		CRSHERROR(CRbad_fmt, format);
+		//CRSHERROR(CRbad_fmt, format);
 	}
 	else
 	{
@@ -227,7 +227,7 @@ CRmsg::add_va_list(const Char *format, va_list ap)
 	if (num_bytes_printed < 0)
 	{
 		msg->abort();
-		CRSHERROR(CRbad_fmt, format);
+		//CRSHERROR(CRbad_fmt, format);
 	}
 	else
 	{
@@ -350,43 +350,3 @@ CRmsg::setOMkey(const Char * theOMkey)
         msg->setOMkey(theOMkey);
 }
 
-
-
-/* setting the x733 alarm stuff */
-
-void
-CRmsg::setAlarmObjectName(const Char* objectName)
-{
-	msg->setAlarmObjectName(objectName);
-}
-
-void
-CRmsg::setAlarmType(CRX733AlarmType alarmType)
-{
-	msg->setAlarmType(alarmType);
-}
-
-void
-CRmsg::setProbableCause(CRX733AlarmProbableCause probableCause)
-{
-	msg->setProbableCause(probableCause);
-}
-
-void
-CRmsg::setSpecificProblem(const Char* specificProblem)
-{
-	msg->setSpecificProblem(specificProblem);
-}
-
-void
-CRmsg::setAdditionalText(const Char* additionalText)
-{
-	msg->setAdditionalText(additionalText);
-
-}
-
-/*void
-CRmsg::setAutoClear(const Char* autoClear)
-{
-	msg->setAutoClear(autoClear);
-}*/

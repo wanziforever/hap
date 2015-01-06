@@ -26,13 +26,11 @@
 
 #include	<string.h>
 
-#include "cc/hdr/cr/CRomBrevityCtl.H"
-#include "cc/hdr/cr/CRdebugMsg.H"
-#include "cc/hdr/cr/CRomdbMsg.H"
-
-#include "cc/cr/hdr/CRgdoMemory.H"
-
-#include "cc/hdr/init/INusrinit.h"
+#include "cc/hdr/cr/CRomBrevityCtl.hh"
+#include "cc/hdr/cr/CRdebugMsg.hh"
+//#include "cc/hdr/cr/CRomdbMsg.hh"
+//#include "cc/cr/hdr/CRgdoMemory.hh"
+#include "cc/hdr/init/INusrinit.hh"
 
 // Initialize the static variables
 CRomBrevityCtl* CRomBrevityCtl:: _instance = 0; // this is used so we don't

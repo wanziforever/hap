@@ -22,10 +22,10 @@
 #else
 #	include <sys/param.h>
 #endif
-#include "cc/hdr/cr/CRmsg.H"
-#include "cc/hdr/msgh/MHnames.H"
-#include "cc/hdr/msgh/MHmsgBase.H"
-#include "cc/hdr/msgh/MHinfoExt.H"
+#include "cc/hdr/cr/CRmsg.hh"
+#include "cc/hdr/msgh/MHnames.hh"
+#include "cc/hdr/msgh/MHmsgBase.hh"
+#include "cc/hdr/msgh/MHinfoExt.hh"
 
 const int CROMDBKEYSZ =  8;
 
@@ -54,7 +54,6 @@ struct CRsplMsgHead
 	char senderMachine[26];
 	char senderState[9];
 	char omkey[8]; // omkey is 7 chars plus 1 for NULL
-	CRx733 x733alarms;
 };
 
 const int CRsplMsgHdSz = sizeof(CRsplMsgHead);
@@ -146,21 +145,11 @@ class CRspoolMsg : public MHmsgBase
 	void setOMkey(const char* OMkey);
 	const char* getOMkey() const;
 
-
-    public:
+public:
 	static const char* dirname() { return directory; }
 	static void audit();
 
-// X733 Stuff
-        void setAlarmObjectName( const Char* );
-        void setAlarmType( CRX733AlarmType );
-        void setProbableCause( CRX733AlarmProbableCause );
-        void setSpecificProblem( const Char* );
-        void setAdditionalText( const Char* );
-        const char* getAdditionalText() const;
-        void clearX733();
-
-    private:
+private:
 	void initForSend();
 	void newSeg();
 	void turnOffBuffering();
@@ -335,11 +324,5 @@ CRspoolMsg::setOMkey(const char* theOMkey )
  	msghead.omkey[(sizeof(msghead.omkey) - 1)]='\0';
 }
 
-inline
-const char*
-CRspoolMsg::getAdditionalText() const
-{
-	return msghead.x733alarms.getAdditionalText();
-}
 
 #endif
