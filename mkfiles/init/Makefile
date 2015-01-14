@@ -29,7 +29,7 @@ SRC := \
 	INmachdep.cc
 
 
-LIBS := $(LIBS) -lmsgh -ltimer -lehhandler -lssl -lbasic -llinux -linit
+LIBS := $(LIBS) -lmsgh -ltimer -lehhandler -lbasic -llinux -linit
 
 src_dirs := $(sort $(dir $(addprefix $(SRC_PATH)/, $(SRC))))
 VPATH := $(subst " ", ":", $(src_dirs))
@@ -70,7 +70,7 @@ Prepare:
 ##########################
 
 $(TARGET): $(OBJS)
-	$(LINK) $^ -o $@ $(LIBS)
+	$(LINK) $^ -o $@ $(LIBS) -lom -lcrmisc
 
 
 clean:

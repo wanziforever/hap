@@ -36,12 +36,12 @@
 #include "cc/hdr/cr/CRomHdrFtr.hh"
 
 CRmsg::CRmsg(const Char* initStr, Bool buffering) : 
-        OMclass(CL_DEBUG), alarmLevel(POA_DEFAULT)
+  OMclass(CL_DEBUG), alarmLevel(POA_DEFAULT)
 {
 	/* second parameter is to indicate whether to buffer upto 10 segments 
 	 * before sending it to CSOP process or send the segment to CSOP 
 	 * as soon as the segment is filled
-	*/
+   */
 
 	msg = new CRspoolMsg(buffering);
 	msg->setClass(OMclass);
@@ -59,7 +59,7 @@ CRmsg::CRmsg(CROMCLASS cl, CRALARMLVL al, Bool buffering) :
 	/* third parameter is to indicate whether to buffer upto 10 segments 
 	 * before sending it to CSOP process or send the segment to CSOP 
 	 * as soon as the segment is filled
-	*/
+   */
 
 	msg = new CRspoolMsg(buffering);
 	msg->setClass(OMclass);
@@ -80,7 +80,7 @@ CRmsg::~CRmsg()
  * are sent to CSOP process. The valid range is between 2 seconds and 
  * 30 seconds. If this function is not called, the default value of 
  * 2 seconds is used.
-*/
+ */
 void
 CRmsg::setSegInterval(const int sleepTime)
 {
@@ -121,7 +121,7 @@ CRmsg::title(const char *format,...)
 		//CRSHERROR(CRcorrupt_mem, num_bytes_printed+1);
 	}
 	else
-		msg->title(hdr);
+     msg->title(hdr);
 	va_end(ap);
 
 }	
@@ -130,7 +130,7 @@ CRmsg::title(const char *format,...)
 static char buf[CRVBUFSIZE];    /* buffer for call to vsprintf */
 
 extern const char* CRcorrupt_mem = 
-"Memory corrupted! Formatting buffer needs to be at least %d bytes";
+   "Memory corrupted! Formatting buffer needs to be at least %d bytes";
 
 extern const char* CRbad_fmt = "Invalid message format '%s'";
 
@@ -149,7 +149,7 @@ CRaddblanks(const char* instring, std::string& outbuf)
 	{
 		outbuf += *inptr;
 		if (*inptr == '\n' && *(inptr+1) != '\n')
-			outbuf += "   ";
+       outbuf += "   ";
 	}
 }
 
@@ -173,15 +173,15 @@ CRmsg&
 CRmsg::add(const Char *format,...)
 {
 	/* this is dangerous!  Assumes that resulting string will never
-	*  be more than VBUFSIZE characters!
-	*/
+   *  be more than VBUFSIZE characters!
+   */
 	va_list ap;
 	va_start(ap, format);
 
 	/* Note: there is a difference between vsprintf on the Tandem
-	*  and the Sun's.  On Tandem vsprintf returns the number of
-	*  of bytes "printed".  On Sun's it does not.
-	*/
+   *  and the Sun's.  On Tandem vsprintf returns the number of
+   *  of bytes "printed".  On Sun's it does not.
+   */
 
 	//
 	//      This is to make the buffer "buf" thread safe
@@ -190,7 +190,7 @@ CRmsg::add(const Char *format,...)
 	mutex_lock(&CRbufferLock);
 
 	int num_bytes_printed = vsnprintf(buf, sizeof(buf) -1, format, ap);
-        buf[sizeof(buf)-1]='\0';
+  buf[sizeof(buf)-1]='\0';
 
 	if (num_bytes_printed < 0)
 	{
@@ -211,9 +211,9 @@ void
 CRmsg::add_va_list(const Char *format, va_list ap)
 {
 	/* Note: there is a difference between vsprintf on the Tandem
-	*  and the Sun's.  On Tandem vsprintf returns the number of
-	*  of bytes "printed".  On Sun's it does not.
-	*/
+   *  and the Sun's.  On Tandem vsprintf returns the number of
+   *  of bytes "printed".  On Sun's it does not.
+   */
 
 	//
 	//      This is to make the buffer "buf" thread safe
@@ -222,7 +222,7 @@ CRmsg::add_va_list(const Char *format, va_list ap)
  	mutex_lock(&CRbufferLock);
 
  	int num_bytes_printed = vsnprintf(buf, sizeof(buf) -1, format, ap);
-        buf[sizeof(buf)-1]='\0';
+  buf[sizeof(buf)-1]='\0';
 
 	if (num_bytes_printed < 0)
 	{
@@ -243,7 +243,7 @@ CRmsg::setOMinfo(const CRomInfo* cepOMinfo)
 	if (cepOMinfo != NULL)
 	{
 		if (alarmLevel == POA_DEFAULT)
-			msg->setAlarmLevel(cepOMinfo->getAlarmLevel());
+       msg->setAlarmLevel(cepOMinfo->getAlarmLevel());
 
 		msg->setUSLIname(cepOMinfo->getUSLIname());
 	}
@@ -260,7 +260,7 @@ CRmsg::spool(const CRomInfo* cepOMinfo)
 		// update get status of the OM
 		//
 		if((omBrevityCtl->status(theStoredKey, alarmLevel)) == CRCLEAR)
-        	{
+    {
 			msg->spool();
 		}
 		//else don't print message
@@ -347,6 +347,6 @@ CRmsg::setOMkey(const Char * theOMkey)
 	// reset the message class and alarm level to defaults
 	msg->setClass("");
 	msg->setAlarmLevel(POA_DEFAULT);
-        msg->setOMkey(theOMkey);
+  msg->setOMkey(theOMkey);
 }
 

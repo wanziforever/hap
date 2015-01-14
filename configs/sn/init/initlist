@@ -1,0 +1,127 @@
+#
+#  DESCRIPTION:
+#       This file contains information used by INIT to start permanent
+#       processes in the system.  All the information is entered in name=value
+#       format. The per process information always starts with msgh_name
+#       definition. Until msgh_name is encountered, all arguments apply
+#       to system wide parameters. Anything following '#' is considered
+#       a comment and is ignored till the end of the line.
+# 
+#  NOTES:
+#       Unlike the "EE" environment, only FULL path names are allowed
+#       in the "CC" environment.
+#
+#       The user_id  was added for integration load 5.5.  INIT will
+#       change the user ID of procs. it creates to the value stored in
+#       this field IFF INIT's UID is zero -- i.e. if INIT was started
+#       by UNIX or a shell with a UID of zero. 
+#
+#  OPTIONAL SYSTEM LEVEL PARAMETERS:
+#       failover_alarm - alarm level for a message generated when failover
+#               of paired nodes finishes.  Possible values are: 
+#               0 - info only (default)
+#               1 - transient critical
+#               2 - critical
+#
+#
+############################################################################
+# Required values defining system parameters are: 
+init_flags=0x0          # Trace flags for the INIT process
+#                         (see "ccr/init/INinit.h")
+sys_init_threshold=3    # Number of times the system will be allowed to
+#                         roll in level 4 inits before CC UNIX boot occurs
+sys_run_lvl=100         # Run level to use on full system boots  
+first_bootlvl=12        # Level of the first initialization phase
+aru_timer=20
+process_flags=0x0       # Trace flags for processes INIT creates
+
+#                         (see "ccr/init/INinit.h")
+sys_error_threshold=500 # System threshold for system wide errors
+sys_error_dec_rate=50   # Rate/min at which cummulative errors are decremented
+sys_crerror_inh=NO      # NO means that CRERRORS will be counted toward escalation
+#
+# The following three parameters control thresholds for generation of alarms 
+# when available virtual memory falls below specified levels.
+# The values are in Mbytes and should be increasing as alarm levels decrease.
+#
+vmem_critical=100
+vmem_major=500
+vmem_minor=1000
+default_restart_threshold=3
+default_error_threshold=200
+default_error_dec_rate=25
+default_priority=20
+# Following default values for various timers are all in seconds
+default_restart_interval=750
+default_sanity_timer=90
+default_init_complete_timer=60
+default_procinit_timer=180
+default_create_timer=20
+default_q_size=250000
+default_lv3_timer=30
+default_global_queue_timer=90
+default_brevity_low=20
+default_brevity_high=40
+default_brevity_interval=60
+default_msg_limit=300
+# percent of load to be sent to Active CC for distributed SPAs
+# value of 50 is a default setting and indicates a balanced load
+percent_load_on_active=50
+#time INIT will wait for the shutdown script to complete
+shutdown_timer=30
+oam_lead=as001
+vhost_failover_time=10
+max_boots=3
+##########################################################################
+#       Following are MSGH tunables
+# Number of messages in the cargo buffer that will cause cargo send
+max_cargo=100
+# Size of the accumlated messages that will cause cargosend
+min_cargo_sz=16000
+# Timeout after which cargo message will be automatically sent
+cargo_tmr=10
+# Use buffered protocol when communicating between nodes
+buffered=YES
+# Number of 256 byte message buffers for intra node communication
+num256=16000
+# Number of 1024 byte message buffers for intra node communication
+num1024=6000
+# Number of 4096 byte message buffers for intra node communication
+num4096=4000
+# Number of 16384 byte message buffers for intra node communication
+num16384=300
+msgh_ping=200
+# Number of large message buffers in MHRPROC
+num_lrg_buf=30
+# Number of network outgoing 4096 byte message buffers
+num_msgh_outgoing=8192 
+debug_timer=3000
+safe_interval=600
+core_full_minor=50
+core_full_major=90
+
+#--MSGH 
+#msgh_name=MSGH run_lvl=10 path=/sn/msgh/msgh user_id=0
+msgh_name=MSGH run_lvl=10 path=/home/denny/project/hap/bin/MSGH user_id=0
+process_category=CC priority=4 msgh_qid=0 procinit_timer=2400 q_size=2000000 msg_limit=3000
+#
+#--MHRPROC
+#msgh_name=MHRPROC run_lvl=9  path=/sn/msgh/mhrproc  user_id=0
+#process_category=PC priority=4 sanity_timer=30 msgh_qid=1 msg_limit=400
+#
+#--MHGDPROC1
+#msgh_name=MHGDPROC1 run_lvl=9  path=/sn/msgh/gdproc  user_id=0
+#process_category=PC priority=4 sanity_timer=30 msgh_qid=2 q_size=2000000
+#
+#--FTMOUNTER
+#msgh_name=FTMOUNTER run_lvl=12 path=/sn/ft/ftmounter user_id=0 
+#process_category=CC procinit_timer=9000 sanity_timer=900 msgh_qid=8
+#
+#--DBMON
+#msgh_name=DBMON run_lvl=19 path=/cs/sn/DBmonitor user_id=0 oamleadonly=YES
+#process_category=IC priority=15 msgh_qid=70
+#
+#--DBSYNC
+#msgh_name=DBSYNC run_lvl=20 path=/sn/DBSYNC user_id=18032
+#process_category=NC msgh_qid=72
+#

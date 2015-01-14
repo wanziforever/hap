@@ -23,15 +23,15 @@ SRC = \
 	CRalarmLevel.cc \
 	CRomHdrFtr.cc \
 	CRofficeNm.cc \
-	CRlogFile.cc \
 	CRloadName.cc \
-	CRmofMsg.cc \
-	CRlogLoc.cc \
-	CRlogFileSwitchUpd.cc \
 	CRprmMsg.cc \
 	CRprmSpool.cc \
-	CRalarmMsg.cc \
-	CRdbCmdMsg.cc
+	CRomDest.cc \
+	CRomBrevityCtl.cc \
+	CRtmstamp.cc \
+	CRmiscSpool.cc \
+	../msgs/CRalarmMsg.cc \
+	../msgs/CRdbCmdMsg.cc
 
 
 LIBS := $(LIBS) -lpthread -ldl

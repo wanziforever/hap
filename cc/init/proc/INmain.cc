@@ -206,7 +206,7 @@ int main(Short argc, char *argv[]) {
   }
 
   MHisCC(INissimplex, hostId);
-  printf("MHisCC set INissimplex to %d\n", INissimplex);
+  CR_PRM(POA_INF, "MHisCC set INissimplex to %d\n", INissimplex);
   INmain_init();
 
   if (INcmd == FALSE) {

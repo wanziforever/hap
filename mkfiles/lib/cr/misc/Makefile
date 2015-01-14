@@ -7,7 +7,7 @@ MISC_HEADER = $(TOP_INC)/cr
 MISC_LIB = $(TOP_LIB)
 MISC_BIN = $(TOP_BIN)
 
-TARGET := $(MISC_LIB)/libmisc.so
+TARGET := $(MISC_LIB)/libcrmisc.so
 
 SRC_PATH := $(MISC_SRC)
 HEADER_PATH := $(MISC_HEADER)
@@ -15,9 +15,10 @@ LIB_PATH := $(MISC_LIB)
 BIN_PATH := $(MISC_BIN)
 
 SRC = \
-	CRsllist.cc \
-	CRstringList.cc \
-	GLretString.cc
+	CRlogFile.cc \
+	CRlogLoc.cc \
+	CRdirCheck.cc \
+	CRlogFileSwitchUpd.cc
 
 LIBS := $(LIBS) -lpthread -ldl
 CFLAGS := $(CFLAGS) -fPIC
@@ -29,6 +30,9 @@ OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 .PHONY : clean info Prepare
 
 all: info Prepare $(TARGET)
+
+LINUX_HDR = ${TOP_SRC}/hdr/linux
+INC := ${INC} -I${LINUX_HDR}
 
 $(OBJS):%.o:%.cc
 	@$(CC) -MM $(CFLAGS) $(INC) -o .$*.d $<

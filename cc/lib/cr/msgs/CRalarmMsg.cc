@@ -21,12 +21,12 @@
 #include <string.h>
 #include "hdr/GLtypes.h"
 #include "hdr/GLreturns.h"
-#include "cc/hdr/msgh/MHmsgBase.H"
-#include "cc/hdr/msgh/MHinfoExt.H"
-#include "cc/hdr/cr/CRmtype.H"
-#include "cc/cr/hdr/CRalarmMsg.H"
-#include "cc/hdr/cr/CRalarmLevel.H"
-#include "cc/hdr/cr/CRindStatus.H"
+#include "cc/hdr/msgh/MHmsgBase.hh"
+#include "cc/hdr/msgh/MHinfoExt.hh"
+#include "cc/hdr/cr/CRmtype.hh"
+#include "cc/hdr/cr/CRalarmMsg.hh"
+#include "cc/hdr/cr/CRalarmLevel.hh"
+//#include "cc/hdr/cr/CRindStatus.hh"
 
 static
 const char*
@@ -115,7 +115,7 @@ CRalarmMsg::send()
 //	Function:
 //		Send an "sound alarm" message to ALARM of the
 //		priority "lvl", where "lvl" is the alarm level
-//		used by CSOP. See "cc/hdr/cr/CRalarmLevel.H.
+//		used by CSOP. See "cc/hdr/cr/CRalarmLevel.hh.
 //	Called By:
 //		Any process/CEP wishing to activate an alarm.
 
@@ -126,9 +126,9 @@ CRalarmMsg::soundAlarm( CRALARMLVL lvl )
 	level = lvl ;
 	
 	/* Tell SYSTAT to turn the appropriate indicator on */
-	CRindStatusMsg indMsg;
-	indMsg.add(CRalarmIndName(lvl), "NORMAL");
-	indMsg.send(CRalarmIndName(lvl), CRalarmValue(lvl));
+	//CRindStatusMsg indMsg;
+	//indMsg.add(CRalarmIndName(lvl), "NORMAL");
+	//indMsg.send(CRalarmIndName(lvl), CRalarmValue(lvl));
 
 	return GLsuccess;
 }
@@ -137,7 +137,7 @@ CRalarmMsg::soundAlarm( CRALARMLVL lvl )
 //	Function:
 //		Send an "cancel alarm" message to ALARM of the
 //		priority "lvl", where "lvl" is the alarm level
-//		used by CSOP. See "cc/hdr/cr/CRalarmLevel.H.
+//		used by CSOP. See "cc/hdr/cr/CRalarmLevel.hh.
 //	Called By:
 //		Any process/CEP wishing to cancel an active alarm.
 
@@ -148,8 +148,8 @@ CRalarmMsg::cancelAlarm( CRALARMLVL lvl )
 	level = lvl ;
 
 	/* Tell SYSTAT to change the appropriate indicator to NORMAL */
-	CRindStatusMsg indMsg;
-	indMsg.send(CRalarmIndName(lvl), "NORMAL");
+	//CRindStatusMsg indMsg;
+	//indMsg.send(CRalarmIndName(lvl), "NORMAL");
 
 	return GLsuccess;
 }
@@ -172,7 +172,7 @@ CRalarmMsg::cancelAlarms( )
 //	Function:
 //		Send an "mute alarm" message to ALARM of the
 //		priority "lvl", where "lvl" is the alarm level
-//		used by CSOP. See "cc/hdr/cr/CRalarmLevel.H.
+//		used by CSOP. See "cc/hdr/cr/CRalarmLevel.hh.
 //	Called By:
 //		Any process wishing to jerk ALARM's chain.
 
@@ -221,11 +221,11 @@ CRalarmMsg::reportAlarmStatus( Short all_flag )
 //	Function:
 //		Add CRomInfo object to alarm message.
 //
-void
-CRalarmMsg::link_originating_terminal(CRcmdLine &cmdline)
-{
-	omInfo = *cmdline.getOMinfo();
-}
+//void
+//CRalarmMsg::link_originating_terminal(CRcmdLine &cmdline)
+//{
+//	omInfo = *cmdline.getOMinfo();
+//}
 
 //	Name: getOMinfo
 //	Function:

@@ -81,7 +81,8 @@ static	const	int	CRMAXSEQNUM = 999998;
 
 
 extern	char*	CRgenOMhdr(char* time_buf, char* msgclass, char* omdbkey, 
-                           int seqnum, char* segstr);
+                         int seqnum, char* segstr, char *machName,
+                         const char *machState);
 
 extern	char*	CRgenOMftr(int seqnum);
 #endif

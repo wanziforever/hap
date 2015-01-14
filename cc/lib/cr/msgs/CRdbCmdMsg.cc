@@ -17,8 +17,8 @@
 **	These functions were previously "inline".
 */
 
-#include "cc/hdr/cr/CRdbCmdMsg.H"
-#include "cc/hdr/cr/CRdebugMsg.H"
+#include "cc/hdr/cr/CRdbCmdMsg.hh"
+#include "cc/hdr/cr/CRdebugMsg.hh"
 
 CRdbCmdMsg::CRdbCmdMsg()
 {

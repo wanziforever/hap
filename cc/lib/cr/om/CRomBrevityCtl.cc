@@ -31,6 +31,7 @@
 //#include "cc/hdr/cr/CRomdbMsg.hh"
 //#include "cc/cr/hdr/CRgdoMemory.hh"
 #include "cc/hdr/init/INusrinit.hh"
+#include "cc/hdr/msgh/MHgd.hh"
 
 // Initialize the static variables
 CRomBrevityCtl* CRomBrevityCtl:: _instance = 0; // this is used so we don't
@@ -161,529 +162,530 @@ CRomBrevityCtl::~CRomBrevityCtl()
 CRomStatus
 CRomBrevityCtl::status(const char* msgKey, CRALARMLVL alarmLevel)
 {
+  return CRCLEAR;
 
-  int flag=0;
-  FILE *fp;
-  if( (strcmp(CRprocname,"SCC")==0) && (CRDEBUG_FLAGSET(123)) )
-  {
-    flag=1;
-  }
-
-  if(flag){
-    fp=fopen("/tmp/brev.out","a");
-    fprintf(fp, "++++++++++++ S T A T U S +++++++++++++++++++++++++++++++\n");
-    fprintf(fp, "Checking Process = %s  msgKey = %s alarmLevel = %d\n",
-            CRprocname, (const char*) msgKey, alarmLevel);
-    fclose(fp);
-  }
-
-	static int initValuesFlag = 0;
-	static Char* addr = NULL;
-
-	Bool minorAlarmFlag = FALSE;
-	Bool assertFlag = FALSE;
-	Bool crcftassertFlag = FALSE;
-
-	if(initValuesFlag == 0)
-	{
-// Get brevity control values from INIT
-// get 3 values. If INIT gives me 0 then brevity control is off
-		IN_BREV_PARMS(&_low,&_high,&_period);
-
-
-		if((_period != 0 ) && (_low >= _high))
-		{
-			// I can't use CRCFTASSERT MARCO
-			// so I'm building my own CRCFTASSERT OM
-			// I using CRbadBrevityParmsFMT all really 
-			// in CRassertIDs
-			//CRCFTASSERT(CRBadBrevityParmsId,
-      //(CRBadBrevityParmsFMT, _low,_high,CRprocname));
-      //
-      // +++ PSPQ148 2000-07-17 15:44:22 ASRT        
-      // A  REPT MANUAL ASSERT=9503
-      //    PROC=CEP1746, ../BLopClk.C AT LINE 143
-      //    THIS IS CRAFT ASSERT 0
-      //END OF REPORT #000660++-
-
-			CRmsg om;
-			om.setMsgClass("ASRT");
-			om.setAlarmLevel(POA_ACT);
-			om.add("REPT MANUAL ASSERT=3041\n");
-			om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
-			om.add("brevity_low(%d) is greater then or equal to brevity_high(%d)",_low,_high);
-			om.spool();
-			initValuesFlag=1;
-			_period=0; // turn off brevity control
-		}
-		else if((_period != 0 ) && (_low < 1 || _low > 254 ))
-		{
-			CRmsg om;
-			om.setMsgClass("ASRT");
-			om.setAlarmLevel(POA_ACT);
-			om.add("REPT MANUAL ASSERT=3041\n");
-			om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
-			om.add("brevity_low(%d) can only be 1 - 254",_low);
-			om.spool();
-			initValuesFlag=1;
-			_period=0; // turn off brevity control
-		}
-		else if((_period != 0 ) && (_high < 2 || _high > 255 ))
-		{
-			CRmsg om;
-			om.setMsgClass("ASRT");
-			om.setAlarmLevel(POA_ACT);
-			om.add("REPT MANUAL ASSERT=3041\n");
-			om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
-			om.add("brevity_high(%d) can only be 2 - 255",_high);
-			om.spool();
-			initValuesFlag=1;
-			_period=0; // turn off brevity control
-		}
-		else if((_period != 0 ) && (_period > 60))
-		{
-			CRmsg om;
-			om.setMsgClass("ASRT");
-			om.setAlarmLevel(POA_ACT);
-			om.add("REPT MANUAL ASSERT=3041\n");
-			om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
-			om.add("brevity_peroid(%d) can only be 0, 1 - 60",_period);
-			om.spool();
-			initValuesFlag=1;
-			_period=0; // turn off brevity control
-		}
-		else
-		{
-			++initValuesFlag;
-		}
-	}
-
-  CRDEBUG(CRusli, 
-          ("Checking brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",
-           CRprocname, (const char*) msgKey, _period, _high, _low));
-
-
-	GLretVal retval;
-
-  char keyArray[CROMKEYSZ]; 
-	strncpy(keyArray,msgKey,CROMKEYSZ);
-	keyArray[strlen(msgKey)] = '\0';
-
-  if(flag){
-    fp=fopen("/tmp/brev.out","a");
-    fprintf(fp, "Checking Process = %s  msgKey = %s alarmLevel = %d keyArray = %s\n",
-            CRprocname, (const char*) msgKey, alarmLevel, keyArray);
-    fclose(fp);
-  }
-
-	if( _brevGDOaddr != NULL )
-	{
-		CRshData = (CRbrevSharedMemory *) _brevGDOaddr;
-
-		if( CRshData->noOfRecords != 0 ) /*  non-empty GDO */
-		{
-			int noOfRecords = CRshData->noOfRecords;
-			int i = 0;
-
-      /* CRERROR 2file!493 */ 
-      /* CROMDB 1/CR012    */ 
-      /* CRASSERT 43007    */ 
-      /* ALL_OM            */ 
-			/* added 3 more sev keys */
-			/* MINOR             */
-			/* ASSERT            */
-			/* CFTASSERT         */
-			/* ALL               */
-      char *key = &keyArray[1];
-
-      if(flag){
-        fp=fopen("/tmp/brev.out","a");
-        fprintf(fp, "IN SHARE MEMORY VALUES for %s %s\n",
-                CRprocname,(const char*) msgKey);
-        fclose(fp);
-      }
-
-			if( CRshData->whichRecordSet == 0 )
-			{
-        if(flag){
-          fp=fopen("/tmp/brev.out","a");
-          fprintf(fp, "record set 0\n");
-          fclose(fp);
-        }
-        for(i=0;i<noOfRecords;++i)
-        {
-          if( (strcmp(CRprocname, 
-                      CRshData->records0[i].process)) == 0 )
-          {
-            if(flag){
-              fp=fopen("/tmp/brev.out","a");
-              fprintf(fp, "MATCH process\n");
-              fclose(fp);
-            }
-            /* this is for sevity */
-            if(((strcmp("MINOR", 
-                        CRshData->records0[i].omkey )) == 0 ) ||
-               ((strcmp("ALL", 
-                        CRshData->records0[i].omkey )) == 0 ))
-            {
-              if(flag){
-                fp=fopen("/tmp/brev.out","a");
-                fprintf(fp, "MATCH MINOR alarm\n");
-                fclose(fp);
-              }
-				      if(alarmLevel == POA_MIN)
-				      {
-                if(flag){
-                  fp=fopen("/tmp/brev.out","a");
-                  fprintf(fp, "alarm lvl = minor\n");
-                  fclose(fp);
-                }
-                // set values
-				        if((strcmp("ALL", 
-                           CRshData->records0[i].omkey )) == 0 )
-                {
-                  minorAlarmFlag=TRUE;
-                  strncpy(keyArray,"ALL",CROMKEYSZ);
-                  keyArray[strlen("ALL")] = '\0';
-                }
-                else
-                {
-                  strncpy(keyArray,"MINOR",CROMKEYSZ);
-                  keyArray[strlen("MINOR")] = '\0';
-                }
-                initValuesFlag=0;
-                _period = CRshData->records0[i].period;
-                _high = CRshData->records0[i].upper;
-                _low = CRshData->records0[i].lower;
-                CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-                break;
-				      }
-            }// end of MINOR or ALL case
-
-            // 3 at beginning of omkey means CRASSERT OM
-            if(((strcmp("CRASSERT", 
-                        CRshData->records0[i].omkey )) == 0 )||
-				       ((strcmp("ALL", 
-                        CRshData->records0[i].omkey )) == 0 ))
-            {
-              if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"3",1)==0)))
-              {
-				        if((strcmp("ALL", 
-                           CRshData->records0[i].omkey )) == 0 )
-                {
-                  assertFlag=TRUE;
-                  strncpy(keyArray,"ALL",CROMKEYSZ);
-                  keyArray[strlen("ALL")] = '\0';
-                }
-                else
-                {
-                  strncpy(keyArray,"CRASSERT",CROMKEYSZ);
-                  keyArray[strlen("CRASSERT")] = '\0';
-                }
-                // set values
-                initValuesFlag=0;
-                _period = CRshData->records0[i].period;
-                _high = CRshData->records0[i].upper;
-                _low = CRshData->records0[i].lower;
-                CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-                break;
-              }
-            }// end of CRASSERT or ALL case
-
-            // 4 at beginning of omkey means CRCFTASSERT OM
-            if(((strcmp("CRCFTASSERT", 
-                        CRshData->records0[i].omkey )) == 0 )||
-				       ((strcmp("ALL", 
-                        CRshData->records0[i].omkey )) == 0 ))
-            {
-              if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"4",1)==0)))
-              {
-				        if((strcmp("ALL", 
-                           CRshData->records0[i].omkey )) == 0 )
-                {
-                  crcftassertFlag=TRUE;
-                  strncpy(keyArray,"ALL",CROMKEYSZ);
-                  keyArray[strlen("ALL")] = '\0';
-                }
-                else
-                {
-                  strncpy(keyArray,
-                          "CRCFTASSERT",CROMKEYSZ);
-                  keyArray[strlen("CRCFTASSERT")] = '\0';
-                }
-                // set values
-                initValuesFlag=0;
-                _period = CRshData->records0[i].period;
-                _high = CRshData->records0[i].upper;
-                _low = CRshData->records0[i].lower;
-                CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-                break;
-              }
-            }// end of CRCFTASSERT or ALL case
-
-            ///////// End Set brevity control for alm value
-
-            if( (strcmp(key, CRshData->records0[i].omkey )) == 0 )
-            {
-              // set values
-              initValuesFlag=0;
-              _period = CRshData->records0[i].period;
-              _high = CRshData->records0[i].upper;
-              _low = CRshData->records0[i].lower;
-              CRDEBUG(CRusli, ("MATCH 1 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-              break;
-            }
-            if( (strcmp("ALL_OMs", CRshData->records0[i].omkey )) == 0 )
-            {
-              // set values
-              initValuesFlag=0;
-              _period = CRshData->records0[i].period;
-              _high = CRshData->records0[i].upper;
-              _low = CRshData->records0[i].lower;
-              CRDEBUG(CRusli, ("MATCH 2 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-              continue; // see if a match with omkey
-            }
-          }// match process name
-        }//for loop
-			}//record set
-			else
-			{
-        if(flag){
-          fp=fopen("/tmp/brev.out","a");
-          fprintf(fp, "second set of records\n");
-          fclose(fp);
-        }
-        for(i=0;i<noOfRecords;++i)
-        {
-          if( (strcmp(CRprocname, CRshData->records1[i].process)) == 0 )
-          {
-            if(flag){
-              fp=fopen("/tmp/brev.out","a");
-              fprintf(fp, "PROC match\n");
-              fclose(fp);
-            }
-
-            /* this is for sevity */
-            if(((strcmp("MINOR", 
-                        CRshData->records1[i].omkey )) == 0 )||
-				       ((strcmp("ALL", 
-                        CRshData->records1[i].omkey )) == 0 ))
-            {
-              if(flag){
-                fp=fopen("/tmp/brev.out","a");
-                fprintf(fp, "MINOR alarm\n");
-                fclose(fp);
-              }
-				      if(alarmLevel == POA_MIN)
-				      {
-                if(flag){
-                  fp=fopen("/tmp/brev.out","a");
-                  fprintf(fp, "alarm lvl match MINOR\n");
-                  fclose(fp);
-                }
-                // set values
-				        if((strcmp("ALL", 
-                           CRshData->records1[i].omkey )) == 0 )
-                {
-                  minorAlarmFlag=TRUE;
-                  strncpy(keyArray,"ALL",CROMKEYSZ);
-                  keyArray[strlen("ALL")] = '\0';
-                }
-                else
-                {
-                  strncpy(keyArray,"MINOR",CROMKEYSZ);
-                  keyArray[strlen("MINOR")] = '\0';
-                }
-                initValuesFlag=0;
-                _period = CRshData->records1[i].period;
-                _high = CRshData->records1[i].upper;
-                _low = CRshData->records1[i].lower;
-                CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-                break;
-				      }
-            }// end of MINOR or ALL case
-
-            // 3 at beginning of omkey means CRASSERT OM
-            if(((strcmp("CRASSERT", 
-                        CRshData->records1[i].omkey )) == 0 )||
-				       ((strcmp("ALL", 
-                        CRshData->records1[i].omkey )) == 0 ))
-            {
-              if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"3",1)==0)))
-              {
-                // set values
-                assertFlag=TRUE;
-				        if((strcmp("ALL", 
-                           CRshData->records1[i].omkey )) == 0 )
-                {
-                  strncpy(keyArray,"ALL",CROMKEYSZ);
-                  keyArray[strlen("ALL")] = '\0';
-                }
-                else
-                {
-                  strncpy(keyArray,"CRASSERT",CROMKEYSZ);
-                  keyArray[strlen("CRASSERT")] = '\0';
-                }
-                initValuesFlag=0;
-                _period = CRshData->records1[i].period;
-                _high = CRshData->records1[i].upper;
-                _low = CRshData->records1[i].lower;
-                CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-                break;
-              }
-            }// end of CRASSERRT or ALL case
-
-            // 4 at beginning of omkey means CRCFTASSERT OM
-            if(((strcmp("CRCFTASSERT", 
-                        CRshData->records1[i].omkey )) == 0 )||
-				       ((strcmp("ALL", 
-                        CRshData->records1[i].omkey )) == 0 ))
-            {
-              if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"4",1)==0)))
-              {
-                // set values
-				        if((strcmp("ALL", 
-                           CRshData->records1[i].omkey )) == 0 )
-                {
-                  crcftassertFlag=TRUE;
-                  strncpy(keyArray,"ALL",CROMKEYSZ);
-                  keyArray[strlen("ALL")] = '\0';
-                }
-                else
-                {
-                  strncpy(keyArray,
-                          "CRCFTASSERT",CROMKEYSZ);
-                  keyArray[strlen("CRCFTASSERT")] = '\0';
-                }
-                initValuesFlag=0;
-                _period = CRshData->records1[i].period;
-                _high = CRshData->records1[i].upper;
-                _low = CRshData->records1[i].lower;
-                CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-                break;
-              }
-            }// end of CRCFTASSERT or ALL case
-
-            /////////End  Set brevity control for alm value
-
-            if((strcmp(key, CRshData->records1[i].omkey )) == 0 )
-            {
-              // set values
-              initValuesFlag=0;
-              _period = CRshData->records1[i].period;
-              _high = CRshData->records1[i].upper;
-              _low = CRshData->records1[i].lower;
-              CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-              break;
-            }
-            if((strcmp("ALL_OMs", CRshData->records1[i].omkey )) == 0 )
-            {
-              // set values
-              initValuesFlag=0;
-              _period = CRshData->records1[i].period;
-              _high = CRshData->records1[i].upper;
-              _low = CRshData->records1[i].lower;
-              CRDEBUG(CRusli, ("MATCH 4 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
-              continue; // see if match on key
-            }
-          }// if match process
-        }// for loop
-			}//else
-		}// end CRshData.noOfRecords > 0
-	}// end of CRshData != NULL
-
-  if(flag){
-    fp=fopen("/tmp/brev.out","a");
-    fprintf(fp, "VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d\n",CRprocname, keyArray,  _period, _high, _low);
-    fclose(fp);
-  }
-
-  CRDEBUG(CRusli, ("VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname, keyArray,  _period, _high, _low));
-
-	if( _period == 0 ) // don't do brevity control
-	{
-    CRDEBUG(CRusli, ("BREV TURN OFF for %s %s", CRprocname, (const char*) msgKey));
-		return CRCLEAR;
-	}
-
-	if((strcmp(msgKey,"1/CR065")) == 0)  // don't block my block message
-     return CRCLEAR;
-
-	int arrayCnt  = 0;
-	Long thisTime = getOMtime(); // call getOMtime once per status call
-
-	// Must be FIRST OM so thus add it to the array
-	if(_omArrayCnt == 0)
-	{
-		addNewOM(keyArray);
-
-		_printTimer = thisTime + CRTIMEDELAY; // five minutes
-		return CRCLEAR;
-	}
-	else
-	{
-
-		// Check to see if its time do do some cleanup
-		// and print any block OM
-		if(_printTimer < thisTime)
-		{
-			printDelayOM(thisTime);
-		}
-
-		// go through the array until a match if no match
-		// then assume its a new OM and added it in
-		for(arrayCnt = 0;arrayCnt < _omArrayCnt;++arrayCnt)
-		{
-			// Check to see if the OM is already in the ARRAY
-			if((strcmp(_OMlist[arrayCnt].omKey,keyArray)) == 0) 
-			{
-        // Check to see key = ALL for all sevitys
-        // Check to see if in BLOCKED or PENDING
-        // next add to count for MINOR/ASSERT/CRCFTASSERT
-        if((strcmp("ALL", keyArray)) == 0 )
-        {
-          if((_OMlist[arrayCnt].status == CRBLOCK) ||
-	   			   (_OMlist[arrayCnt].status == CRPENDING))
-          {
-            if(minorAlarmFlag)
-            {
-              ++CRminorAlarmCnt;
-            }
-            if(assertFlag)
-            {
-              ++CRassertCnt;
-            }
-            if(crcftassertFlag)
-            {
-              ++CRcrcftassertCnt;
-            }
-          }
-        }
-
-        // Check to see if its a new time peroid
-        if(thisTime > _OMlist[arrayCnt].nextTimePeriod)
-        {
-          //
-          // new time period
-          //
-          // have to check to see what to do
-          ++_OMlist[arrayCnt].totalTimePeriods;
-          return updateStatusForNewPeriod(arrayCnt, 
-                                          thisTime);
-        }// end of if
-        else
-        {
-          return updateStatus(arrayCnt);
-        }// end else
-      }// end of if
-		}//end of for loop
-
-		// new OM so add it to array
-
-		addNewOM(keyArray);
-		return CRCLEAR;
-	}
-	return _OMlist[arrayCnt].status; // equal last omArrayCnt
+  //int flag=0;
+  //FILE *fp;
+  //if( (strcmp(CRprocname,"SCC")==0) && (CRDEBUG_FLAGSET(123)) )
+  //{
+  //  flag=1;
+  //}
+  //
+  //if(flag){
+  //  fp=fopen("/tmp/brev.out","a");
+  //  fprintf(fp, "++++++++++++ S T A T U S +++++++++++++++++++++++++++++++\n");
+  //  fprintf(fp, "Checking Process = %s  msgKey = %s alarmLevel = %d\n",
+  //          CRprocname, (const char*) msgKey, alarmLevel);
+  //  fclose(fp);
+  //}
+  //
+	//static int initValuesFlag = 0;
+	//static Char* addr = NULL;
+  //
+	//Bool minorAlarmFlag = FALSE;
+	//Bool assertFlag = FALSE;
+	//Bool crcftassertFlag = FALSE;
+  //
+	//if(initValuesFlag == 0)
+	//{
+//// Get brevity control values from INIT
+//// get 3 values. If INIT gives me 0 then brevity control is off
+	//	IN_BREV_PARMS(&_low,&_high,&_period);
+  //
+  //
+	//	if((_period != 0 ) && (_low >= _high))
+	//	{
+	//		// I can't use CRCFTASSERT MARCO
+	//		// so I'm building my own CRCFTASSERT OM
+	//		// I using CRbadBrevityParmsFMT all really 
+	//		// in CRassertIDs
+	//		//CRCFTASSERT(CRBadBrevityParmsId,
+  //    //(CRBadBrevityParmsFMT, _low,_high,CRprocname));
+  //    //
+  //    // +++ PSPQ148 2000-07-17 15:44:22 ASRT        
+  //    // A  REPT MANUAL ASSERT=9503
+  //    //    PROC=CEP1746, ../BLopClk.C AT LINE 143
+  //    //    THIS IS CRAFT ASSERT 0
+  //    //END OF REPORT #000660++-
+  //
+	//		CRmsg om;
+	//		om.setMsgClass("ASRT");
+	//		om.setAlarmLevel(POA_ACT);
+	//		om.add("REPT MANUAL ASSERT=3041\n");
+	//		om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
+	//		om.add("brevity_low(%d) is greater then or equal to brevity_high(%d)",_low,_high);
+	//		om.spool();
+	//		initValuesFlag=1;
+	//		_period=0; // turn off brevity control
+	//	}
+	//	else if((_period != 0 ) && (_low < 1 || _low > 254 ))
+	//	{
+	//		CRmsg om;
+	//		om.setMsgClass("ASRT");
+	//		om.setAlarmLevel(POA_ACT);
+	//		om.add("REPT MANUAL ASSERT=3041\n");
+	//		om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
+	//		om.add("brevity_low(%d) can only be 1 - 254",_low);
+	//		om.spool();
+	//		initValuesFlag=1;
+	//		_period=0; // turn off brevity control
+	//	}
+	//	else if((_period != 0 ) && (_high < 2 || _high > 255 ))
+	//	{
+	//		CRmsg om;
+	//		om.setMsgClass("ASRT");
+	//		om.setAlarmLevel(POA_ACT);
+	//		om.add("REPT MANUAL ASSERT=3041\n");
+	//		om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
+	//		om.add("brevity_high(%d) can only be 2 - 255",_high);
+	//		om.spool();
+	//		initValuesFlag=1;
+	//		_period=0; // turn off brevity control
+	//	}
+	//	else if((_period != 0 ) && (_period > 60))
+	//	{
+	//		CRmsg om;
+	//		om.setMsgClass("ASRT");
+	//		om.setAlarmLevel(POA_ACT);
+	//		om.add("REPT MANUAL ASSERT=3041\n");
+	//		om.add("PROC=%s, CRomBrevityCtl.C AT LINE %d\n",CRprocname, __LINE__);
+	//		om.add("brevity_peroid(%d) can only be 0, 1 - 60",_period);
+	//		om.spool();
+	//		initValuesFlag=1;
+	//		_period=0; // turn off brevity control
+	//	}
+	//	else
+	//	{
+	//		++initValuesFlag;
+	//	}
+	//}
+  //
+  //CRDEBUG(CRusli, 
+  //        ("Checking brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",
+  //         CRprocname, (const char*) msgKey, _period, _high, _low));
+  //
+  //
+	//GLretVal retval;
+  //
+  //char keyArray[CROMKEYSZ]; 
+	//strncpy(keyArray,msgKey,CROMKEYSZ);
+	//keyArray[strlen(msgKey)] = '\0';
+  //
+  //if(flag){
+  //  fp=fopen("/tmp/brev.out","a");
+  //  fprintf(fp, "Checking Process = %s  msgKey = %s alarmLevel = %d keyArray = %s\n",
+  //          CRprocname, (const char*) msgKey, alarmLevel, keyArray);
+  //  fclose(fp);
+  //}
+  //
+	//if( _brevGDOaddr != NULL )
+	//{
+	//	CRshData = (CRbrevSharedMemory *) _brevGDOaddr;
+  //
+	//	if( CRshData->noOfRecords != 0 ) /*  non-empty GDO */
+	//	{
+	//		int noOfRecords = CRshData->noOfRecords;
+	//		int i = 0;
+  //
+  //    /* CRERROR 2file!493 */ 
+  //    /* CROMDB 1/CR012    */ 
+  //    /* CRASSERT 43007    */ 
+  //    /* ALL_OM            */ 
+	//		/* added 3 more sev keys */
+	//		/* MINOR             */
+	//		/* ASSERT            */
+	//		/* CFTASSERT         */
+	//		/* ALL               */
+  //    char *key = &keyArray[1];
+  //
+  //    if(flag){
+  //      fp=fopen("/tmp/brev.out","a");
+  //      fprintf(fp, "IN SHARE MEMORY VALUES for %s %s\n",
+  //              CRprocname,(const char*) msgKey);
+  //      fclose(fp);
+  //    }
+  //
+	//		if( CRshData->whichRecordSet == 0 )
+	//		{
+  //      if(flag){
+  //        fp=fopen("/tmp/brev.out","a");
+  //        fprintf(fp, "record set 0\n");
+  //        fclose(fp);
+  //      }
+  //      for(i=0;i<noOfRecords;++i)
+  //      {
+  //        if( (strcmp(CRprocname, 
+  //                    CRshData->records0[i].process)) == 0 )
+  //        {
+  //          if(flag){
+  //            fp=fopen("/tmp/brev.out","a");
+  //            fprintf(fp, "MATCH process\n");
+  //            fclose(fp);
+  //          }
+  //          /* this is for sevity */
+  //          if(((strcmp("MINOR", 
+  //                      CRshData->records0[i].omkey )) == 0 ) ||
+  //             ((strcmp("ALL", 
+  //                      CRshData->records0[i].omkey )) == 0 ))
+  //          {
+  //            if(flag){
+  //              fp=fopen("/tmp/brev.out","a");
+  //              fprintf(fp, "MATCH MINOR alarm\n");
+  //              fclose(fp);
+  //            }
+	//			      if(alarmLevel == POA_MIN)
+	//			      {
+  //              if(flag){
+  //                fp=fopen("/tmp/brev.out","a");
+  //                fprintf(fp, "alarm lvl = minor\n");
+  //                fclose(fp);
+  //              }
+  //              // set values
+	//			        if((strcmp("ALL", 
+  //                         CRshData->records0[i].omkey )) == 0 )
+  //              {
+  //                minorAlarmFlag=TRUE;
+  //                strncpy(keyArray,"ALL",CROMKEYSZ);
+  //                keyArray[strlen("ALL")] = '\0';
+  //              }
+  //              else
+  //              {
+  //                strncpy(keyArray,"MINOR",CROMKEYSZ);
+  //                keyArray[strlen("MINOR")] = '\0';
+  //              }
+  //              initValuesFlag=0;
+  //              _period = CRshData->records0[i].period;
+  //              _high = CRshData->records0[i].upper;
+  //              _low = CRshData->records0[i].lower;
+  //              CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //              break;
+	//			      }
+  //          }// end of MINOR or ALL case
+  //
+  //          // 3 at beginning of omkey means CRASSERT OM
+  //          if(((strcmp("CRASSERT", 
+  //                      CRshData->records0[i].omkey )) == 0 )||
+	//			       ((strcmp("ALL", 
+  //                      CRshData->records0[i].omkey )) == 0 ))
+  //          {
+  //            if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"3",1)==0)))
+  //            {
+	//			        if((strcmp("ALL", 
+  //                         CRshData->records0[i].omkey )) == 0 )
+  //              {
+  //                assertFlag=TRUE;
+  //                strncpy(keyArray,"ALL",CROMKEYSZ);
+  //                keyArray[strlen("ALL")] = '\0';
+  //              }
+  //              else
+  //              {
+  //                strncpy(keyArray,"CRASSERT",CROMKEYSZ);
+  //                keyArray[strlen("CRASSERT")] = '\0';
+  //              }
+  //              // set values
+  //              initValuesFlag=0;
+  //              _period = CRshData->records0[i].period;
+  //              _high = CRshData->records0[i].upper;
+  //              _low = CRshData->records0[i].lower;
+  //              CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //              break;
+  //            }
+  //          }// end of CRASSERT or ALL case
+  //
+  //          // 4 at beginning of omkey means CRCFTASSERT OM
+  //          if(((strcmp("CRCFTASSERT", 
+  //                      CRshData->records0[i].omkey )) == 0 )||
+	//			       ((strcmp("ALL", 
+  //                      CRshData->records0[i].omkey )) == 0 ))
+  //          {
+  //            if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"4",1)==0)))
+  //            {
+	//			        if((strcmp("ALL", 
+  //                         CRshData->records0[i].omkey )) == 0 )
+  //              {
+  //                crcftassertFlag=TRUE;
+  //                strncpy(keyArray,"ALL",CROMKEYSZ);
+  //                keyArray[strlen("ALL")] = '\0';
+  //              }
+  //              else
+  //              {
+  //                strncpy(keyArray,
+  //                        "CRCFTASSERT",CROMKEYSZ);
+  //                keyArray[strlen("CRCFTASSERT")] = '\0';
+  //              }
+  //              // set values
+  //              initValuesFlag=0;
+  //              _period = CRshData->records0[i].period;
+  //              _high = CRshData->records0[i].upper;
+  //              _low = CRshData->records0[i].lower;
+  //              CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //              break;
+  //            }
+  //          }// end of CRCFTASSERT or ALL case
+  //
+  //          ///////// End Set brevity control for alm value
+  //
+  //          if( (strcmp(key, CRshData->records0[i].omkey )) == 0 )
+  //          {
+  //            // set values
+  //            initValuesFlag=0;
+  //            _period = CRshData->records0[i].period;
+  //            _high = CRshData->records0[i].upper;
+  //            _low = CRshData->records0[i].lower;
+  //            CRDEBUG(CRusli, ("MATCH 1 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //            break;
+  //          }
+  //          if( (strcmp("ALL_OMs", CRshData->records0[i].omkey )) == 0 )
+  //          {
+  //            // set values
+  //            initValuesFlag=0;
+  //            _period = CRshData->records0[i].period;
+  //            _high = CRshData->records0[i].upper;
+  //            _low = CRshData->records0[i].lower;
+  //            CRDEBUG(CRusli, ("MATCH 2 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //            continue; // see if a match with omkey
+  //          }
+  //        }// match process name
+  //      }//for loop
+	//		}//record set
+	//		else
+	//		{
+  //      if(flag){
+  //        fp=fopen("/tmp/brev.out","a");
+  //        fprintf(fp, "second set of records\n");
+  //        fclose(fp);
+  //      }
+  //      for(i=0;i<noOfRecords;++i)
+  //      {
+  //        if( (strcmp(CRprocname, CRshData->records1[i].process)) == 0 )
+  //        {
+  //          if(flag){
+  //            fp=fopen("/tmp/brev.out","a");
+  //            fprintf(fp, "PROC match\n");
+  //            fclose(fp);
+  //          }
+  //
+  //          /* this is for sevity */
+  //          if(((strcmp("MINOR", 
+  //                      CRshData->records1[i].omkey )) == 0 )||
+	//			       ((strcmp("ALL", 
+  //                      CRshData->records1[i].omkey )) == 0 ))
+  //          {
+  //            if(flag){
+  //              fp=fopen("/tmp/brev.out","a");
+  //              fprintf(fp, "MINOR alarm\n");
+  //              fclose(fp);
+  //            }
+	//			      if(alarmLevel == POA_MIN)
+	//			      {
+  //              if(flag){
+  //                fp=fopen("/tmp/brev.out","a");
+  //                fprintf(fp, "alarm lvl match MINOR\n");
+  //                fclose(fp);
+  //              }
+  //              // set values
+	//			        if((strcmp("ALL", 
+  //                         CRshData->records1[i].omkey )) == 0 )
+  //              {
+  //                minorAlarmFlag=TRUE;
+  //                strncpy(keyArray,"ALL",CROMKEYSZ);
+  //                keyArray[strlen("ALL")] = '\0';
+  //              }
+  //              else
+  //              {
+  //                strncpy(keyArray,"MINOR",CROMKEYSZ);
+  //                keyArray[strlen("MINOR")] = '\0';
+  //              }
+  //              initValuesFlag=0;
+  //              _period = CRshData->records1[i].period;
+  //              _high = CRshData->records1[i].upper;
+  //              _low = CRshData->records1[i].lower;
+  //              CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //              break;
+	//			      }
+  //          }// end of MINOR or ALL case
+  //
+  //          // 3 at beginning of omkey means CRASSERT OM
+  //          if(((strcmp("CRASSERT", 
+  //                      CRshData->records1[i].omkey )) == 0 )||
+	//			       ((strcmp("ALL", 
+  //                      CRshData->records1[i].omkey )) == 0 ))
+  //          {
+  //            if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"3",1)==0)))
+  //            {
+  //              // set values
+  //              assertFlag=TRUE;
+	//			        if((strcmp("ALL", 
+  //                         CRshData->records1[i].omkey )) == 0 )
+  //              {
+  //                strncpy(keyArray,"ALL",CROMKEYSZ);
+  //                keyArray[strlen("ALL")] = '\0';
+  //              }
+  //              else
+  //              {
+  //                strncpy(keyArray,"CRASSERT",CROMKEYSZ);
+  //                keyArray[strlen("CRASSERT")] = '\0';
+  //              }
+  //              initValuesFlag=0;
+  //              _period = CRshData->records1[i].period;
+  //              _high = CRshData->records1[i].upper;
+  //              _low = CRshData->records1[i].lower;
+  //              CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //              break;
+  //            }
+  //          }// end of CRASSERRT or ALL case
+  //
+  //          // 4 at beginning of omkey means CRCFTASSERT OM
+  //          if(((strcmp("CRCFTASSERT", 
+  //                      CRshData->records1[i].omkey )) == 0 )||
+	//			       ((strcmp("ALL", 
+  //                      CRshData->records1[i].omkey )) == 0 ))
+  //          {
+  //            if((alarmLevel == POA_ACT) && ((strncmp(msgKey,"4",1)==0)))
+  //            {
+  //              // set values
+	//			        if((strcmp("ALL", 
+  //                         CRshData->records1[i].omkey )) == 0 )
+  //              {
+  //                crcftassertFlag=TRUE;
+  //                strncpy(keyArray,"ALL",CROMKEYSZ);
+  //                keyArray[strlen("ALL")] = '\0';
+  //              }
+  //              else
+  //              {
+  //                strncpy(keyArray,
+  //                        "CRCFTASSERT",CROMKEYSZ);
+  //                keyArray[strlen("CRCFTASSERT")] = '\0';
+  //              }
+  //              initValuesFlag=0;
+  //              _period = CRshData->records1[i].period;
+  //              _high = CRshData->records1[i].upper;
+  //              _low = CRshData->records1[i].lower;
+  //              CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //              break;
+  //            }
+  //          }// end of CRCFTASSERT or ALL case
+  //
+  //          /////////End  Set brevity control for alm value
+  //
+  //          if((strcmp(key, CRshData->records1[i].omkey )) == 0 )
+  //          {
+  //            // set values
+  //            initValuesFlag=0;
+  //            _period = CRshData->records1[i].period;
+  //            _high = CRshData->records1[i].upper;
+  //            _low = CRshData->records1[i].lower;
+  //            CRDEBUG(CRusli, ("MATCH 3 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //            break;
+  //          }
+  //          if((strcmp("ALL_OMs", CRshData->records1[i].omkey )) == 0 )
+  //          {
+  //            // set values
+  //            initValuesFlag=0;
+  //            _period = CRshData->records1[i].period;
+  //            _high = CRshData->records1[i].upper;
+  //            _low = CRshData->records1[i].lower;
+  //            CRDEBUG(CRusli, ("MATCH 4 NEW VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname,(const char*) msgKey,  _period, _high, _low));
+  //            continue; // see if match on key
+  //          }
+  //        }// if match process
+  //      }// for loop
+	//		}//else
+	//	}// end CRshData.noOfRecords > 0
+	//}// end of CRshData != NULL
+  //
+  //if(flag){
+  //  fp=fopen("/tmp/brev.out","a");
+  //  fprintf(fp, "VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d\n",CRprocname, keyArray,  _period, _high, _low);
+  //  fclose(fp);
+  //}
+  //
+  //CRDEBUG(CRusli, ("VALUES brev for %s %s values are :\nperiod = %d\nhigh = %d\nlow = %d",CRprocname, keyArray,  _period, _high, _low));
+  //
+	//if( _period == 0 ) // don't do brevity control
+	//{
+  //  CRDEBUG(CRusli, ("BREV TURN OFF for %s %s", CRprocname, (const char*) msgKey));
+	//	return CRCLEAR;
+	//}
+  //
+	//if((strcmp(msgKey,"1/CR065")) == 0)  // don't block my block message
+  //   return CRCLEAR;
+  //
+	//int arrayCnt  = 0;
+	//Long thisTime = getOMtime(); // call getOMtime once per status call
+  //
+	//// Must be FIRST OM so thus add it to the array
+	//if(_omArrayCnt == 0)
+	//{
+	//	addNewOM(keyArray);
+  //
+	//	_printTimer = thisTime + CRTIMEDELAY; // five minutes
+	//	return CRCLEAR;
+	//}
+	//else
+	//{
+  //
+	//	// Check to see if its time do do some cleanup
+	//	// and print any block OM
+	//	if(_printTimer < thisTime)
+	//	{
+	//		printDelayOM(thisTime);
+	//	}
+  //
+	//	// go through the array until a match if no match
+	//	// then assume its a new OM and added it in
+	//	for(arrayCnt = 0;arrayCnt < _omArrayCnt;++arrayCnt)
+	//	{
+	//		// Check to see if the OM is already in the ARRAY
+	//		if((strcmp(_OMlist[arrayCnt].omKey,keyArray)) == 0) 
+	//		{
+  //      // Check to see key = ALL for all sevitys
+  //      // Check to see if in BLOCKED or PENDING
+  //      // next add to count for MINOR/ASSERT/CRCFTASSERT
+  //      if((strcmp("ALL", keyArray)) == 0 )
+  //      {
+  //        if((_OMlist[arrayCnt].status == CRBLOCK) ||
+	//   			   (_OMlist[arrayCnt].status == CRPENDING))
+  //        {
+  //          if(minorAlarmFlag)
+  //          {
+  //            ++CRminorAlarmCnt;
+  //          }
+  //          if(assertFlag)
+  //          {
+  //            ++CRassertCnt;
+  //          }
+  //          if(crcftassertFlag)
+  //          {
+  //            ++CRcrcftassertCnt;
+  //          }
+  //        }
+  //      }
+  //
+  //      // Check to see if its a new time peroid
+  //      if(thisTime > _OMlist[arrayCnt].nextTimePeriod)
+  //      {
+  //        //
+  //        // new time period
+  //        //
+  //        // have to check to see what to do
+  //        ++_OMlist[arrayCnt].totalTimePeriods;
+  //        return updateStatusForNewPeriod(arrayCnt, 
+  //                                        thisTime);
+  //      }// end of if
+  //      else
+  //      {
+  //        return updateStatus(arrayCnt);
+  //      }// end else
+  //    }// end of if
+	//	}//end of for loop
+  //
+	//	// new OM so add it to array
+  //
+	//	addNewOM(keyArray);
+	//	return CRCLEAR;
+	//}
+	//return _OMlist[arrayCnt].status; // equal last omArrayCnt
 }
 
 
@@ -962,282 +964,282 @@ CRomBrevityCtl::updateStatus(int i)
 Void
 CRomBrevityCtl::printBlockOM(int i)
 {
-  int deflag=0;
-  FILE *fp;
-  if( (strcmp(CRprocname,"SCC")==0) && (CRDEBUG_FLAGSET(123)) )
-  {
-    deflag=1;
-  }
-
-  if(deflag){
-    fp=fopen("/tmp/brev.out","a");
-    fprintf(fp, "In printBlockOM for %d\n",i);
-    fclose(fp);
-  }
-	int flag=0;
-	//0 is BLOCK/CLEAR
-	//1 is START
-
-	char str[200];
-
-	memset((char*) &str, 0, sizeof(str));
-
-	if( ( _OMlist[i].totalomCnt == 0 ) && \
-	    (_OMlist[i].status == CRBLOCK) )
-	{
-		flag=1;
-	}
-	else
-	{
-		if( _OMlist[i].totalomCnt == 0 )
-       return; // why print a message saying nothing was block
-	}
-
-	CROMDBKEY(CRlogBlockOM, "/CR065");
-
-  CRomdbMsg *om = new CRomdbMsg;
-
-	if( _OMlist[i].totalomCnt == -1 )
-	{
-    _OMlist[i].totalomCnt = 0;
-		om->setAlarmLevel(POA_INF);
-    om->add("CLEARED");
-	}
-	else
-	{
-		//do it from RCV
-		//om->setAlarmLevel(POA_TMN);
-		if( flag == 1 )
-		{
-      om->add("STARTING TO BLOCK");
-		}
-		else
-		{
-      om->add("BLOCKED");
-		}
-	}
-
-  om->add(CRprocname);
-  om->add(_OMlist[i].totalomCnt);
-
-  char keyArray[CROMKEYSZ]; 
-	strncpy(keyArray,_OMlist[i].omKey,CROMKEYSZ);
-	om->setAlarmObjectName(keyArray);
-  int omtype = 0;
-  char charOmtype[CROMKEYSZ];
-  strncpy(charOmtype,keyArray,1);
-  charOmtype[1]='\0';
-
-	if(strncmp(keyArray,"CRASSERT",8)==0)
-	{
-    omtype = 10;
-	}
-	else if(strncmp(keyArray,"CRCFTASSERT",11)==0)
-	{
-    omtype = 11;
-	}
-	else if(strncmp(keyArray,"MINOR",5)==0)
-	{
-    omtype = 12;
-	}
-	else if(strncmp(keyArray,"ALL",3)==0)
-	{
-    omtype = 13;
-	}
-	else
-	{
-    omtype = atoi(charOmtype);
-
-	}
-  char *key = &keyArray[1];
-
-	char    theSpecificProblem[20 + CROMKEYSZ];
-
-  switch(omtype)
-  {
-  case CROMCRMSG:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"CRMSG OM BEING CLEARED; MSG KEY IS : "); 
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    else
-    {
-      strcpy(str,"CRMSG OM BEING BLOCKED; MSG KEY IS : "); 
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-
-    strncat(str,key,CROMKEYSZ-1); 
-    break;
-
-  case CROMCROMDB:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"CROMDB OM BEING CLEARED; OMDB KEY : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    else
-    {
-      strcpy(str,"CROMDB OM BEING BLOCKED; OMDB KEY : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    strncat(str,key,CROMKEYSZ-1); 
-    break;
-
-  case CROMCRERROR:
-    const char *file;
-    const char *line;
-    file = strtok( key, "!" ) ;
-    line = strtok( NULL, "!" ) ;
-
-    if(file == 0)
-       file="UNKNOWN";
-    if(line == 0)
-       line="UNKNOWN";
-
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"CRERROR BEING CLEARED; FILE : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    else
-    {
-      strcpy(str,"CRERROR BEING BLOCKED; FILE : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-
-    strcat(str,file);
-    strcat(str," LINE NUMBER : ");
-    strcat(str,line);
-    break;
-
-  case CROMCRASSERT:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"CRASSERT OM BEING CLEARED; ASSERT IS  : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    else
-    {
-      strcpy(str,"CRASSERT OM BEING BLOCKED; ASSERT IS  : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-
-    strncat(str,key,CROMKEYSZ-1); 
-    break;
-
-  case CROMCRCFTASSERT:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"CRCFTASSERT OM BEING CLEARED; CRAFT ASSERT IS  : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    else
-    {
-      strcpy(str,"CRCFTASSERT OM BEING BLOCKED; CRAFT ASSERT IS  : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-
-    strncat(str,key,CROMKEYSZ-1); 
-    break;
-
-  case 10:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"SEVERITY LEVEL: ASSERT OMs BEING CLEARED");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ASSERT");
-    }
-    else
-    {
-      strcpy(str,"SEVERITY LEVEL: ASSERT");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ASSERT");
-    }
-
-    break;
-
-  case 11:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"SEVERITY LEVEL: CRAFT ASSERT OMs BEING CLEARED");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED CASSERT");
-    }
-    else
-    {
-      strcpy(str,"SEVERITY LEVEL: CRAFT ASSERT");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED CASSERT");
-    }
-
-    break;
-
-  case 12:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"SEVERITY LEVEL: MINOR ALARMED OMs BEING CLEARED");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED MINOR");
-    }
-    else
-    {
-      strcpy(str,"SEVERITY LEVEL: MINOR");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED MINOR");
-    }
-    break;
-
-  case 13:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"SEVERITY LEVEL: ALL ASSERT, CRAFT ASSERT, and MINOR ALARMED OMs BEING CLEARED");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ALL ALRM");
-    }
-    else
-    {
-      if(_OMlist[i].totalomCnt == 0) 
-      {
-        sprintf(str,"SEVERITY LEVEL: ASSERT(0), CRAFT ASSERT(0), MINOR(0)");
-      }
-      else
-      {
-        sprintf(str,"SEVERITY LEVEL: ASSERT(%d), CRAFT ASSERT(%d), MINOR(%d)",CRassertCnt,CRcrcftassertCnt,CRminorAlarmCnt);
-      }
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ALL ALRM");
-    }
-    break;
-
-  default:
-    if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-    {
-      strcpy(str,"OM BEING CLEARED; KEY IS  : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    else
-    {
-      strcpy(str,"OM BEING BLOCKED; KEY IS  : ");
-      snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
-    }
-    strncat(str,key,CROMKEYSZ-1); 
-    break;
-  }
-  om->add(str);
-
-
-	om->setSpecificProblem(theSpecificProblem);
-
-	if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
-	{
-		//do not send clear
-		CRDEBUG(CRusli, ("%s", str));
-	}
-	else
-	{
-    om->spool(CRlogBlockOM);
-	}
-
-	delete om;
-
-	_OMlist[i].totalTimePeriods = 0;
-	_OMlist[i].totalomCnt       = 0;
-	CRminorAlarmCnt = 0;
-	CRassertCnt = 0;
-	CRcrcftassertCnt = 0;
+  //int deflag=0;
+  //FILE *fp;
+  //if( (strcmp(CRprocname,"SCC")==0) && (CRDEBUG_FLAGSET(123)) )
+  //{
+  //  deflag=1;
+  //}
+  //
+  //if(deflag){
+  //  fp=fopen("/tmp/brev.out","a");
+  //  fprintf(fp, "In printBlockOM for %d\n",i);
+  //  fclose(fp);
+  //}
+	//int flag=0;
+	////0 is BLOCK/CLEAR
+	////1 is START
+  //
+	//char str[200];
+  //
+	//memset((char*) &str, 0, sizeof(str));
+  //
+	//if( ( _OMlist[i].totalomCnt == 0 ) && \
+	//    (_OMlist[i].status == CRBLOCK) )
+	//{
+	//	flag=1;
+	//}
+	//else
+	//{
+	//	if( _OMlist[i].totalomCnt == 0 )
+  //     return; // why print a message saying nothing was block
+	//}
+  //
+	//CROMDBKEY(CRlogBlockOM, "/CR065");
+  //
+  //CRomdbMsg *om = new CRomdbMsg;
+  //
+	//if( _OMlist[i].totalomCnt == -1 )
+	//{
+  //  _OMlist[i].totalomCnt = 0;
+	//	om->setAlarmLevel(POA_INF);
+  //  om->add("CLEARED");
+	//}
+	//else
+	//{
+	//	//do it from RCV
+	//	//om->setAlarmLevel(POA_TMN);
+	//	if( flag == 1 )
+	//	{
+  //    om->add("STARTING TO BLOCK");
+	//	}
+	//	else
+	//	{
+  //    om->add("BLOCKED");
+	//	}
+	//}
+  //
+  //om->add(CRprocname);
+  //om->add(_OMlist[i].totalomCnt);
+  //
+  //char keyArray[CROMKEYSZ]; 
+	//strncpy(keyArray,_OMlist[i].omKey,CROMKEYSZ);
+	//om->setAlarmObjectName(keyArray);
+  //int omtype = 0;
+  //char charOmtype[CROMKEYSZ];
+  //strncpy(charOmtype,keyArray,1);
+  //charOmtype[1]='\0';
+  //
+	//if(strncmp(keyArray,"CRASSERT",8)==0)
+	//{
+  //  omtype = 10;
+	//}
+	//else if(strncmp(keyArray,"CRCFTASSERT",11)==0)
+	//{
+  //  omtype = 11;
+	//}
+	//else if(strncmp(keyArray,"MINOR",5)==0)
+	//{
+  //  omtype = 12;
+	//}
+	//else if(strncmp(keyArray,"ALL",3)==0)
+	//{
+  //  omtype = 13;
+	//}
+	//else
+	//{
+  //  omtype = atoi(charOmtype);
+  //
+	//}
+  //char *key = &keyArray[1];
+  //
+	//char    theSpecificProblem[20 + CROMKEYSZ];
+  //
+  //switch(omtype)
+  //{
+  //case CROMCRMSG:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"CRMSG OM BEING CLEARED; MSG KEY IS : "); 
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"CRMSG OM BEING BLOCKED; MSG KEY IS : "); 
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //
+  //  strncat(str,key,CROMKEYSZ-1); 
+  //  break;
+  //
+  //case CROMCROMDB:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"CROMDB OM BEING CLEARED; OMDB KEY : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"CROMDB OM BEING BLOCKED; OMDB KEY : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  strncat(str,key,CROMKEYSZ-1); 
+  //  break;
+  //
+  //case CROMCRERROR:
+  //  const char *file;
+  //  const char *line;
+  //  file = strtok( key, "!" ) ;
+  //  line = strtok( NULL, "!" ) ;
+  //
+  //  if(file == 0)
+  //     file="UNKNOWN";
+  //  if(line == 0)
+  //     line="UNKNOWN";
+  //
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"CRERROR BEING CLEARED; FILE : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"CRERROR BEING BLOCKED; FILE : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //
+  //  strcat(str,file);
+  //  strcat(str," LINE NUMBER : ");
+  //  strcat(str,line);
+  //  break;
+  //
+  //case CROMCRASSERT:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"CRASSERT OM BEING CLEARED; ASSERT IS  : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"CRASSERT OM BEING BLOCKED; ASSERT IS  : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //
+  //  strncat(str,key,CROMKEYSZ-1); 
+  //  break;
+  //
+  //case CROMCRCFTASSERT:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"CRCFTASSERT OM BEING CLEARED; CRAFT ASSERT IS  : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"CRCFTASSERT OM BEING BLOCKED; CRAFT ASSERT IS  : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //
+  //  strncat(str,key,CROMKEYSZ-1); 
+  //  break;
+  //
+  //case 10:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"SEVERITY LEVEL: ASSERT OMs BEING CLEARED");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ASSERT");
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"SEVERITY LEVEL: ASSERT");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ASSERT");
+  //  }
+  //
+  //  break;
+  //
+  //case 11:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"SEVERITY LEVEL: CRAFT ASSERT OMs BEING CLEARED");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED CASSERT");
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"SEVERITY LEVEL: CRAFT ASSERT");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED CASSERT");
+  //  }
+  //
+  //  break;
+  //
+  //case 12:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"SEVERITY LEVEL: MINOR ALARMED OMs BEING CLEARED");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED MINOR");
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"SEVERITY LEVEL: MINOR");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED MINOR");
+  //  }
+  //  break;
+  //
+  //case 13:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"SEVERITY LEVEL: ALL ASSERT, CRAFT ASSERT, and MINOR ALARMED OMs BEING CLEARED");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ALL ALRM");
+  //  }
+  //  else
+  //  {
+  //    if(_OMlist[i].totalomCnt == 0) 
+  //    {
+  //      sprintf(str,"SEVERITY LEVEL: ASSERT(0), CRAFT ASSERT(0), MINOR(0)");
+  //    }
+  //    else
+  //    {
+  //      sprintf(str,"SEVERITY LEVEL: ASSERT(%d), CRAFT ASSERT(%d), MINOR(%d)",CRassertCnt,CRcrcftassertCnt,CRminorAlarmCnt);
+  //    }
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED ALL ALRM");
+  //  }
+  //  break;
+  //
+  //default:
+  //  if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+  //  {
+  //    strcpy(str,"OM BEING CLEARED; KEY IS  : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  else
+  //  {
+  //    strcpy(str,"OM BEING BLOCKED; KEY IS  : ");
+  //    snprintf(theSpecificProblem,20 + CROMKEYSZ,"OM BLOCKED %s",key);
+  //  }
+  //  strncat(str,key,CROMKEYSZ-1); 
+  //  break;
+  //}
+  //om->add(str);
+  //
+  //
+	//om->setSpecificProblem(theSpecificProblem);
+  //
+	//if( (_OMlist[i].totalomCnt == 0) && ( flag == 0) )
+	//{
+	//	//do not send clear
+	//	CRDEBUG(CRusli, ("%s", str));
+	//}
+	//else
+	//{
+  //  om->spool(CRlogBlockOM);
+	//}
+  //
+	//delete om;
+  //
+	//_OMlist[i].totalTimePeriods = 0;
+	//_OMlist[i].totalomCnt       = 0;
+	//CRminorAlarmCnt = 0;
+	//CRassertCnt = 0;
+	//CRcrcftassertCnt = 0;
 
 }// end of printBlockOM
 
@@ -1543,46 +1545,46 @@ GLretVal
 CRomBrevityCtl::attachGDO()
 {
 
-  FILE *fp;
-  int deflag=0;
-  if( (strcmp(CRprocname,"SCC")==0) && (CRDEBUG_FLAGSET(123)) )
-  {
-    deflag=1;
-  }
-
-  if(deflag){
-    fp=fopen("/tmp/brev.out","a");
-    fprintf(fp, "attachGDO\n");
-    fclose(fp);
-  }
-	GLretVal retval;
-	Bool isNew = FALSE;
-	if( _brevGDOaddr == NULL )
-	{
-		retval = CRgdo.attach( CRgdoOMtableName, /* name of GDO */
-                           TRUE,           /* TRUE create GDO */
-                           isNew,
-                           CRbrevPerm,      /* permissions */
-                           /* size of gdo */
-                           (Long)sizeof(CRbrevSharedMemory), 
-                           _brevGDOaddr,            /* pointer to GDO */
-                           /* set to default values */
-                           (Long)(3* sizeof(CRbrevSharedMemory)), 
-                           (void*) NULL,
-
-                           MHGD_ALL,   /* put the gdo on all nodes */
-                           (Long)sizeof(CRbrevSharedMemory));
-
-		if( isNew == TRUE )
-		{
-		  CRshData = (CRbrevSharedMemory *) _brevGDOaddr;
-      CRshData->noOfRecords=0; /* set state to 0 for fresh GDO */
-      CRshData->whichRecordSet=0; /* set state to 0 for fresh GDO */
-      CRgdo.invalidate( &CRshData->noOfRecords, (int)sizeof(int) );
-      CRgdo.invalidate( &CRshData->whichRecordSet, (int)sizeof(int) );
-		}
-		CRDEBUG(CRusli,("ATTACHING TO GDO : %d",retval));
-		return retval;
-	}
+  //FILE *fp;
+  //int deflag=0;
+  //if( (strcmp(CRprocname,"SCC")==0) && (CRDEBUG_FLAGSET(123)) )
+  //{
+  //  deflag=1;
+  //}
+  //
+  //if(deflag){
+  //  fp=fopen("/tmp/brev.out","a");
+  //  fprintf(fp, "attachGDO\n");
+  //  fclose(fp);
+  //}
+	//GLretVal retval;
+	//Bool isNew = FALSE;
+	//if( _brevGDOaddr == NULL )
+	//{
+	//	retval = CRgdo.attach( CRgdoOMtableName, /* name of GDO */
+  //                         TRUE,           /* TRUE create GDO */
+  //                         isNew,
+  //                         CRbrevPerm,      /* permissions */
+  //                         /* size of gdo */
+  //                         (Long)sizeof(CRbrevSharedMemory), 
+  //                         _brevGDOaddr,            /* pointer to GDO */
+  //                         /* set to default values */
+  //                         (Long)(3* sizeof(CRbrevSharedMemory)), 
+  //                         (void*) NULL,
+  //
+  //                         MHGD_ALL,   /* put the gdo on all nodes */
+  //                         (Long)sizeof(CRbrevSharedMemory));
+  //
+	//	if( isNew == TRUE )
+	//	{
+	//	  CRshData = (CRbrevSharedMemory *) _brevGDOaddr;
+  //    CRshData->noOfRecords=0; /* set state to 0 for fresh GDO */
+  //    CRshData->whichRecordSet=0; /* set state to 0 for fresh GDO */
+  //    CRgdo.invalidate( &CRshData->noOfRecords, (int)sizeof(int) );
+  //    CRgdo.invalidate( &CRshData->whichRecordSet, (int)sizeof(int) );
+	//	}
+	//	CRDEBUG(CRusli,("ATTACHING TO GDO : %d",retval));
+	//	return retval;
+	//}
 	return GLsuccess;
 }

@@ -1,0 +1,61 @@
+# This file contains the names and IDs of the hosts
+
+# that MSGH will try to communicate with.  This file must
+
+# be the same on all machines in a MSGH network.
+
+#
+
+# In this file, comments can be made with a "#" in column 1.
+
+#
+
+# Non commentary lines have 3 white-space separated fields:
+
+# field 1 contains a number from 0 through 63, and is the
+
+#       host number.
+
+# field 2 contains the logical name of the processor that can be
+
+#       used for sending to processes using the "hostname:queuename"
+
+#       syntax.
+
+# fields 3 and 4 contain the names of the two addresses that can
+
+#       be used to reach that host. Those entries must exist in /etc/hosts
+
+#       file.  A preferred path can be specified by placing an * in front
+
+#       of the name.  If simplex networking is used, the same name can
+
+#       be used twice.
+
+# field 5 contains the real name of the machine.  One of these
+
+#       should be the uname of the current machine (minus the -0 or -1
+
+#       in duplex machines) and the rest must have entries the the
+
+#       hosts file.
+
+#
+
+# If there are no entries in this list, MSGH assumes that networking
+
+# mode is turned off.
+
+#4      as005   *n440sa02-3     n440sa02-1      n440sa02
+
+#5      as006   *n440sa05-3     n440sa05-1      n440sa05
+
+2       as003   *cmtNLTih_cf51-03       cmtNLTih_cf51-12        cmtNLTih_cf51
+
+3       as004   *cmtNLTih_cf52-10       cmtNLTih_cf52-20        cmtNLTih_cf52
+
+0       as001   *cmtNLTih_df51-03       cmtNLTih_df51-12        cmtNLTih_df51
+
+1       as002   *cmtNLTih_df52-20       cmtNLTih_df52-30        cmtNLTih_df52
+
+ 

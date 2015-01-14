@@ -24,8 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "cc/hdr/cr/CRloadName.H"
-#include "cc/hdr/cr/CRvpath.H"
+#include "cc/hdr/cr/CRloadName.hh"
 
 /* global variable to store the current load.
 ** This should probably come from a global parameter,
@@ -52,14 +51,8 @@ CRloadName::getName()
 {
 	if (name[0] == 1)
 	{
-#ifdef EES
-		const char* fileName = "cc/lib/cr/CRcurLoad.h";
-		String realfname;
-		FILE* fp = CRfopen_vpath(fileName, "r", realfname);
-#else
 		const char* fileName = "/sn/release/version";
 		FILE* fp = fopen(fileName, "r");
-#endif
 		if (fp == NULL)
 		{
 			setName("");

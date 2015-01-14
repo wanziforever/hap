@@ -23,7 +23,7 @@
 #include "cc/hdr/eh/EHhandler.hh"
 //#include "cc/hdr/cr/CRdebugMsg.hh"
 #include "cc/hdr/cr/CRomInfo.hh"
-//#include "cc/hdr/cr/CRprmMsg.hh"
+#include "cc/hdr/cr/CRprmMsg.hh"
 #include "cc/hdr/init/INreturns.hh"
 //#include "cc/hdr/su/SUapplyMsg.hh"
 #include "cc/hdr/init/INproctab.hh"
