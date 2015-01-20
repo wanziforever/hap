@@ -73,7 +73,7 @@ CRprmPtr()
 	*/
 	if (CRprmOM == NULL)
 		CRprmOM = new CRmsg(CL_MAINT, POA_INF);
-
+  printf("----------- CRdebugMsg::CRprmPtr() going to return a CRmsg object\n");
 	return CRprmOM;
 }
 

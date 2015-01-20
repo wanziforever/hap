@@ -415,9 +415,7 @@ CRspoolMsg::prepForSend()
 	return GLsuccess;
 }
 
-GLretVal
-CRspoolMsg::send()
-{
+GLretVal CRspoolMsg::send() {
 	CRSentToCsop = TRUE;
 	MHqid qid;
 
@@ -500,6 +498,45 @@ CRspoolMsg::send()
 	}
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  printf("csop process is not implemented right now, log locally first\n");
+  logMsgLocally();
+  reset();
+  return GLfail;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
 	/*
   ** If this is the first send to CSOP must get its queue id
   **
@@ -793,8 +830,7 @@ CRspoolMsg::sendToSop(CRomDest* soparray[], int numSOPs, int seqnum)
 		//	Get OM body
 		//
 		int bytesRead;
-		if ((bytesRead = read(fd, (void*) fileBufPtr, sizeOfFile)) < 0 )
-		{
+		if ((bytesRead = read(fd, (void*) fileBufPtr, sizeOfFile)) < 0 ) {
 			close(fd);
 			delete [] fileBufPtr;
 			CRERROR("could not read file '%s'", msgText);

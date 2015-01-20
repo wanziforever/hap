@@ -1224,15 +1224,15 @@ Void INfreeres(Bool release_init) {
     if (shmctl(ld_shmid, IPC_RMID, &membuf) < 0) {
       // Error deallocating shared memory segment:
       printf("INfreeres():\n\tshmctl() error while freeing up "
-             "IN_SDATA segment, error=%d", errno);
+             "IN_SDATA segment, error=%d\n", errno);
     } else {
       // Successfully freed up the shared memory segment
       //INIT_DEBUG("INfreeres: INfreeres(): the IN_SDATA segment was deallocated");
-      printf("INfreeres: INfreeres(): the IN_SDATA segment was deallocated");
+      printf("INfreeres: INfreeres(): the IN_SDATA segment was deallocated\n");
     }
   } else {
     // IN_PROCDATA segment was not allocated:
-    printf("Infreeres: the IN_SDATA segment did not exist");
+    printf("Infreeres: the IN_SDATA segment did not exist\n");
   }
 
   // Release shared memory segment used by INIT processes:
@@ -1240,16 +1240,16 @@ Void INfreeres(Bool release_init) {
     // Free up private INIT shared memory
     if (shmctl(pd_shmid, IPC_RMID, &membuf) < 0) {
       printf("INfreeres():\n\tshmctl() error while freeing up "
-             "IN_PROCDATA segment, errno = %d", errno);
+             "IN_PROCDATA segment, errno = %d\n", errno);
     } else {
       //INIT_DEBUG((IN_DEBUG|IN_RSTRTR),
       //           (POA_INF, "INfreeres: INfreeres(): the IN_PROCDATA"
       //            "segment was deallocated"));
       printf("INfreeres: INfreeres(): the IN_PROCDATA"
-             "segment was deallocated");
+             "segment was deallocated\n");
     }
   } else {
-    printf("INfreeres: the IN_PROCDATA segment did not exists");
+    printf("INfreeres: the IN_PROCDATA segment did not exists\n");
   }
 }
 

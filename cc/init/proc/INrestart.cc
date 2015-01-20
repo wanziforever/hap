@@ -202,7 +202,7 @@ INdeath(U_short indx)
 	Bool		send_pdeath = TRUE;
 
 	//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath():process died: \"%s\"\n\tpid = %d indx = %d",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid,indx));
-  printf("INdeath():process died: \"%s\"\n\tpid = %d indx = %d",
+  printf("INdeath():process died: \"%s\"\n\tpid = %d indx = %d\n",
          IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid,indx);
 
 	/*
@@ -225,7 +225,7 @@ INdeath(U_short indx)
 		 */
 		oldpid = IN_FREEPID;	/* garbage pid for INpDeath msg */
 		//INIT_DEBUG((IN_DEBUG | IN_RSTRTR),(POA_INF,"INdeath(): process \"%s\" found with invalid PID %d\n\tprevented killing it",IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid));
-    printf("INdeath(): process \"%s\" found with invalid PID %d\n\tprevented killing it",
+    printf("INdeath(): process \"%s\" found with invalid PID %d\n\tprevented killing it\n",
            IN_LDPTAB[indx].proctag,IN_LDPTAB[indx].pid);
 	}	
 
@@ -327,13 +327,13 @@ INdeath(U_short indx)
 			// If process was supposed to die silently, do not print this
 			if(a_lvl == POA_INF || a_lvl == POA_MAN){
 				//CR_PRM(a_lvl, "REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
-        printf("REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
+        printf("REPT INIT DETECTED %s DIED\n",IN_LDPTAB[indx].proctag);
 				IN_SDPTAB[indx].alvl = POA_INF;
 			} else {
 				//CR_X733PRM(a_lvl, IN_LDPTAB[indx].proctag, qualityOfServiceAlarm, 
         //           softwareProgramAbnormallyTerminated, NULL,";201", 
         //           "REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
-        printf("REPT INIT DETECTED %s DIED",IN_LDPTAB[indx].proctag);
+        printf("REPT INIT DETECTED %s DIED\n",IN_LDPTAB[indx].proctag);
 				IN_SDPTAB[indx].alvl = a_lvl;
 			}
 		}

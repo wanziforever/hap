@@ -1,0 +1,80 @@
+#!/bin/bash
+
+COPY="/bin/cp"
+source_dir="/home/denny/projects/hap"
+build_binary_dir=${source_dir}/bin
+build_library_dir=${source_dir}/lib
+sps_dir="/sn/sps"
+sps_binary_dir=${sps_dir}/bin
+sps_library_dir=${sps_dir}/lib
+
+copy_file() {
+    src=${1}
+    target=${2}
+    ${COPY} ${src} ${target}
+    if [ $? == 0 ]; then
+        echo "copy ${src} to ${target} successfully"
+    else
+        echo "copy ${src} to ${target} failed"
+    fi
+}
+
+copy_dir() {
+    src=${1}
+    target=${2}
+    ${COPY} -r ${src} ${target}
+    if [ $? == 0 ]; then
+        echo "copy ${src} to ${target} successfully"
+    else
+        echo "copy ${src} to ${target} failed"
+    fi
+}
+
+copy_binary() {
+    filename=${1}
+    src=${build_binary_dir}/${filename}
+    target=${sps_binary_dir}/${filename}
+    copy_file ${src} ${target}
+}
+
+copy_library() {
+    filename=${1}
+    src=${build_library_dir}/${filename}
+    target=${sps_library_dir}/${filename}
+    copy_file ${src} ${target}
+}
+
+copy_all_binary() {
+    cd ${build_binary_dir}
+    for f in `ls`; do
+        if [ ! -x ${f} ]; then
+            continue
+        fi
+        copy_binary ${f}
+    done
+}
+
+copy_all_library() {
+    cd ${build_library_dir}
+    for f in `ls *.so`; do
+        if [ ! -x ${f} ]; then
+            continue
+        fi
+        copy_library ${f}
+    done
+}
+
+copy_configs() {
+    # copy the configuration files to the root directory
+    copy_dir ${source_dir}/configs/sn /sn
+}
+
+# main start
+echo "copy all configuration files"
+copy_configs
+echo "copy all binaries ..."
+copy_all_binary
+echo "copy all libraries ..."
+copy_all_library
+
+

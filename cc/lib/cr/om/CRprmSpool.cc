@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include "cc/hdr/cr/CRtmstamp.hh"
 #include "cc/hdr/cr/CRspoolMsg.hh"
-//#include "cc/hdr/misc/GLasync.hh"
+#include "cc/hdr/misc/GLasync.h"
 #include "cc/hdr/cr/CRomDest.hh"
 #include "cc/hdr/cr/CRdebugMsg.hh"
 
@@ -42,39 +42,40 @@ CRspoolMsg::prmSpool()
 	spool();
 }
 
-GLretVal
-CRspoolMsg::prmSend()
-{
+GLretVal CRspoolMsg::prmSend() {
+  printf("CRspoolMsg::prmSend enter \n");
 	Long time_s;
 	time_s = time(0);
 	msghead.timestamp = time_s;
 	
 	char tmp_buf[CRsplMaxTextSz];
-	if (textLength() == 0)
-	{
+	if (textLength() == 0) {
 		CRERROR("Output message has no text. Message not sent.");
 		return GLfail;
 	}
 	(void) strcpy(tmp_buf, msgText);
 	
 	CRprmLogSop logerr;
-	if (logerr.init(CRDEFPRMLOG) == GLsuccess)
-		sendToSop(&logerr);
-
+	if (logerr.init(CRDEFPRMLOG) == GLsuccess) {
+     printf("CRprmSpool::prmSend going to sendToSop \n");
+     sendToSop(&logerr);
+  }
+  printf("CRprmSpool::prmSend gping to call send\n");
 	/* now send the message to CSOP */
 	GLretVal rtn = send();
+  printf("CRprmSpool::prmSend send return result is %d\n", rtn);
 
-	if (rtn != GLsuccess)
-	{
-#ifndef __linux
-
+	if (rtn != GLsuccess) {
 		/* since the CSOP process is not up and running, write the 
 		 * message to console 
-		*/
-		String dynamic_buf = Stringsize(4096);
+     */
+    printf("return fail for send\n");
+
+		std::string dynamic_buf = std::string();
 		dynamic_buf = "\n";
 		static char timebuf[30];
 		CRformatTime(time(0), timebuf);
+    dynamic_buf += "Console: ";
 		dynamic_buf += timebuf;
 		dynamic_buf += " ";
 		dynamic_buf += tmp_buf;
@@ -82,20 +83,17 @@ CRspoolMsg::prmSend()
 
 		/* the message needs to be written to console here */
 		/* set async gaurd time to 1 second for now */
-		GLsetAsyncGuardTime(1);
-#ifdef CC
-		int console_fd = GLopen("/dev/pspcon", O_WRONLY| O_NOCTTY);
-#else
-		int console_fd = GLopen("/dev/pspcon", O_WRONLY);
-#endif
-		if (console_fd != -1)
-		{	
-			GLwrite(console_fd, (const char *) dynamic_buf, dynamic_buf.length());
-  			GLclose(console_fd);
-		}
-#endif /* not __linux */
+		//GLsetAsyncGuardTime(1);
+		//int console_fd = GLopen("/dev/console", O_WRONLY);
+    //printf("the console fd is %d\n", console_fd);
+		//if (console_fd != -1) {	
+		//	GLwrite(console_fd, (const char *) dynamic_buf.c_str(), dynamic_buf.length());
+  	//		GLclose(console_fd);
+		//}
+    printf("%s", dynamic_buf.c_str());
 		return GLfail;
 	}
+  printf("CRprmSpool::prmSend() exit\n");
 	return GLsuccess;
 }	
 
@@ -135,14 +133,14 @@ CRspoolMsg::intSend()
 
 	if (rtn != GLsuccess)
 	{
-#ifndef __linux
 		/* since the CSOP process is not up and running, write the 
 		 * message to console 
 		*/
-		String dynamic_buf = Stringsize(4096);
+		std::string dynamic_buf = std::string();
 		dynamic_buf = "\n";
 		static char timebuf[30];
 		CRformatTime(time(0), timebuf);
+    dynamic_buf += "Console: ";
 		dynamic_buf += timebuf;
 		dynamic_buf += " ";
 		dynamic_buf += tmp_buf;
@@ -150,18 +148,14 @@ CRspoolMsg::intSend()
 
 		/* the message needs to be written to console here */
 		/* set async gaurd time to 1 second for now */
-		GLsetAsyncGuardTime(1);
-#ifdef CC
-		int console_fd = GLopen("/dev/pspcon", O_WRONLY| O_NOCTTY);
-#else
-		int console_fd = GLopen("/dev/pspcon", O_WRONLY);
-#endif
-		if (console_fd != -1)
-		{	
-			GLwrite(console_fd, (const char *) dynamic_buf, dynamic_buf.length());
-  			GLclose(console_fd);
-		}
-#endif /* not __linux */
+		//GLsetAsyncGuardTime(1);
+		//int console_fd = GLopen("/dev/pspcon", O_WRONLY);
+		//if (console_fd != -1)
+		//{	
+		//	GLwrite(console_fd, (const char *) dynamic_buf, dynamic_buf.length());
+  	//		GLclose(console_fd);
+		//}
+    printf("%s", dynamic_buf.c_str());
 		return GLfail;
 	}
 	return GLsuccess;

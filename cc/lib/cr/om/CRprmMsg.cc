@@ -33,10 +33,8 @@
 
 
 /* this function is only used by the CR_PRM macro only */
-void
-CRmsg::prmSpool(CRALARMLVL al, const Char *format,...)
-{
-
+void CRmsg::prmSpool(CRALARMLVL al, const Char *format,...) {
+  printf("CRmsg::prmSpool() enter\n");
 	mutex_lock(&CRlockVarible);
 	va_list ap;
 	va_start(ap, format);
@@ -45,8 +43,7 @@ CRmsg::prmSpool(CRALARMLVL al, const Char *format,...)
 	va_end(ap);
 
 	Bool isIntLog = FALSE;
-	if(al > POA_MAXALARM)
-	{
+	if(al > POA_MAXALARM) {
 		al=al - POA_MAXALARM;
 		isIntLog = TRUE;
 	}
@@ -54,14 +51,11 @@ CRmsg::prmSpool(CRALARMLVL al, const Char *format,...)
 	msg->setAlarmLevel(al);
 	//msg->clearX733();
   //msg->setAlarmType(alarmTypeUndefined);
-
-	if(isIntLog)
-	{
+  printf("CRmsg::prmSpool() isIntLog is %d\n", isIntLog);
+	if(isIntLog) {
 		// this will spool both incident and PRM
     msg->intSpool();
-	}
-	else
-	{
+	} else {
 		// this is PRM only
 		msg->prmSpool();
 	}
@@ -70,12 +64,11 @@ CRmsg::prmSpool(CRALARMLVL al, const Char *format,...)
 	msg->setClass(OMclass);
 	msg->setState();
 	mutex_unlock(&CRlockVarible);
+  printf("CRmsg::prmSpool exit\n");
 }
 
 /* this function is only used by the CR_PRM macro only */
-void
-CRmsg::miscSpool(short destDev, CRALARMLVL al, const Char *format,...)
-{
+void CRmsg::miscSpool(short destDev, CRALARMLVL al, const Char *format,...) {
 	va_list ap;
 	va_start(ap, format);
 

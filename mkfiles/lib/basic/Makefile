@@ -16,13 +16,18 @@ BIN_PATH := $(BASIC_BIN)
 
 SRC = \
 	atoi.c \
-	String.c
+	String.c \
+	GLvsprintf.c \
+	GLasync.c
 
 src_dirs := $(sort $(dir $(addprefix $(SRC_PATH)/, $(SRC))))
 VPATH := $(subst " ", ":", $(src_dirs))
 
 OBJS := $(addsuffix .o, $(basename $(notdir $(SRC))))
 .PHONY : clean info Prepare
+
+LINUX_HDR = ${TOP_SRC}/hdr/linux
+INC := ${INC} -I${LINUX_HDR}
 
 all: info Prepare $(TARGET)
 
